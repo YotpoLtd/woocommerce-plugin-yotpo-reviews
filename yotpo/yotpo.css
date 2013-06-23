@@ -1,0 +1,11 @@
+#icon-yotpo-settings-page {
+    background: transparent url( 'images/logo.png' ) no-repeat;
+}
+
+.form-table th {
+	width: 300px;
+}
+
+#save_yotpo_settings {
+	margin-right: 20px;
+}
