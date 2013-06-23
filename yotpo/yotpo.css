@@ -6,6 +6,26 @@
 	width: 300px;
 }
 
-#save_yotpo_settings {
-	margin-right: 20px;
+.button-primary.submit-btn {
+	margin-left:102px;
 }
+.button-secondary.not-user-btn {
+	margin-left: 12px;
+}
+
+.buttons-container {
+	width: 501px;
+}
+.button-secondary.past-orders-btn {
+	float: right;
+}
+#save_yotpo_settings {
+	float: right;
+	margin-left: 5px;
+}
+
+.yotpo-widget-location {
+	width: 170px;
+}
+
+

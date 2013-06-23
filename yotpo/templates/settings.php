@@ -77,7 +77,7 @@ function display_yotpo_settings() {
 	    	         <tr valign='top'>			
 				       <th scope='row'><div>Select widget location</div></th>
 				       <td>
-				         <select name='yotpo_widget_location'>
+				         <select name='yotpo_widget_location' class='yotpo-widget-location'>
 				  	       <option value='footer' $widget_location_footer>Page footer</option>
 			 		       <option value='tab' $widget_location_tab>Tab</option>
 			 	           <option value='other' $widget_location_other>Other (click update to see instructions)</option>
@@ -106,11 +106,13 @@ function display_yotpo_settings() {
 		   		     </tr>					 	 
 		           </fieldset>
 		         </table></br>			  		
+		         <div class='buttons-container'>
 				<input type='submit' name='yotpo_settings' value='Update' class='button-primary' id='save_yotpo_settings'/>";
-				//if($show_submit_past_orders) {
-					$settings_html .="<input type='submit' name='yotpo_past_orders' value='Submit past orders' class='button-secondary'>";
-				//}
-			$settings_html .="	
+				if($show_submit_past_orders) {
+					$settings_html .="<input type='submit' name='yotpo_past_orders' value='Submit past orders' class='button-secondary past-orders-btn'>";
+				}
+			$settings_html .="
+			</div>
 		  </form>
 		</div>";		
 
@@ -163,13 +165,14 @@ function display_yotpo_register() {
 			    <td><div><input type='password' name='yotpo_user_confirm_password' /></div></td>
 			  </tr>
 			  <tr valign='top'>
-			    <th scope='row'><div><input type='submit' name='yotpo_register' value='Register' class='button-primary' /></div>
+			    <th scope='row'></th>
+			    <td><div><input type='submit' name='yotpo_register' value='Register' class='button-primary submit-btn' /></div></td>
 			  </tr>			  
 			</fieldset>			
 			<table/>
 		</form>
 		<form method='post'>
-		  <div>Already using Yotpo?<input type='submit' name='log_in_button' value='click here' class='button-secondary' /></div>
+		  <div>Already using Yotpo?<input type='submit' name='log_in_button' value='click here' class='button-secondary not-user-btn' /></div>
 		</form>
 	 </div>
   </div>

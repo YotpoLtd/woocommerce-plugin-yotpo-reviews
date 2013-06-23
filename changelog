@@ -2,3 +2,10 @@
 ----
 Alon
 1) WooCommerce initial commit, includes bottom line in category and product page, widget in tab and footer, disable native reivew in product page tab, send MAP when shop admin mark order as complete, and allow shop admin to submit past orders. 
+
+2013-06-23
+----
+Alon
+1) Changes in admin design
+2) Bug fix in past purchases.
+3) Add conversion tracking code to thank you page.

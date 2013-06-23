@@ -10,11 +10,11 @@
  */
 include( plugin_dir_path( __FILE__ ) . 'templates/settings.php');
 include( plugin_dir_path( __FILE__ ) . 'lib/yotpo-api/bootstrap.php');
+
 add_action( 'admin_menu', 'yotpo_admin_settings' );
-add_action('admin_init', 'yotpo_show_notification');
 
 if(yotpo_is_who_commerce_installed()) {
-	$yotpo_settings = get_option('yotpo_setttings', yotpo_get_degault_settings());
+	$yotpo_settings = get_option('yotpo_settings', yotpo_get_degault_settings());
 	if(!empty($yotpo_settings['app_key'])) {
 		add_action( 'template_redirect', 'yotpo_front_end_init' );
 		if(!is_admin()) {
@@ -28,31 +28,35 @@ if(yotpo_is_who_commerce_installed()) {
 
 register_activation_hook(   __FILE__, 'yotpo_activation' );
 register_uninstall_hook( __FILE__, 'yotpo_uninstall' );
-function yotpo_admin_settings() {
-	$yotpo_settings = get_option('yotpo_setttings', false);
-	$page = add_menu_page( 'Yotpo', 'Yotpo', 'manage_options', 'yotpo-settings-page', 'display_yotpo_admin_page', null, 81 );	
-	add_action( 'admin_print_styles-' . $page, 'yotpo_add_css' );		
-}
 
-function yotpo_admin_init() {
-	add_action('admin_notices', 'yotpo_show_notification');
+function yotpo_admin_settings() {
+	wp_register_style( 'yotpoSettingsStylesheet', plugins_url('yotpo.css', __FILE__));
+	wp_register_style( 'yotpoSideLogoStylesheet', plugins_url('side-menu-logo.css', __FILE__));
+	wp_enqueue_style( 'yotpoSideLogoStylesheet');
+	
+	$page = add_menu_page( 'Yotpo', 'Yotpo', 'manage_options', 'yotpo-settings-page', 'display_yotpo_admin_page', 'none', 81 );
+	//load only whe yotpo settings page is displayed.
+	add_action( 'admin_print_styles-' . $page, 'yotpo_add_css' );	
+	
+	yotpo_show_notification();	
 }
 
 function yotpo_show_notification() {
 	if (!yotpo_is_who_commerce_installed()) {
-    	echo "<div class='updated fade'><p><strong>Yotpo - </strong> WooCommerce is not installed</p></div>";
+		add_action('admin_notices', create_function('', 'echo "<div class=\'updated fade\'<p><strong>Yotpo - </strong> WooCommerce is not installed</p></div>";'));
 	}	
 	else {
-		$yotpo_settings = get_option('yotpo_setttings', false);
-		if($yotpo_settings == false || (is_array($yotpo_settings) && !isset($yotpo_settings['app_key']))) {
-			echo "<div class='updated fade'><p><strong>Yotpo - </strong>Set your API key in order the Yotpo plugin to work correctly</p></div>";	
+		$yotpo_settings = get_option('yotpo_settings', false);
+		if($yotpo_settings == false || (is_array($yotpo_settings) && empty($yotpo_settings['app_key']))) {
+			add_action('admin_notices', create_function('', 'echo "<div class=\'updated fade\'<p><strong>Yotpo - </strong>Set your API key in order the Yotpo plugin to work correctly</p></div>";'));	
 		}
-	}
-	wp_register_style( 'yotpoStylesheet', plugins_url('yotpo.css', __FILE__) );
+	}	
 }
 
 function yotpo_front_end_init() {
-	$settings = get_option('yotpo_settings',yotpo_get_degault_settings());			
+	$settings = get_option('yotpo_settings',yotpo_get_degault_settings());
+	add_action('woocommerce_thankyou', 'yotpo_conversion_track');	
+			
 	if(is_product()) {
 		$widget_location = $settings['widget_location'];					
 		add_action('woocommerce_product_tabs', 'yotpo_remove_native_review_system');
@@ -90,10 +94,6 @@ function yotpo_uninstall() {
 }
 
 function yotpo_show_widget() {
-//	$order = new WC_Order(30);
-//	$aa = get_term_by( 'slug', 'completed', 'shop_order_status' );
-//	error_log(json_encode($aa));
-	//yotpo_get_past_orders();
 	$product_data = yotpo_get_product_data();	
 	$yotpo_div = "<div class='yotpo reviews' 
  				data-appkey='".$product_data['app_key']."'
@@ -173,7 +173,7 @@ function yotpo_remove_native_review_system($tabs) {
 }
 
 function yotpo_add_css() {
-	wp_enqueue_style( 'yotpoStylesheet' );
+	wp_enqueue_style( 'yotpoSettingsStylesheet' );
 }
 
 function yotpo_map($order_id) {
@@ -285,7 +285,6 @@ function yotpo_send_past_orders() {
 	{
 		$past_orders = yotpo_get_past_orders();
 		$is_success = true;
-		error_log(json_encode($past_orders));
 		if(!is_null($past_orders) && is_array($past_orders)) {
 			$yotpo_api = new \Yotpo\Yotpo($yotpo_settings['app_key'], $yotpo_settings['secret']);
 			$get_oauth_token_response = $yotpo_api->get_oauth_token();
@@ -294,9 +293,8 @@ function yotpo_send_past_orders() {
 					if (!is_null($post_bulk))
 					{
 						$post_bulk['utoken'] = $get_oauth_token_response->access_token;
-						$response = $yotpo_api->create_purchases($post_bulk);
-						error_log(json_encode($response));
-						if ($response->status->code != 200 && $is_success)
+						$response = $yotpo_api->create_purchases($post_bulk);						
+						if ($response->code != 200 && $is_success)
 						{
 							$is_success = false;
 							yotpo_display_error_message($response->status->message);
@@ -317,4 +315,21 @@ function yotpo_send_past_orders() {
 	else {
 		yotpo_display_error_message('You need to set your app key and secret token to post past orders');
 	}		
+}
+
+function yotpo_conversion_track($order_id) {
+	$yotpo_settings = get_option('yotpo_settings', yotpo_get_degault_settings());
+	$order = new WC_Order($order_id);
+	$currency = $order->order_custom_fields['_order_currency'];
+	if(is_array($currency)) {
+		$currency = $currency[0];
+	}
+	$conversion_params = "app_key="      .$yotpo_settings['app_key'].
+           				 "&order_id="    .$order_id.
+           				 "&order_amount=".$order->get_total().
+           				 "&order_currency="  .$currency;
+	echo "<img 
+   	src='https://api.yotpo.com/conversion_tracking.gif?$conversion_params'
+	width='1'
+	height='1'></img>";
 }
