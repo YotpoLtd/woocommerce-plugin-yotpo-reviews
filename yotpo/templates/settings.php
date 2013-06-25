@@ -1,44 +1,44 @@
 <?php
-function display_yotpo_admin_page() {
+function wc_display_yotpo_admin_page() {
 	if ( function_exists('current_user_can') && !current_user_can('manage_options') ) {
 		die(__(''));
 	}
 	if (isset($_POST['log_in_button']) ) {
-		display_yotpo_settings();
+		wc_display_yotpo_settings();
 	}
 	elseif (isset($_POST['yotpo_settings'])) {
 		check_admin_referer( 'yotpo_settings_form' );
-		proccess_yotpo_settings();
-		display_yotpo_settings();
+		wc_proccess_yotpo_settings();
+		wc_display_yotpo_settings();
 	}
 	elseif (isset($_POST['yotpo_register'])) {
 		check_admin_referer( 'yotpo_registration_form' );
-		$success = proccess_yotpo_register();
+		$success = wc_proccess_yotpo_register();
 		if($success) {			
-			display_yotpo_settings();
+			wc_display_yotpo_settings();
 		}
 		else {
-			display_yotpo_register();	
+			wc_display_yotpo_register();	
 		}
 		
 	}
 	elseif (isset($_POST['yotpo_past_orders'])) {
-		yotpo_send_past_orders();	
-		display_yotpo_settings();
+		wc_yotpo_send_past_orders();	
+		wc_display_yotpo_settings();
 	}	
 	else {
-		$yotpo_settings = get_option('yotpo_settings', yotpo_get_degault_settings());
+		$yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
 		if(empty($yotpo_settings['app_key']) && empty($yotpo_settings['secret'])) {			
-			display_yotpo_register();
+			wc_display_yotpo_register();
 		}
 		else {
-			display_yotpo_settings();
+			wc_display_yotpo_settings();
 		}
 	}
 }
 
-function display_yotpo_settings() {
-	$yotpo_settings = get_option('yotpo_settings', yotpo_get_degault_settings());
+function wc_display_yotpo_settings() {
+	$yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
 	$app_key = $yotpo_settings['app_key'];
 	$secret = $yotpo_settings['secret'];
 	$widget_location = $yotpo_settings['widget_location'];
@@ -57,7 +57,7 @@ function display_yotpo_settings() {
 	$widget_location_other = $widget_location == 'other' ? 'selected' : '';
 	
 	if(empty($yotpo_settings['app_key'])) {
-		yotpo_display_message('Set your API key in order the Yotpo plugin to work correctly', false);	
+		wc_yotpo_display_message('Set your API key in order the Yotpo plugin to work correctly', false);	
 	}
 	$settings_html =  
 		"<div class='wrap'>"			
@@ -120,8 +120,8 @@ function display_yotpo_settings() {
 	echo $settings_html;		  
 }
 
-function proccess_yotpo_settings() {
-	$current_settings = get_option('yotpo_settings', yotpo_get_degault_settings());
+function wc_proccess_yotpo_settings() {
+	$current_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
 	$new_settings = array('app_key' => $_POST['yotpo_app_key'],
 						 'secret' => $_POST['yotpo_oauth_token'],
 						 'widget_location' => $_POST['yotpo_widget_location'],
@@ -134,7 +134,7 @@ function proccess_yotpo_settings() {
 	update_option( 'yotpo_settings', $new_settings );
 }
 
-function display_yotpo_register() {	
+function wc_display_yotpo_register() {	
 	$email = isset($_POST['yotpo_user_email']) ? $_POST['yotpo_user_email'] : '';
 	$user_name = isset($_POST['yotpo_user_name']) ? $_POST['yotpo_user_name'] : '';
 	$register_html = 
@@ -181,7 +181,7 @@ function display_yotpo_register() {
   echo $register_html;		 
 }
 
-function proccess_yotpo_register() {
+function wc_proccess_yotpo_register() {
 	$errors = array();
 	if ($_POST['yotpo_user_email'] === '') {
 		array_push($errors, 'Provide valid email address');
@@ -217,11 +217,11 @@ function proccess_yotpo_register() {
         			$yotpo_api->set_app_key($app_key);
         			$yotpo_api->set_secret($secret);
         			$shop_domain = parse_url($shop_url,PHP_URL_HOST);
-        			$account_platform_response = $yotpo_api->create_account_platform(array( 'shop_domain' => yotpo_get_shop_domain(),
+        			$account_platform_response = $yotpo_api->create_account_platform(array( 'shop_domain' => wc_yotpo_get_shop_domain(),
         																		   			'utoken' => $response->response->token,
         																					'platform_type_id' => 8));
         			if(isset($response->status) && isset($response->status->code) && $response->status->code == 200) {
-        				$current_settings = get_option('yotpo_settings', yotpo_get_degault_settings());
+        				$current_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
         				$current_settings['app_key'] = $app_key;
         				$current_settings['secret'] = $secret;
 						update_option('yotpo_settings', $current_settings);							
@@ -229,7 +229,7 @@ function proccess_yotpo_register() {
         			}
         			elseif($response->status->code >= 400){
         				if(isset($response->status->message)) {
-        					yotpo_display_message($response->status->message, true);
+        					wc_yotpo_display_message($response->status->message, true);
         				}
         			}
         		}
@@ -237,14 +237,14 @@ function proccess_yotpo_register() {
         			if(isset($response->status->message)) { 
         				if(isset($response->status->message->email)) {
         					if(is_array($response->status->message->email)) {
-        						yotpo_display_message($response->status->message->email[0], false);
+        						wc_yotpo_display_message($response->status->message->email[0], false);
         					}
         					else {
-        						yotpo_display_message($response->status->message->email, false);
+        						wc_yotpo_display_message($response->status->message->email, false);
         					}        					
         				}   
         				else {
-        					yotpo_display_message($response->status->message, true);	
+        					wc_yotpo_display_message($response->status->message, true);	
         				}    				
         					        						
         			}
@@ -255,16 +255,16 @@ function proccess_yotpo_register() {
         	}
         }
         catch (Exception $e) {
-        	yotpo_display_message($e->getMessage(), true);	
+        	wc_yotpo_display_message($e->getMessage(), true);	
         }         		
 	}
 	else {
-		yotpo_display_message($errors, false);	
+		wc_yotpo_display_message($errors, false);	
 	}	
 	return false;		
 }
 
-function yotpo_display_message($messages = array(), $is_error = false) {
+function wc_yotpo_display_message($messages = array(), $is_error = false) {
 	$class = $is_error ? 'error' : 'updated fade';
 	if(is_array($messages)) {
 		foreach ($messages as $message) {

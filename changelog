@@ -16,3 +16,9 @@ Alon
 1) Re arrange code. 
 2) Small bug fixes.
 3) Add some css.
+
+2013-06-25
+----
+Alon
+1) Make all functions start with wc_
+2) redirect user to settings page after activating yotpo plugin.
