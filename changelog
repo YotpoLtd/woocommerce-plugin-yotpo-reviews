@@ -22,3 +22,10 @@ Alon
 Alon
 1) Make all functions start with wc_
 2) redirect user to settings page after activating yotpo plugin.
+
+2013-06-25
+----
+Alon
+1) Design changes.
+2) Add b2b dashboard link in admin page.
+3) Add checkbox which diasbles native review system.

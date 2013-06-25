@@ -38,43 +38,54 @@ function wc_display_yotpo_admin_page() {
 }
 
 function wc_display_yotpo_settings() {
+
 	$yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
 	$app_key = $yotpo_settings['app_key'];
 	$secret = $yotpo_settings['secret'];
 	$widget_location = $yotpo_settings['widget_location'];
 	$language_code = $yotpo_settings['language_code'];
 	$widget_tab_name = $yotpo_settings['widget_tab_name'];
-	$bottom_line_enabled_category = $yotpo_settings['bottom_line_enabled_category'];
-	$bottom_line_enabled_product = $yotpo_settings['bottom_line_enabled_product'];
-	$yotpo_language_as_site = $yotpo_settings['yotpo_language_as_site'];
 	$show_submit_past_orders = $yotpo_settings['show_submit_past_orders']; 
-	$yotpo_language_as_site_checkbox = $yotpo_language_as_site ? "checked='checked'" : '';
-	$bottom_line_enabled_product_checkbox = $bottom_line_enabled_product ? "checked='checked'" : '';
-	$bottom_line_enabled_category_checkbox = $bottom_line_enabled_category ? "checked='checked'" : '';
+	
+	$yotpo_language_as_site_checkbox = $yotpo_settings['yotpo_language_as_site'] ? "checked='checked'" : '';	
+	$bottom_line_enabled_product_checkbox = $yotpo_settings['bottom_line_enabled_product'] ? "checked='checked'" : '';
+	$bottom_line_enabled_category_checkbox = $yotpo_settings['bottom_line_enabled_category'] ? "checked='checked'" : '';	
+	$yotpo_disable_native_review_system_checkbox = $yotpo_settings['disable_native_review_system'] ? "checked='checked'" : '';
 	
 	$widget_location_footer = $widget_location == 'footer' ? 'selected' : '';
 	$widget_location_tab = $widget_location == 'tab' ? 'selected' : '';
 	$widget_location_other = $widget_location == 'other' ? 'selected' : '';
-	
+	$dashboard_link = false;
 	if(empty($yotpo_settings['app_key'])) {
-		wc_yotpo_display_message('Set your API key in order the Yotpo plugin to work correctly', false);	
+		wc_yotpo_display_message('Set your API key in order the Yotpo plugin to work correctly', false);			
+	}
+	if (!empty($yotpo_settings['app_key']) && !empty($yotpo_settings['secret'])) {
+		$dashboard_link = '<a href="https://api.yotpo.com/users/b2blogin?app_key='.$yotpo_settings['app_key'].'&secret='.$yotpo_settings['secret'].'" target="_blank">Yotpo Dashboard.</a></div>';
+	}
+	else {
+		$dashboard_link = '<a href="https://www.yotpo.com/?login=true" target="_blank">Yotpo Dashboard.</a></div>';
 	}
 	$settings_html =  
 		"<div class='wrap'>"			
 		   .screen_icon( ).
 		   "<h2>Yotpo Settings</h2>			
 			  <form  method='post'>
+			  <h4>To customize the look and feel of the widget, and to edit your Mail After Purchase settings, just head to the ".$dashboard_link."</h4>
 			  	<table class='form-table'>".
 			  		wp_nonce_field('yotpo_settings_form').
 			  	  "<fieldset>
-			  	     <tr valign='top'>  	
-		             <th scope='row'><div class='y-label'>For multipule-language sites, mark this check box. This will choose the language according to the user's site language</div></th>
-	                 <td><input type='checkbox' name='yotpo_language_as_site' value='1' $yotpo_language_as_site_checkbox /></td>	                  
-	                 </tr>
 	                 <tr valign='top'>
 	                 	<th scope='row'><div>If you would like to choose a set language, please type the 2-letter language code here. You can find the supported langauge codes <a class='y-href' href='http://support.yotpo.com/entries/21861473-Languages-Customization-' target='_blank'>here.</a></div></th>
 	                 	<td><div><input type='text' class='yotpo_language_code_text' name='yotpo_widget_language_code' maxlength='2' value='$language_code'/></div></td>
 	                 </tr>
+			  	     <tr valign='top'>  	
+		             	<th scope='row'><div>For multipule-language sites, mark this check box. This will choose the language according to the user's site language</div></th>
+	                 	<td><input type='checkbox' name='yotpo_language_as_site' value='1' $yotpo_language_as_site_checkbox /></td>	                  
+	                 </tr>
+					 <tr valign='top'>
+		   		       <th scope='row'><div>Disable native reviews system:</div></th>
+		   		       <td><input type='checkbox' name='disable_native_review_system' value='1' $yotpo_disable_native_review_system_checkbox /></td>
+		   		     </tr>	                 	                 
 	    	         <tr valign='top'>			
 				       <th scope='row'><div>Select widget location</div></th>
 				       <td>
@@ -102,7 +113,7 @@ function wc_display_yotpo_settings() {
 		   		       <td><input type='checkbox' name='yotpo_bottom_line_enabled_product' value='1' $bottom_line_enabled_product_checkbox /></td>
 		   		     </tr>					  	 
 					 <tr valign='top'>
-		   		       <th scope='row'><div class='y-label'>Enable bottom line in category page:</div></th>
+		   		       <th scope='row'><div>Enable bottom line in category page:</div></th>
 		   		       <td><input type='checkbox' name='yotpo_bottom_line_enabled_category' value='1' $bottom_line_enabled_category_checkbox /></td>
 		   		     </tr>					 	 
 		           </fieldset>
@@ -130,6 +141,7 @@ function wc_proccess_yotpo_settings() {
 						 'bottom_line_enabled_product' => isset($_POST['yotpo_bottom_line_enabled_product']) ? true : false,
 						 'bottom_line_enabled_category' => isset($_POST['yotpo_bottom_line_enabled_category']) ? true : false,
 						 'yotpo_language_as_site' => isset($_POST['yotpo_language_as_site']) ? true : false,
+						 'disable_native_review_system' => isset($_POST['disable_native_review_system']) ? true : false,
 						 'show_submit_past_orders' => $current_settings['show_submit_past_orders']);
 	update_option( 'yotpo_settings', $new_settings );
 }
