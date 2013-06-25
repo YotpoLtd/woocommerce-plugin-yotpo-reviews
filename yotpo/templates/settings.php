@@ -55,9 +55,10 @@ function display_yotpo_settings() {
 	$widget_location_footer = $widget_location == 'footer' ? 'selected' : '';
 	$widget_location_tab = $widget_location == 'tab' ? 'selected' : '';
 	$widget_location_other = $widget_location == 'other' ? 'selected' : '';
-
-
-
+	
+	if(empty($yotpo_settings['app_key'])) {
+		yotpo_display_message('Set your API key in order the Yotpo plugin to work correctly', false);	
+	}
 	$settings_html =  
 		"<div class='wrap'>"			
 		   .screen_icon( ).
@@ -145,7 +146,7 @@ function display_yotpo_register() {
 		<form method='post'>
 		<table class='form-table'>"
 		   .wp_nonce_field('yotpo_registration_form').		   
-		  "<h2><i class='y-logo'></i>Create your Yotpo account</h2>
+		  "<h2><i></i>Create your Yotpo account</h2>
 			<fieldset>
 			  <h2>Generate more reviews, more engagement, and more sales.</h2>    
 			  <tr valign='top'>
@@ -228,7 +229,7 @@ function proccess_yotpo_register() {
         			}
         			elseif($response->status->code >= 400){
         				if(isset($response->status->message)) {
-        					yotpo_display_error_message($response->status->message);
+        					yotpo_display_message($response->status->message, true);
         				}
         			}
         		}
@@ -236,14 +237,14 @@ function proccess_yotpo_register() {
         			if(isset($response->status->message)) { 
         				if(isset($response->status->message->email)) {
         					if(is_array($response->status->message->email)) {
-        						yotpo_display_error_message($response->status->message->email[0]);
+        						yotpo_display_message($response->status->message->email[0], false);
         					}
         					else {
-        						yotpo_display_error_message($response->status->message->email);
+        						yotpo_display_message($response->status->message->email, false);
         					}        					
         				}   
         				else {
-        					yotpo_display_error_message($response->status->message);	
+        					yotpo_display_message($response->status->message, true);	
         				}    				
         					        						
         			}
@@ -254,35 +255,23 @@ function proccess_yotpo_register() {
         	}
         }
         catch (Exception $e) {
-        	yotpo_display_error_message(array($e->getMessage()));	
+        	yotpo_display_message($e->getMessage(), true);	
         }         		
 	}
 	else {
-		yotpo_display_error_message($errors);	
+		yotpo_display_message($errors, false);	
 	}	
 	return false;		
 }
 
-function yotpo_display_error_message($errors = array()) {
-	if(is_array($errors)) {
-		foreach ($errors as $error) {
-			echo "<div id='message' class='error'><p><strong>$error</strong></p></div>";
+function yotpo_display_message($messages = array(), $is_error = false) {
+	$class = $is_error ? 'error' : 'updated fade';
+	if(is_array($messages)) {
+		foreach ($messages as $message) {
+			echo "<div id='message' class='$class'><p><strong>$message</strong></p></div>";
 		}
 	}
-	elseif(is_string($errors)) {
-		echo "<div id='message' class='error'><p><strong>$errors</strong></p></div>";
+	elseif(is_string($messages)) {
+		echo "<div id='message' class='$class'><p><strong>$messages</strong></p></div>";
 	}
-
-}
-
-function yotpo_get_degault_settings() {
-	return array( 'app_key' => '',
-				  'secret' => '',
-				  'widget_location' => 'footer',
-				  'language_code' => 'en',
-				  'widget_tab_name' => 'Reviews',
-				  'bottom_line_enabled_product' => true,
-				  'bottom_line_enabled_category' => true,
-				  'yotpo_language_as_site' => true,
-				  'show_submit_past_orders' => true);
 }
