@@ -29,3 +29,9 @@ Alon
 1) Design changes.
 2) Add b2b dashboard link in admin page.
 3) Add checkbox which diasbles native review system.
+
+2013-06-26
+----
+Alon
+1) Add option to export local reviews.
+2) archive yotpo-php lib into single phar file.

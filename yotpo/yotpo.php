@@ -12,12 +12,14 @@ register_activation_hook(   __FILE__, 'wc_yotpo_activation' );
 register_uninstall_hook( __FILE__, 'wc_yotpo_uninstall' );
 add_action('plugins_loaded', 'wc_yotpo_init');
 add_action('init', 'wc_yotpo_redirect');
-
+		
+		
+		
 function wc_yotpo_init() {
 	$is_admin = is_admin();
 	if($is_admin) {
 		include( plugin_dir_path( __FILE__ ) . 'templates/settings.php');
-		include( plugin_dir_path( __FILE__ ) . 'lib/yotpo-api/bootstrap.php');
+		include( plugin_dir_path( __FILE__ ) . 'lib/yotpo-api/yotpo.phar');
 		add_action( 'admin_menu', 'wc_yotpo_admin_settings' );
 	}
 	$yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
@@ -90,13 +92,13 @@ function wc_yotpo_uninstall() {
 	}	
 }
 
-function wc_yotpo_show_widget() {	
+function wc_yotpo_show_widget() {		 
 	$product_data = wc_yotpo_get_product_data();	
 	$yotpo_div = "<div class='yotpo reviews' 
  				data-appkey='".$product_data['app_key']."'
    				data-domain='".$product_data['shop_domain']."'
    				data-product-id='".$product_data['id']."'
-   				data-product-models=''
+   				data-product-models='".$product_data['product-models']."'
    				data-name='".$product_data['title']."' 
    				data-url='".$product_data['url']."' 
    				data-image-url='".$product_data['image-url']."' 
@@ -132,7 +134,7 @@ function wc_yotpo_show_botomline($summery) {
    				data-appkey='".$product_data['app_key']."'
    				data-domain='".$product_data['shop_domain']."'
    				data-product-id='".$product_data['id']."'
-   				data-product-models=''
+   				data-product-models='".$product_data['product-models']."'
    				data-name='".$product_data['title']."' 
    				data-url='".$product_data['url']."' 
    				data-image-url='".$product_data['image-url']."' 
@@ -162,7 +164,8 @@ function wc_yotpo_get_product_data() {
 	$product_data['description'] = strip_tags($product->get_post_data()->post_excerpt);
 	$product_data['id'] = $product->id;	
 	$product_data['title'] = $product->get_title();
-	$product_data['image-url'] = wc_yotpo_get_product_image_url($product->id);	
+	$product_data['image-url'] = wc_yotpo_get_product_image_url($product->id);
+	$product_data['product-models'] = $product->get_sku();	
 	return $product_data;
 }
 
@@ -190,7 +193,7 @@ function wc_yotpo_map($order_id) {
 		}		
 	}
 	catch (Exception $e) {
-		//nothing to do here..
+		error_log($e->getMessage());
 	}
 
 }

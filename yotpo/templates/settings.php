@@ -26,6 +26,27 @@ function wc_display_yotpo_admin_page() {
 		wc_yotpo_send_past_orders();	
 		wc_display_yotpo_settings();
 	}	
+	elseif (isset($_POST['yotpo_export_reviews'])) {
+		$yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
+		if(!empty($yotpo_settings['app_key'])) {					
+			include(dirname(plugin_dir_path( __FILE__ )) . '/export-reviews.php');
+			$export = new Yotpo_Review_Export();
+			list($file, $errors) = $export->exportReviews();
+			if(is_null($errors)) {
+				$errors = $export->downloadReviewToBrowser($file);
+				if(!is_null($errors)) {
+					wc_yotpo_display_message($errors);
+				}	
+			}
+			else {
+				wc_yotpo_display_message($errors);
+			}	
+		}
+		else {
+			wc_yotpo_display_message('Please set up your API key before exporting reviews.');	
+		}	
+		wc_display_yotpo_settings();		
+	}
 	else {
 		$yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
 		if(empty($yotpo_settings['app_key']) && empty($yotpo_settings['secret'])) {			
@@ -55,7 +76,6 @@ function wc_display_yotpo_settings() {
 	$widget_location_footer = $widget_location == 'footer' ? 'selected' : '';
 	$widget_location_tab = $widget_location == 'tab' ? 'selected' : '';
 	$widget_location_other = $widget_location == 'other' ? 'selected' : '';
-	$dashboard_link = false;
 	if(empty($yotpo_settings['app_key'])) {
 		wc_yotpo_display_message('Set your API key in order the Yotpo plugin to work correctly', false);			
 	}
@@ -119,6 +139,7 @@ function wc_display_yotpo_settings() {
 		           </fieldset>
 		         </table></br>			  		
 		         <div class='buttons-container'>
+		        <input type='submit' name='yotpo_export_reviews' value='Export Reviews' class='button-secondary'/>
 				<input type='submit' name='yotpo_settings' value='Update' class='button-primary' id='save_yotpo_settings'/>";
 				if($show_submit_past_orders) {
 					$settings_html .="<input type='submit' name='yotpo_past_orders' value='Submit past orders' class='button-secondary past-orders-btn'>";
@@ -231,7 +252,7 @@ function wc_proccess_yotpo_register() {
         			$shop_domain = parse_url($shop_url,PHP_URL_HOST);
         			$account_platform_response = $yotpo_api->create_account_platform(array( 'shop_domain' => wc_yotpo_get_shop_domain(),
         																		   			'utoken' => $response->response->token,
-        																					'platform_type_id' => 8));
+        																					'platform_type_id' => 12));
         			if(isset($response->status) && isset($response->status->code) && $response->status->code == 200) {
         				$current_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
         				$current_settings['app_key'] = $app_key;
