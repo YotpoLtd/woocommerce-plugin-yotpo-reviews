@@ -82,31 +82,32 @@ class Yotpo_Review_Export
     protected function getHeadRowValues()
     {
         return array(
+        	'review_title',
             'review_content',
             'display_name',
-//            'review_status',         #STATUS_APPROVED = 1;STATUS_PENDING = 2;STATUS_NOT_APPROVED = 3;
+        	'user_email',
+        	'user_type',
             'review_score',
-            'review_date',
+            'date',
             'sku',
             'product_title',
             'product_description',
             'product_url',
             'product_image_url',
-            'appkey'
         );
     }
 
     protected function getAllReviews() {   
-    	$settings = get_option('yotpo_settings',wc_yotpo_get_degault_settings());
-    	$app_key = $settings['app_key']; 	
     	global $wpdb;
 		$query = "SELECT comment_post_ID AS product_id, 
 						 comment_author AS display_name, 
-						 comment_date AS review_date, 
+						 comment_date AS date,
+						 comment_author_email AS user_email, 
 						 comment_content AS review_content, 
 						 meta_value AS review_score,
 						 post_content AS product_description,
-						 post_title AS product_title
+						 post_title AS product_title,
+						 user_id
 				  FROM `".$wpdb->prefix."comments` 
 				  INNER JOIN `".$wpdb->prefix."posts` ON `".$wpdb->prefix."posts`.`ID` = `".$wpdb->prefix."comments`.`comment_post_ID` 
 				  INNER JOIN `".$wpdb->prefix."commentmeta` ON `".$wpdb->prefix."commentmeta`.`comment_id` = `".$wpdb->prefix."comments`.`comment_ID` 
@@ -116,16 +117,18 @@ class Yotpo_Review_Export
 		foreach ($results as $value) {
 			$product_instance = get_product($value->product_id);
 			$current_review = array();		
+			$current_review['review_title'] = $value->product_title;
 			$current_review['review_content'] = $value->review_content;
 			$current_review['display_name'] = $value->display_name;
+			$current_review['user_email'] = $value->user_email;
+			$current_review['user_type'] = woocommerce_customer_bought_product($value->user_email, $value->user_id, $value->product_id) ? 'verified_buyer' : '';
 			$current_review['review_score'] = $value->review_score;
-			$current_review['review_date'] = $value->review_date;
-			$current_review['sku'] = $product_instance->get_sku();
+			$current_review['date'] = $value->date;
+			$current_review['sku'] = $value->product_id;
 			$current_review['product_title'] = $value->product_title;
 			$current_review['product_description'] = strip_tags($product_instance->get_post_data()->post_excerpt);
 			$current_review['product_url'] = get_permalink($value->product_id);
 			$current_review['product_image_url'] = wc_yotpo_get_product_image_url($value->product_id);
-			$current_review['appkey'] = $app_key;
 			$all_reviews[] = $current_review;
 		}
 		return $all_reviews;
