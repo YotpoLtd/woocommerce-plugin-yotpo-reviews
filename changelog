@@ -49,3 +49,9 @@ Alon
 3) add terms of use link in registration page.
 4) Add export order explanation link to register and settings page.
 5) small tweaks to settings page.
+
+
+2013-06-27
+----
+Alon
+1) In case the user enabled bottom line in category page then disable his native reviews rating.

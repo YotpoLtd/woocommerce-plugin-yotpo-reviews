@@ -70,6 +70,10 @@ function wc_yotpo_front_end_init() {
 	}
 	elseif ($settings['bottom_line_enabled_category']) {
 		add_action('woocommerce_after_shop_loop_item_title', 'wc_yotpo_show_botomline',7);
+		$native_review_sysyem_ratings = get_option('woocommerce_enable_review_rating');
+		if(!empty($native_review_sysyem_ratings) && $native_review_sysyem_ratings == 'yes') {
+			update_option('woocommerce_enable_review_rating', 'no');
+		}
 		wp_enqueue_style('yotpoSideBootomLineStylesheet', plugins_url('assets/css/bottom-line.css', __FILE__));
 	}							
 }

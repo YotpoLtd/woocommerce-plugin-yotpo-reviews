@@ -1,5 +1,6 @@
 <?php
 function wc_display_yotpo_admin_page() {
+
 	if ( function_exists('current_user_can') && !current_user_can('manage_options') ) {
 		die(__(''));
 	}
