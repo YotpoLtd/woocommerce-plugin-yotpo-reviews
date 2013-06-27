@@ -30,7 +30,7 @@ function wc_display_yotpo_admin_page() {
 	elseif (isset($_POST['yotpo_export_reviews'])) {
 		$yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
 		if(!empty($yotpo_settings['app_key'])) {					
-			include(dirname(plugin_dir_path( __FILE__ )) . '/export-reviews.php');
+			include(dirname(plugin_dir_path( __FILE__ )) . '/classes/class-wc-yotpo-export-reviews.php');
 			$export = new Yotpo_Review_Export();
 			list($file, $errors) = $export->exportReviews();
 			if(is_null($errors)) {

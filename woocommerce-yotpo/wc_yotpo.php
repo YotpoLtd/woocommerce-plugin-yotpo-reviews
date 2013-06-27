@@ -17,7 +17,7 @@ add_action('init', 'wc_yotpo_redirect');
 function wc_yotpo_init() {
 	$is_admin = is_admin();
 	if($is_admin) {
-		include( plugin_dir_path( __FILE__ ) . 'templates/settings.php');
+		include( plugin_dir_path( __FILE__ ) . 'templates/wc-yotpo-settings.php');
 		include( plugin_dir_path( __FILE__ ) . 'lib/yotpo-api/yotpo.phar');
 		add_action( 'admin_menu', 'wc_yotpo_admin_settings' );
 	}
@@ -36,14 +36,14 @@ function wc_yotpo_init() {
 function wc_yotpo_redirect() {
 	if ( get_option('wc_yotpo_just_installed', false)) {
 		delete_option('wc_yotpo_just_installed');
-		wp_redirect( ( ( is_ssl() || force_ssl_admin() || force_ssl_login() ) ? str_replace( 'http:', 'https:', admin_url( 'admin.php?page=yotpo-settings-page' ) ) : str_replace( 'https:', 'http:', admin_url( 'admin.php?page=yotpo-settings-page' ) ) ) );
+		wp_redirect( ( ( is_ssl() || force_ssl_admin() || force_ssl_login() ) ? str_replace( 'http:', 'https:', admin_url( 'admin.php?page=woocommerce-yotpo-settings-page' ) ) : str_replace( 'https:', 'http:', admin_url( 'admin.php?page=woocommerce-yotpo-settings-page' ) ) ) );
 		exit;
 	}	
 }
 
 function wc_yotpo_admin_settings() {
 	add_action( 'admin_enqueue_scripts', 'wc_yotpo_admin_styles' );	
-	$page = add_menu_page( 'Yotpo', 'Yotpo', 'manage_options', 'yotpo-settings-page', 'wc_display_yotpo_admin_page', 'none', 81 );			
+	$page = add_menu_page( 'Yotpo', 'Yotpo', 'manage_options', 'woocommerce-yotpo-settings-page', 'wc_display_yotpo_admin_page', 'none', 81 );			
 }
 
 function wc_yotpo_front_end_init() {
@@ -353,7 +353,7 @@ function wc_yotpo_get_degault_settings() {
 }
 
 function wc_yotpo_admin_styles($hook) {
-	if($hook == 'toplevel_page_yotpo-settings-page') {		
+	if($hook == 'toplevel_page_woocommerce-yotpo-settings-page') {		
 		wp_enqueue_script( 'yotpoSettingsJs', plugins_url('assets/js/settings.js', __FILE__), array('jquery-effects-core'));		
 		wp_enqueue_style( 'yotpoSettingsStylesheet', plugins_url('assets/css/yotpo.css', __FILE__));
 	}
