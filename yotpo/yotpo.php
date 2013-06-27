@@ -1,6 +1,6 @@
 <?php
 /*
-	Plugin Name: Yotpo
+	Plugin Name: WooCommerce Yotpo Social Reviews
 	Description: The #1 reviews add-on for SMBs. Generate beautiful, trusted reviews for your shop.
 	Author: Yotpo
 	Version: 1.0
@@ -13,8 +13,6 @@ register_activation_hook(   __FILE__, 'wc_yotpo_activation' );
 register_uninstall_hook( __FILE__, 'wc_yotpo_uninstall' );
 add_action('plugins_loaded', 'wc_yotpo_init');
 add_action('init', 'wc_yotpo_redirect');
-		
-		
 		
 function wc_yotpo_init() {
 	$is_admin = is_admin();
@@ -156,7 +154,7 @@ function wc_yotpo_get_product_data() {
 	$settings = get_option('yotpo_settings',wc_yotpo_get_degault_settings());
 	$product_data['app_key'] = $settings['app_key'];
 	$product_data['shop_domain'] = wc_yotpo_get_shop_domain(); 
-	$product_data['url'] = get_page_link();
+	$product_data['url'] = get_permalink($product->id);
 	$product_data['lang'] = $settings['language_code']; 
 	if($settings['yotpo_language_as_site'] == true) {
 		$lang = explode('-', get_bloginfo('language'));
@@ -192,7 +190,7 @@ function wc_yotpo_map($order_id) {
 				$get_oauth_token_response = $yotpo_api->get_oauth_token();
 				if(!empty($get_oauth_token_response) && !empty($get_oauth_token_response->access_token)) {
 					$purchase_data['utoken'] = $get_oauth_token_response->access_token;
-					$purchase_data['platform'] = 'prestashop';
+					$purchase_data['platform'] = 'woocommerce';
 					$response = $yotpo_api->create_purchase($purchase_data);			
 			}
 		}		
@@ -200,7 +198,6 @@ function wc_yotpo_map($order_id) {
 	catch (Exception $e) {
 		error_log($e->getMessage());
 	}
-
 }
 
 function wc_yotpo_get_single_map_data($order_id) {
@@ -267,13 +264,13 @@ function wc_yotpo_get_past_orders() {
 			}      	
 		}
 		if(count($orders) > 0) {
-			$post_bulk_orders = array_chunk($orders, 1000);
+			$post_bulk_orders = array_chunk($orders, 200);
 			$result = array();
 			foreach ($post_bulk_orders as $index => $bulk)
 			{
 				$result[$index] = array();
 				$result[$index]['orders'] = $bulk;
-				$result[$index]['platform'] = 'prestashop';			
+				$result[$index]['platform'] = 'woocommerce';			
 			}
 		}		
 	}
@@ -331,6 +328,7 @@ function wc_yotpo_conversion_track($order_id) {
 	if(is_array($currency)) {
 		$currency = $currency[0];
 	}
+	
 	$conversion_params = "app_key="      .$yotpo_settings['app_key'].
            				 "&order_id="    .$order_id.
            				 "&order_amount=".$order->get_total().
