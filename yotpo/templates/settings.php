@@ -60,22 +60,12 @@ function wc_display_yotpo_admin_page() {
 }
 
 function wc_display_yotpo_settings() {
-
 	$yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
 	$app_key = $yotpo_settings['app_key'];
 	$secret = $yotpo_settings['secret'];
-	$widget_location = $yotpo_settings['widget_location'];
 	$language_code = $yotpo_settings['language_code'];
 	$widget_tab_name = $yotpo_settings['widget_tab_name'];
-	
-	$yotpo_language_as_site_checkbox = $yotpo_settings['yotpo_language_as_site'] ? "checked='checked'" : '';	
-	$bottom_line_enabled_product_checkbox = $yotpo_settings['bottom_line_enabled_product'] ? "checked='checked'" : '';
-	$bottom_line_enabled_category_checkbox = $yotpo_settings['bottom_line_enabled_category'] ? "checked='checked'" : '';	
-	$yotpo_disable_native_review_system_checkbox = $yotpo_settings['disable_native_review_system'] ? "checked='checked'" : '';
-	
-	$widget_location_footer = $widget_location == 'footer' ? 'selected' : '';
-	$widget_location_tab = $widget_location == 'tab' ? 'selected' : '';
-	$widget_location_other = $widget_location == 'other' ? 'selected' : '';
+
 	if(empty($yotpo_settings['app_key'])) {
 		wc_yotpo_display_message('Set your API key in order the Yotpo plugin to work correctly', false);			
 	}
@@ -90,8 +80,7 @@ function wc_display_yotpo_settings() {
 	$cradentials_location_explanation = isset($_POST['log_in_button']) 	? "<tr valign='top'>  	
 		             														<th scope='row'><p class='description'>To get your api key and secret token <a href='https://www.yotpo.com/?login=true' target='_blank'>log in here</a> and go to your account settings.</p></th>
 	                 		                  							   </tr>" : '';		
-	$submit_past_orders_button_disabled = empty($app_key) || empty($secret) ? 'disabled' :'';
-	$submit_past_orders_button = $yotpo_settings['show_submit_past_orders'] ? "<input type='submit' name='yotpo_past_orders' value='Submit past orders' class='button-secondary past-orders-btn' $submit_past_orders_button_disabled></br></br><p class='description'>*Learn <a href='#'>how to export your existing reviews</a> into Yotpo.</p>" : '';
+	$submit_past_orders_button = $yotpo_settings['show_submit_past_orders'] ? "<input type='submit' name='yotpo_past_orders' value='Submit past orders' class='button-secondary past-orders-btn' ".disabled(true,empty($app_key) || empty($secret),true)."></br></br><p class='description'>*Learn <a href='#'>how to export your existing reviews</a> into Yotpo.</p>" : '';
 	
 	$settings_html =  
 		"<div class='wrap'>"			
@@ -108,24 +97,24 @@ function wc_display_yotpo_settings() {
 	                 </tr>
 			  	     <tr valign='top'>  	
 		             	<th scope='row'><div>For multipule-language sites, mark this check box. This will choose the language according to the user's site language.</div></th>
-	                 	<td><input type='checkbox' name='yotpo_language_as_site' value='1' $yotpo_language_as_site_checkbox /></td>	                  
+	                 	<td><input type='checkbox' name='yotpo_language_as_site' value='1' ".checked(1, $yotpo_settings['yotpo_language_as_site'], true)."/></td>	                  
 	                 </tr>
 					 <tr valign='top'>
 		   		       <th scope='row'><div>Disable native reviews system:</div></th>
-		   		       <td><input type='checkbox' name='disable_native_review_system' value='1' $yotpo_disable_native_review_system_checkbox /></td>
+		   		       <td><input type='checkbox' name='disable_native_review_system' value='1' ".checked(1, $yotpo_settings['disable_native_review_system'], true)." /></td>
 		   		     </tr>	                 	                 
 	    	         <tr valign='top'>			
 				       <th scope='row'><div>Select widget location</div></th>
 				       <td>
 				         <select name='yotpo_widget_location' class='yotpo-widget-location'>
-				  	       <option value='footer' $widget_location_footer>Page footer</option>
-			 		       <option value='tab' $widget_location_tab>Tab</option>
-			 	           <option value='other' $widget_location_other>Other (click update to see instructions)</option>
+				  	       <option value='footer' ".selected('footer',$yotpo_settings['widget_location'],true).">Page footer</option>
+			 		       <option value='tab' ".selected('tab',$yotpo_settings['widget_location'],true).">Tab</option>
+			 	           <option value='other' ".selected('other',$yotpo_settings['widget_location'],true).">Other (click update to see instructions)</option>
 				         </select>
 		   		       </td>
 		   		     </tr>
 		   		     <tr valign='top' class='yotpo-widget-location-other-explain'>
-                 		<th scope='row'><p class='description'>In order to locate the widget in a custome location open 'wp-content/plugins/woocommerce/templates/content-single-product.php' and add the following line <code>wc_yotpo_show_widget();</code> in the desired location.</p></th>	                 																	
+                 		<th scope='row'><p class='description'>In order to locate the widget in a custome location open 'wp-content/plugins/woocommerce/templates/content-single-product.php' and add the following line <code>wc_yotpo_show_widget();</code> in the requested location.</p></th>	                 																	
 	                 </tr>
 		   		     <tr valign='top' class='yotpo-widget-tab-name'>
 		   		       <th scope='row'><div>Select tab name:</div></th>
@@ -145,17 +134,17 @@ function wc_display_yotpo_settings() {
 		   		     </tr>				 	 
 					 <tr valign='top'>
 		   		       <th scope='row'><div>Enable bottom line in product page:</div></th>
-		   		       <td><input type='checkbox' name='yotpo_bottom_line_enabled_product' value='1' $bottom_line_enabled_product_checkbox /></td>
+		   		       <td><input type='checkbox' name='yotpo_bottom_line_enabled_product' value='1' ".checked(1, $yotpo_settings['bottom_line_enabled_product'], true)." /></td>
 		   		     </tr>					  	 
 					 <tr valign='top'>
 		   		       <th scope='row'><div>Enable bottom line in category page:</div></th>
-		   		       <td><input type='checkbox' name='yotpo_bottom_line_enabled_category' value='1' $bottom_line_enabled_category_checkbox />		   		       
+		   		       <td><input type='checkbox' name='yotpo_bottom_line_enabled_category' value='1' ".checked(1, $yotpo_settings['bottom_line_enabled_category'], true)." />		   		       
 		   		       </td>
 		   		     </tr>					 	 
 		           </fieldset>
 		         </table></br>			  		
 		         <div class='buttons-container'>
-		        <input type='submit' name='yotpo_export_reviews' value='Export Reviews' class='button-secondary' $submit_past_orders_button_disabled/>
+		        <input type='submit' name='yotpo_export_reviews' value='Export Reviews' class='button-secondary' ".disabled(true,empty($app_key) || empty($secret),true)."/>
 				<input type='submit' name='yotpo_settings' value='Update' class='button-primary' id='save_yotpo_settings'/>$submit_past_orders_button
 			</div>
 		  </form>
@@ -179,7 +168,7 @@ function wc_proccess_yotpo_settings() {
 	update_option( 'yotpo_settings', $new_settings );
 }
 
-function wc_display_yotpo_register() {	
+function wc_display_yotpo_register() {		
 	$email = isset($_POST['yotpo_user_email']) ? $_POST['yotpo_user_email'] : '';
 	$user_name = isset($_POST['yotpo_user_name']) ? $_POST['yotpo_user_name'] : '';
 	$register_html = 
@@ -217,7 +206,7 @@ function wc_display_yotpo_register() {
 		<form method='post'>
 		  <div>Already registered to Yotpo?<input type='submit' name='log_in_button' value='click here' class='button-secondary not-user-btn' /></div>
 		</form></br><p class='description'>*Learn <a href='#'>how to export your existing reviews</a> into Yotpo.</p></br></br>
-		<div class='yotpo-terms'>By registering I accept the <a href='https://www.yotpo.com/terms-of-service' target='_blank'>Terms of Use.</a></div>
+		<div class='yotpo-terms'>By registering I accept the <a href='https://www.yotpo.com/terms-of-service' target='_blank'>Terms of Use</a> and recognize that a 'Powered by Yotpo' link will appear on the bottom of my Yotpo widget.</div>
   </div>";
   echo $register_html;		 
 }
