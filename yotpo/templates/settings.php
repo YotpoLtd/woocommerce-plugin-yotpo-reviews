@@ -80,7 +80,7 @@ function wc_display_yotpo_settings() {
 	$cradentials_location_explanation = isset($_POST['log_in_button']) 	? "<tr valign='top'>  	
 		             														<th scope='row'><p class='description'>To get your api key and secret token <a href='https://www.yotpo.com/?login=true' target='_blank'>log in here</a> and go to your account settings.</p></th>
 	                 		                  							   </tr>" : '';		
-	$submit_past_orders_button = $yotpo_settings['show_submit_past_orders'] ? "<input type='submit' name='yotpo_past_orders' value='Submit past orders' class='button-secondary past-orders-btn' ".disabled(true,empty($app_key) || empty($secret),true)."></br></br><p class='description'>*Learn <a href='#'>how to export your existing reviews</a> into Yotpo.</p>" : '';
+	$submit_past_orders_button = $yotpo_settings['show_submit_past_orders'] ? "<input type='submit' name='yotpo_past_orders' value='Submit past orders' class='button-secondary past-orders-btn' ".disabled(true,empty($app_key) || empty($secret), false)."></br></br><p class='description'>*Learn <a href='#'>how to export your existing reviews</a> into Yotpo.</p>" : '';
 	
 	$settings_html =  
 		"<div class='wrap'>"			
@@ -97,19 +97,19 @@ function wc_display_yotpo_settings() {
 	                 </tr>
 			  	     <tr valign='top'>  	
 		             	<th scope='row'><div>For multipule-language sites, mark this check box. This will choose the language according to the user's site language.</div></th>
-	                 	<td><input type='checkbox' name='yotpo_language_as_site' value='1' ".checked(1, $yotpo_settings['yotpo_language_as_site'], true)."/></td>	                  
+	                 	<td><input type='checkbox' name='yotpo_language_as_site' value='1' ".checked(1, $yotpo_settings['yotpo_language_as_site'], false)."/></td>	                  
 	                 </tr>
 					 <tr valign='top'>
 		   		       <th scope='row'><div>Disable native reviews system:</div></th>
-		   		       <td><input type='checkbox' name='disable_native_review_system' value='1' ".checked(1, $yotpo_settings['disable_native_review_system'], true)." /></td>
+		   		       <td><input type='checkbox' name='disable_native_review_system' value='1' ".checked(1, $yotpo_settings['disable_native_review_system'], false)." /></td>
 		   		     </tr>	                 	                 
 	    	         <tr valign='top'>			
 				       <th scope='row'><div>Select widget location</div></th>
 				       <td>
 				         <select name='yotpo_widget_location' class='yotpo-widget-location'>
-				  	       <option value='footer' ".selected('footer',$yotpo_settings['widget_location'],true).">Page footer</option>
-			 		       <option value='tab' ".selected('tab',$yotpo_settings['widget_location'],true).">Tab</option>
-			 	           <option value='other' ".selected('other',$yotpo_settings['widget_location'],true).">Other (click update to see instructions)</option>
+				  	       <option value='footer' ".selected('footer',$yotpo_settings['widget_location'], false).">Page footer</option>
+			 		       <option value='tab' ".selected('tab',$yotpo_settings['widget_location'], false).">Tab</option>
+			 	           <option value='other' ".selected('other',$yotpo_settings['widget_location'], false).">Other (click update to see instructions)</option>
 				         </select>
 		   		       </td>
 		   		     </tr>
@@ -134,17 +134,17 @@ function wc_display_yotpo_settings() {
 		   		     </tr>				 	 
 					 <tr valign='top'>
 		   		       <th scope='row'><div>Enable bottom line in product page:</div></th>
-		   		       <td><input type='checkbox' name='yotpo_bottom_line_enabled_product' value='1' ".checked(1, $yotpo_settings['bottom_line_enabled_product'], true)." /></td>
+		   		       <td><input type='checkbox' name='yotpo_bottom_line_enabled_product' value='1' ".checked(1, $yotpo_settings['bottom_line_enabled_product'], false)." /></td>
 		   		     </tr>					  	 
 					 <tr valign='top'>
 		   		       <th scope='row'><div>Enable bottom line in category page:</div></th>
-		   		       <td><input type='checkbox' name='yotpo_bottom_line_enabled_category' value='1' ".checked(1, $yotpo_settings['bottom_line_enabled_category'], true)." />		   		       
+		   		       <td><input type='checkbox' name='yotpo_bottom_line_enabled_category' value='1' ".checked(1, $yotpo_settings['bottom_line_enabled_category'], false)." />		   		       
 		   		       </td>
 		   		     </tr>					 	 
 		           </fieldset>
 		         </table></br>			  		
 		         <div class='buttons-container'>
-		        <input type='submit' name='yotpo_export_reviews' value='Export Reviews' class='button-secondary' ".disabled(true,empty($app_key) || empty($secret),true)."/>
+		        <input type='submit' name='yotpo_export_reviews' value='Export Reviews' class='button-secondary' ".disabled(true,empty($app_key) || empty($secret), false)."/>
 				<input type='submit' name='yotpo_settings' value='Update' class='button-primary' id='save_yotpo_settings'/>$submit_past_orders_button
 			</div>
 		  </form>
