@@ -80,7 +80,7 @@ function wc_display_yotpo_settings() {
 	$cradentials_location_explanation = isset($_POST['log_in_button']) 	? "<tr valign='top'>  	
 		             														<th scope='row'><p class='description'>To get your api key and secret token <a href='https://www.yotpo.com/?login=true' target='_blank'>log in here</a> and go to your account settings.</p></th>
 	                 		                  							   </tr>" : '';		
-	$submit_past_orders_button = $yotpo_settings['show_submit_past_orders'] ? "<input type='submit' name='yotpo_past_orders' value='Submit past orders' class='button-secondary past-orders-btn' ".disabled(true,empty($app_key) || empty($secret), false)."></br></br><p class='description'>*Learn <a href='#'>how to export your existing reviews</a> into Yotpo.</p>" : '';
+	$submit_past_orders_button = $yotpo_settings['show_submit_past_orders'] ? "<input type='submit' name='yotpo_past_orders' value='Submit past orders' class='button-secondary past-orders-btn' ".disabled(true,empty($app_key) || empty($secret), false)."></br></br><p class='description'>*Learn <a href='http://support.yotpo.com/entries/24454261-Exporting-reviews-for-Woocommerce' target='_blank'>how to export your existing reviews</a> into Yotpo.</p>" : '';
 	
 	$settings_html =  
 		"<div class='wrap'>"			
@@ -123,14 +123,14 @@ function wc_display_yotpo_settings() {
 		   		     $cradentials_location_explanation
 					 <tr valign='top'>
 		   		       <th scope='row'><div>App key:</div></th>
-		   		       <td><div class='y-input'><input id='app_key' type='text' name='yotpo_app_key' value='$app_key' $read_only title=I am a tooltip!'/></div></td>
+		   		       <td><div class='y-input'><input id='app_key' type='text' name='yotpo_app_key' value='$app_key' $read_only '/></div></td>
 		   		     </tr>
 					 <tr valign='top'>
 		   		       <th scope='row'><div>Secret token:</div></th>
-		   		       <td><div class='y-input'><input id='secret' type='text'  name='yotpo_oauth_token' value='$secret' $read_only title=I am a tooltip!'/></div></td>
+		   		       <td><div class='y-input'><input id='secret' type='text'  name='yotpo_oauth_token' value='$secret' $read_only '/></div></td>
 		   		     </tr>	
 		   		     <tr valign='top'>
-		   		       <th scope='row'><p class='description'>Yotpo's Bottom Line shows the star rating of the product and the number of reviews for the product. <a href='http://support.yotpo.com/' target='_blank'>learn more.</a></p></th>		   		       
+		   		       <th scope='row'><p class='description'>Yotpo's Bottom Line shows the star rating of the product and the number of reviews for the product. <a href='http://support.yotpo.com/entries/24467793-What-is-the-Yotpo-Bottomline-' target='_blank'>learn more.</a></p></th>		   		       
 		   		     </tr>				 	 
 					 <tr valign='top'>
 		   		       <th scope='row'><div>Enable bottom line in product page:</div></th>
@@ -205,7 +205,7 @@ function wc_display_yotpo_register() {
 		</form>
 		<form method='post'>
 		  <div>Already registered to Yotpo?<input type='submit' name='log_in_button' value='click here' class='button-secondary not-user-btn' /></div>
-		</form></br><p class='description'>*Learn <a href='#'>how to export your existing reviews</a> into Yotpo.</p></br></br>
+		</form></br><p class='description'>*Learn <a href='http://support.yotpo.com/entries/24454261-Exporting-reviews-for-Woocommerce'>how to export your existing reviews</a> into Yotpo.</p></br></br>
 		<div class='yotpo-terms'>By registering I accept the <a href='https://www.yotpo.com/terms-of-service' target='_blank'>Terms of Use</a> and recognize that a 'Powered by Yotpo' link will appear on the bottom of my Yotpo widget.</div>
   </div>";
   echo $register_html;		 
