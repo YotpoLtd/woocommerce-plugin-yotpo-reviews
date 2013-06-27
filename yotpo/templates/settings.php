@@ -125,7 +125,7 @@ function wc_display_yotpo_settings() {
 		   		       </td>
 		   		     </tr>
 		   		     <tr valign='top' class='yotpo-widget-location-other-explain'>
-                 		<th scope='row'><p class='description'>In order to locate the widget in a custome location open 'wp-content/plugins/woocommerce/templates/content-single-product.php' and add the following line <code>wc_yotpo_show_widget();</code> in the requested location.</p></th>	                 																	
+                 		<th scope='row'><p class='description'>In order to locate the widget in a custome location open 'wp-content/plugins/woocommerce/templates/content-single-product.php' and add the following line <code>wc_yotpo_show_widget();</code> in the desired location.</p></th>	                 																	
 	                 </tr>
 		   		     <tr valign='top' class='yotpo-widget-tab-name'>
 		   		       <th scope='row'><div>Select tab name:</div></th>
