@@ -40,3 +40,12 @@ Alon
 ----
 Alon
 1) Small changes in reviews export.
+
+2013-06-27
+----
+Alon
+1) Disable export review button and submit past orders in case there is no app key or secret.
+2) add explanation to what is bottomline in settings page.
+3) add terms of use link in registration page.
+4) Add export order explanation link to register and settings page.
+5) small tweaks to settings page.

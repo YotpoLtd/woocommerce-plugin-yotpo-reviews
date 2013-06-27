@@ -66,7 +66,6 @@ function wc_display_yotpo_settings() {
 	$widget_location = $yotpo_settings['widget_location'];
 	$language_code = $yotpo_settings['language_code'];
 	$widget_tab_name = $yotpo_settings['widget_tab_name'];
-	$show_submit_past_orders = $yotpo_settings['show_submit_past_orders']; 
 	
 	$yotpo_language_as_site_checkbox = $yotpo_settings['yotpo_language_as_site'] ? "checked='checked'" : '';	
 	$bottom_line_enabled_product_checkbox = $yotpo_settings['bottom_line_enabled_product'] ? "checked='checked'" : '';
@@ -79,18 +78,26 @@ function wc_display_yotpo_settings() {
 	if(empty($yotpo_settings['app_key'])) {
 		wc_yotpo_display_message('Set your API key in order the Yotpo plugin to work correctly', false);			
 	}
+	$google_tracking_params = '&utm_source=yotpo_plugin_woocommerce&utm_medium=header_link&utm_campaign=woocommerce_customize_link';
 	if (!empty($yotpo_settings['app_key']) && !empty($yotpo_settings['secret'])) {
-		$dashboard_link = '<a href="https://api.yotpo.com/users/b2blogin?app_key='.$yotpo_settings['app_key'].'&secret='.$yotpo_settings['secret'].'" target="_blank">Yotpo Dashboard.</a></div>';
+		$dashboard_link = '<a href="https://api.yotpo.com/users/b2blogin?app_key='.$yotpo_settings['app_key'].'&secret='.$yotpo_settings['secret'].$google_tracking_params.'" target="_blank">Yotpo Dashboard.</a></div>';
 	}
 	else {
-		$dashboard_link = '<a href="https://www.yotpo.com/?login=true" target="_blank">Yotpo Dashboard.</a></div>';
-	}
+		$dashboard_link = "<a href='https://www.yotpo.com/?login=true$google_tracking_params' target='_blank'>Yotpo Dashboard.</a></div>";
+	}	
+	$read_only = isset($_POST['log_in_button']) ? '' : 'readonly';
+	$cradentials_location_explanation = isset($_POST['log_in_button']) 	? "<tr valign='top'>  	
+		             														<th scope='row'><p class='description'>To get your api key and secret token <a href='https://www.yotpo.com/?login=true' target='_blank'>log in here</a> and go to your account settings.</p></th>
+	                 		                  							   </tr>" : '';		
+	$submit_past_orders_button_disabled = empty($app_key) || empty($secret) ? 'disabled' :'';
+	$submit_past_orders_button = $yotpo_settings['show_submit_past_orders'] ? "<input type='submit' name='yotpo_past_orders' value='Submit past orders' class='button-secondary past-orders-btn' $submit_past_orders_button_disabled></br></br><p class='description'>*Learn <a href='#'>how to export your existing reviews</a> into Yotpo.</p>" : '';
+	
 	$settings_html =  
 		"<div class='wrap'>"			
 		   .screen_icon( ).
-		   "<h2>Yotpo Settings</h2>			
-			  <form  method='post'>
+		   "<h2>Yotpo Settings</h2>						  
 			  <h4>To customize the look and feel of the widget, and to edit your Mail After Purchase settings, just head to the ".$dashboard_link."</h4>
+			  <form  method='post' id='yotpo_settings_form'>
 			  	<table class='form-table'>".
 			  		wp_nonce_field('yotpo_settings_form').
 			  	  "<fieldset>
@@ -99,7 +106,7 @@ function wc_display_yotpo_settings() {
 	                 	<td><div><input type='text' class='yotpo_language_code_text' name='yotpo_widget_language_code' maxlength='2' value='$language_code'/></div></td>
 	                 </tr>
 			  	     <tr valign='top'>  	
-		             	<th scope='row'><div>For multipule-language sites, mark this check box. This will choose the language according to the user's site language</div></th>
+		             	<th scope='row'><div>For multipule-language sites, mark this check box. This will choose the language according to the user's site language.</div></th>
 	                 	<td><input type='checkbox' name='yotpo_language_as_site' value='1' $yotpo_language_as_site_checkbox /></td>	                  
 	                 </tr>
 					 <tr valign='top'>
@@ -116,17 +123,24 @@ function wc_display_yotpo_settings() {
 				         </select>
 		   		       </td>
 		   		     </tr>
-		   		     <tr valign='top'>
+		   		     <tr valign='top' class='yotpo-widget-location-other-explain'>
+                 		<th scope='row'><p class='description'>In order to locate the widget in a custome location open 'wp-content/plugins/woocommerce/templates/content-single-product.php' and add the following line <code>wc_yotpo_show_widget();</code> in the requested location.</p></th>	                 																	
+	                 </tr>
+		   		     <tr valign='top' class='yotpo-widget-tab-name'>
 		   		       <th scope='row'><div>Select tab name:</div></th>
-		   		       <td><div class='y-input'><input type='text' name='yotpo_widget_tab_name' value='$widget_tab_name' /></div></td>
+		   		       <td><div><input type='text' name='yotpo_widget_tab_name' value='$widget_tab_name' /></div></td>
 		   		     </tr>
+		   		     $cradentials_location_explanation
 					 <tr valign='top'>
 		   		       <th scope='row'><div>App key:</div></th>
-		   		       <td><div class='y-input'><input type='text' name='yotpo_app_key' value='$app_key'/></div></td>
+		   		       <td><div class='y-input'><input id='app_key' type='text' name='yotpo_app_key' value='$app_key' $read_only title=I am a tooltip!'/></div></td>
 		   		     </tr>
 					 <tr valign='top'>
 		   		       <th scope='row'><div>Secret token:</div></th>
-		   		       <td><div class='y-input'><input type='text'  name='yotpo_oauth_token' value='$secret'/></div></td>
+		   		       <td><div class='y-input'><input id='secret' type='text'  name='yotpo_oauth_token' value='$secret' $read_only title=I am a tooltip!'/></div></td>
+		   		     </tr>	
+		   		     <tr valign='top'>
+		   		       <th scope='row'><p class='description'>Yotpo's Bottom Line shows the star rating of the product and the number of reviews for the product. <a href='http://support.yotpo.com/' target='_blank'>learn more.</a></p></th>		   		       
 		   		     </tr>				 	 
 					 <tr valign='top'>
 		   		       <th scope='row'><div>Enable bottom line in product page:</div></th>
@@ -134,17 +148,14 @@ function wc_display_yotpo_settings() {
 		   		     </tr>					  	 
 					 <tr valign='top'>
 		   		       <th scope='row'><div>Enable bottom line in category page:</div></th>
-		   		       <td><input type='checkbox' name='yotpo_bottom_line_enabled_category' value='1' $bottom_line_enabled_category_checkbox /></td>
+		   		       <td><input type='checkbox' name='yotpo_bottom_line_enabled_category' value='1' $bottom_line_enabled_category_checkbox />		   		       
+		   		       </td>
 		   		     </tr>					 	 
 		           </fieldset>
 		         </table></br>			  		
 		         <div class='buttons-container'>
-		        <input type='submit' name='yotpo_export_reviews' value='Export Reviews' class='button-secondary'/>
-				<input type='submit' name='yotpo_settings' value='Update' class='button-primary' id='save_yotpo_settings'/>";
-				if($show_submit_past_orders) {
-					$settings_html .="<input type='submit' name='yotpo_past_orders' value='Submit past orders' class='button-secondary past-orders-btn'>";
-				}
-			$settings_html .="
+		        <input type='submit' name='yotpo_export_reviews' value='Export Reviews' class='button-secondary' $submit_past_orders_button_disabled/>
+				<input type='submit' name='yotpo_settings' value='Update' class='button-primary' id='save_yotpo_settings'/>$submit_past_orders_button
 			</div>
 		  </form>
 		</div>";		
@@ -174,14 +185,11 @@ function wc_display_yotpo_register() {
 	"<div class='wrap'>"			
 		   .screen_icon().
 		   "<h2>Yotpo Registration</h2>
-	  <div class='y-wrapper'>
-	  <div class='y-white-box'>
 		<form method='post'>
 		<table class='form-table'>"
 		   .wp_nonce_field('yotpo_registration_form').		   
-		  "<h2><i></i>Create your Yotpo account</h2>
-			<fieldset>
-			  <h2>Generate more reviews, more engagement, and more sales.</h2>    
+		  "<fieldset>
+			  <h2 class='y-register-title'>Fill out the form below and click register to get started with Yotpo.</h2></br></br>    
 			  <tr valign='top'>
 			    <th scope='row'><div>Email address:</div></th>			 			  
 			    <td><div><input type='text' name='yotpo_user_email' value='$email' /></div></td>
@@ -206,10 +214,9 @@ function wc_display_yotpo_register() {
 			<table/>
 		</form>
 		<form method='post'>
-		  <div>Already using Yotpo?<input type='submit' name='log_in_button' value='click here' class='button-secondary not-user-btn' /></div>
-		</form>
-	 </div>
-  </div>
+		  <div>Already registered to Yotpo?<input type='submit' name='log_in_button' value='click here' class='button-secondary not-user-btn' /></div>
+		</form></br><p class='description'>*Learn <a href='#'>how to export your existing reviews</a> into Yotpo.</p></br></br>
+		<div class='yotpo-terms'>By registering I accept the <a href='https://www.yotpo.com/terms-of-service' target='_blank'>Terms of Use.</a></div>
   </div>";
   echo $register_html;		 
 }

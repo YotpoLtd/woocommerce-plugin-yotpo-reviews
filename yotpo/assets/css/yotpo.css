@@ -7,7 +7,7 @@
 }
 
 .button-primary.submit-btn {
-	margin-left:102px;
+	margin-left:92px;
 }
 .button-secondary.not-user-btn {
 	margin-left: 12px;
@@ -25,7 +25,15 @@
 }
 
 .yotpo-widget-location {
-	width: 170px;
+	width: 158px;
 }
-
-
+.y-register-title {
+	font-size: 22px;
+}
+.yotpo-terms{
+	color: rgb(138, 138, 138);
+	font-size: 11.8px;
+}
+#wpfooter{
+	display: none;
+}

@@ -4,8 +4,9 @@
 	Description: The #1 reviews add-on for SMBs. Generate beautiful, trusted reviews for your shop.
 	Author: Yotpo
 	Version: 1.0
-	Author URI: http://www.yotpo.com	
+	Author URI: http://www.yotpo.com?utm_source=yotpo_plugin_woocommerce&utm_medium=plugin_page_link&utm_campaign=woocommerce_plugin_page_link	
 	Text Domain: health-check
+	Plugin URI: http://www.yotpo.com?utm_source=yotpo_plugin_woocommerce&utm_medium=plugin_page_link&utm_campaign=woocommerce_plugin_page_link
 	Domain Path: /lang
  */
 register_activation_hook(   __FILE__, 'wc_yotpo_activation' );
@@ -119,8 +120,8 @@ function wc_yotpo_show_widget_in_tab($tabs) {
 }
 
 function wc_yotpo_load_js(){
-	if(wc_yotpo_is_who_commerce_installed() && !is_admin()) {	
-    	wp_enqueue_script( 'yquery', 'https://www.yotpo.com/js/yQuery.js',null,null);
+	if(wc_yotpo_is_who_commerce_installed()) {		
+    	wp_enqueue_script( 'yquery', 'https://www.yotpo.com/js/yQuery.js',null,null);    	
 	}
 }
 
@@ -350,7 +351,8 @@ function wc_yotpo_get_degault_settings() {
 }
 
 function wc_yotpo_admin_styles($hook) {
-	if($hook == 'toplevel_page_yotpo-settings-page') {
+	if($hook == 'toplevel_page_yotpo-settings-page') {		
+		wp_enqueue_script( 'yotpoSettingsJs', plugins_url('assets/js/settings.js', __FILE__), array('jquery-effects-core'));		
 		wp_enqueue_style( 'yotpoSettingsStylesheet', plugins_url('assets/css/yotpo.css', __FILE__));
 	}
 	wp_enqueue_style('yotpoSideLogoStylesheet', plugins_url('assets/css/side-menu-logo.css', __FILE__));
