@@ -80,7 +80,7 @@ function wc_display_yotpo_settings() {
 	$cradentials_location_explanation = isset($_POST['log_in_button']) 	? "<tr valign='top'>  	
 		             														<th scope='row'><p class='description'>To get your api key and secret token <a href='https://www.yotpo.com/?login=true' target='_blank'>log in here</a> and go to your account settings.</p></th>
 	                 		                  							   </tr>" : '';		
-	$submit_past_orders_button = $yotpo_settings['show_submit_past_orders'] ? "<input type='submit' name='yotpo_past_orders' value='Submit past orders' class='button-secondary past-orders-btn' ".disabled(true,empty($app_key) || empty($secret), false)."></br></br><p class='description'>*Learn <a href='http://support.yotpo.com/entries/24454261-Exporting-reviews-for-Woocommerce' target='_blank'>how to export your existing reviews</a> into Yotpo.</p>" : '';
+	$submit_past_orders_button = $yotpo_settings['show_submit_past_orders'] ? "<input type='submit' name='yotpo_past_orders' value='Submit past orders' class='button-secondary past-orders-btn' ".disabled(true,empty($app_key) || empty($secret), false).">" : '';
 	
 	$settings_html =  
 		"<div class='wrap'>"			
@@ -146,6 +146,7 @@ function wc_display_yotpo_settings() {
 		         <div class='buttons-container'>
 		        <input type='submit' name='yotpo_export_reviews' value='Export Reviews' class='button-secondary' ".disabled(true,empty($app_key) || empty($secret), false)."/>
 				<input type='submit' name='yotpo_settings' value='Update' class='button-primary' id='save_yotpo_settings'/>$submit_past_orders_button
+			  </br></br><p class='description'>*Learn <a href='http://support.yotpo.com/entries/24454261-Exporting-reviews-for-Woocommerce' target='_blank'>how to export your existing reviews</a> into Yotpo.</p>
 			</div>
 		  </form>
 		</div>";		

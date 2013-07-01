@@ -75,3 +75,8 @@ Alon
 ----
 Alon
 1) Add links , change bug in css.
+
+2013-07-01
+----
+Alon
+1) Fix bug: when sending past orders, then the export review eplain link disappeard.
