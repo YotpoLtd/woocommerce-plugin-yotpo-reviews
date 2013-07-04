@@ -86,6 +86,6 @@ Yes. To connect your social accounts to Yotpo, just log into yotpo.com, and clic
 
 == Changelog ==
 
-= 1.0 - 04/07/2013 =
+= 1.0.2 - 04/07/2013 =
 * Initial Release. 
 

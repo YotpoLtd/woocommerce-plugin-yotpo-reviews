@@ -3,7 +3,7 @@
 	Plugin Name: WooCommerce Yotpo Social Reviews
 	Description: The #1 reviews add-on for SMBs. Generate beautiful, trusted reviews for your shop.
 	Author: Yotpo
-	Version: 1.0.1
+	Version: 1.0.2
 	Author URI: http://www.yotpo.com?utm_source=yotpo_plugin_woocommerce&utm_medium=plugin_page_link&utm_campaign=woocommerce_plugin_page_link	
 	Text Domain: health-check
 	Plugin URI: http://www.yotpo.com?utm_source=yotpo_plugin_woocommerce&utm_medium=plugin_page_link&utm_campaign=woocommerce_plugin_page_link
