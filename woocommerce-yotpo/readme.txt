@@ -1,6 +1,5 @@
 === Yotpo Social Reviews for Woocommerce ===
 Contributors: Yotpo
-Donate link: http://example.com/
 Tags: reviews, social reviews, woocommerce, woocommerce reviews, woocommerce product reviews, woocommerce extensions, woocommerce plugins, woocommerce addons, woocommerce add-ons, yotpo, yotpo reviews, yotpo social reviews
 Requires at least: 3.5.1
 Tested up to: 3.5.2
@@ -22,9 +21,10 @@ Generate tons of product reviews for your Woocommerce site with Yotpo Social Rev
 * Create a minisite to increase your SEO with User Generated Content
 * Allow users to share their reviews on their social networks
 * Import pre-existing reviews
-* Fully customize your widget’s look and feel.
-* Connect your business’s social pages to Yotpo, to automatically notify your followers of new reviews.
-* It’s free!
+* Fully customize your widget's look and feel.
+* Connect your business's social pages to Yotpo, to automatically notify your followers of new reviews.
+* It's free!
+
 
 = Demos =
 
@@ -38,6 +38,11 @@ http://www.youtube.com/watch?v=5yo6NVRm6mw
 
 
 == Installation ==
+
+= Minimum Requirements =
+
+* WordPress 3.5.1 or greater
+* PHP version 5.3.0 or greater
 
 1. Install Yotpo Social Reviews either via the WordPress.org plugin directory, or by uploading the files to your server
 2. After activating Yotpo Social Reviews, click on the Yotpo link in the left hand side bar of your Wordpress admin.
