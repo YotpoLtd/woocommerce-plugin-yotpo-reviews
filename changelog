@@ -90,3 +90,8 @@ Alon
 ----
 Alon
 1) Change plugin to work with the new yotpo-php lib, This version will support PHP 5.2.0 
+
+2013-07-21
+----
+Alon
+1) Check that php 5.2.0 and above and curl are installed on server, in case not the settings page will display proper message and yotpo will be disabled on store front end.

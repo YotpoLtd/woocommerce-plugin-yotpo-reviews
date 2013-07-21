@@ -4,58 +4,68 @@ function wc_display_yotpo_admin_page() {
 	if ( function_exists('current_user_can') && !current_user_can('manage_options') ) {
 		die(__(''));
 	}
-	if (isset($_POST['log_in_button']) ) {
-		wc_display_yotpo_settings();
-	}
-	elseif (isset($_POST['yotpo_settings'])) {
-		check_admin_referer( 'yotpo_settings_form' );
-		wc_proccess_yotpo_settings();
-		wc_display_yotpo_settings();
-	}
-	elseif (isset($_POST['yotpo_register'])) {
-		check_admin_referer( 'yotpo_registration_form' );
-		$success = wc_proccess_yotpo_register();
-		if($success) {			
+	if(wc_yotpo_compatible()) {			
+		if (isset($_POST['log_in_button']) ) {
 			wc_display_yotpo_settings();
 		}
-		else {
-			wc_display_yotpo_register();	
+		elseif (isset($_POST['yotpo_settings'])) {
+			check_admin_referer( 'yotpo_settings_form' );
+			wc_proccess_yotpo_settings();
+			wc_display_yotpo_settings();
 		}
-		
-	}
-	elseif (isset($_POST['yotpo_past_orders'])) {
-		wc_yotpo_send_past_orders();	
-		wc_display_yotpo_settings();
-	}	
-	elseif (isset($_POST['yotpo_export_reviews'])) {
-		$yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
-		if(!empty($yotpo_settings['app_key'])) {					
-			include(dirname(plugin_dir_path( __FILE__ )) . '/classes/class-wc-yotpo-export-reviews.php');
-			$export = new Yotpo_Review_Export();
-			list($file, $errors) = $export->exportReviews();
-			if(is_null($errors)) {
-				$errors = $export->downloadReviewToBrowser($file);
-				if(!is_null($errors)) {
+		elseif (isset($_POST['yotpo_register'])) {
+			check_admin_referer( 'yotpo_registration_form' );
+			$success = wc_proccess_yotpo_register();
+			if($success) {			
+				wc_display_yotpo_settings();
+			}
+			else {
+				wc_display_yotpo_register();	
+			}
+			
+		}
+		elseif (isset($_POST['yotpo_past_orders'])) {
+			wc_yotpo_send_past_orders();	
+			wc_display_yotpo_settings();
+		}	
+		elseif (isset($_POST['yotpo_export_reviews'])) {
+			$yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
+			if(!empty($yotpo_settings['app_key'])) {					
+				include(dirname(plugin_dir_path( __FILE__ )) . '/classes/class-wc-yotpo-export-reviews.php');
+				$export = new Yotpo_Review_Export();
+				list($file, $errors) = $export->exportReviews();
+				if(is_null($errors)) {
+					$errors = $export->downloadReviewToBrowser($file);
+					if(!is_null($errors)) {
+						wc_yotpo_display_message($errors);
+					}	
+				}
+				else {
 					wc_yotpo_display_message($errors);
 				}	
 			}
 			else {
-				wc_yotpo_display_message($errors);
+				wc_yotpo_display_message('Please set up your API key before exporting reviews.');	
 			}	
+			wc_display_yotpo_settings();		
 		}
 		else {
-			wc_yotpo_display_message('Please set up your API key before exporting reviews.');	
-		}	
-		wc_display_yotpo_settings();		
+			$yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
+			if(empty($yotpo_settings['app_key']) && empty($yotpo_settings['secret'])) {			
+				wc_display_yotpo_register();
+			}
+			else {
+				wc_display_yotpo_settings();
+			}
+		}
 	}
 	else {
-		$yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
-		if(empty($yotpo_settings['app_key']) && empty($yotpo_settings['secret'])) {			
-			wc_display_yotpo_register();
-		}
-		else {
-			wc_display_yotpo_settings();
-		}
+		if(version_compare(phpversion(), '5.2.0') < 0) {
+			echo '<h1>Yotpo plugin requires PHP 5.2.0 above.</h1><br>';	
+		}	
+		if(!function_exists('curl_init')) {
+			echo '<h1>Yotpo plugin requires cURL library.</h1><br>';
+		}			
 	}
 }
 
