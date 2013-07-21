@@ -227,7 +227,7 @@ function wc_proccess_yotpo_register() {
 		array_push($errors, 'Name is missing');
 	}		
 	if(count($errors) == 0) {		
-		$yotpo_api = new \Yotpo\Yotpo();
+		$yotpo_api = new Yotpo();
 		$shop_url = get_bloginfo('url');		    
         $user = array(
             'email' => $_POST['yotpo_user_email'],
@@ -241,41 +241,41 @@ function wc_proccess_yotpo_register() {
             'url' => $shop_url);
         try {        	        	
         	$response = $yotpo_api->create_user($user);        	
-        	if(isset($response->status) && isset($response->status->code)) {
-        		if($response->status->code == 200) {
-        			$app_key = $response->response->app_key;
-        			$secret = $response->response->secret;
+        	if(!empty($response['status']) && !empty($response['status']['code'])) {
+        		if($response['status']['code'] == 200) {
+        			$app_key = $response['response']['app_key'];
+        			$secret = $response['response']['secret'];
         			$yotpo_api->set_app_key($app_key);
         			$yotpo_api->set_secret($secret);
         			$shop_domain = parse_url($shop_url,PHP_URL_HOST);
         			$account_platform_response = $yotpo_api->create_account_platform(array( 'shop_domain' => wc_yotpo_get_shop_domain(),
-        																		   			'utoken' => $response->response->token,
+        																		   			'utoken' => $response['response']['token'],
         																					'platform_type_id' => 12));
-        			if(isset($response->status) && isset($response->status->code) && $response->status->code == 200) {
+        			if(!empty($response['status']) && !empty($response['status']['code']) && $response['status']['code'] == 200) {
         				$current_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
         				$current_settings['app_key'] = $app_key;
         				$current_settings['secret'] = $secret;
 						update_option('yotpo_settings', $current_settings);							
 						return true;			  						
         			}
-        			elseif($response->status->code >= 400){
-        				if(isset($response->status->message)) {
-        					wc_yotpo_display_message($response->status->message, true);
+        			elseif($response['status']['code'] >= 400){
+        				if(!empty($response['status']['message'])) {
+        					wc_yotpo_display_message($response['status']['message'], true);
         				}
         			}
         		}
-        		elseif($response->status->code >= 400){
-        			if(isset($response->status->message)) { 
-        				if(isset($response->status->message->email)) {
-        					if(is_array($response->status->message->email)) {
-        						wc_yotpo_display_message($response->status->message->email[0], false);
+        		elseif($response['status']['code'] >= 400){
+        			if(!empty($response['status']['message'])) { 
+        				if(!empty($response['status']['message']['email'])) {
+        					if(is_array($response['status']['message']['email'])) {
+        						wc_yotpo_display_message($response['status']['message']['email'][0], false);
         					}
         					else {
-        						wc_yotpo_display_message($response->status->message->email, false);
+        						wc_yotpo_display_message($response['status']['message']['email'], false);
         					}        					
         				}   
         				else {
-        					wc_yotpo_display_message($response->status->message, true);	
+        					wc_yotpo_display_message($response['status']['message'], true);	
         				}    				
         					        						
         			}

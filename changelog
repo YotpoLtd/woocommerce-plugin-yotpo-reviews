@@ -85,3 +85,8 @@ Alon
 ----
 Alon
 1) Add screen shoots, banner and readme file to plugin before uploading to wordpress. 
+
+2013-07-21
+----
+Alon
+1) Change plugin to work with the new yotpo-php lib, This version will support PHP 5.2.0 
