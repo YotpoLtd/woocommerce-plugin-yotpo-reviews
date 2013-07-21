@@ -95,3 +95,8 @@ Alon
 ----
 Alon
 1) Check that php 5.2.0 and above and curl are installed on server, in case not the settings page will display proper message and yotpo will be disabled on store front end.
+
+2013-07-21
+----
+Alon
+1) Add flag of install step done when new user is registered.

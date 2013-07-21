@@ -250,7 +250,7 @@ function wc_proccess_yotpo_register() {
             'callback_url' => $shop_url,
             'url' => $shop_url);
         try {        	        	
-        	$response = $yotpo_api->create_user($user);        	
+        	$response = $yotpo_api->create_user($user, true);        	
         	if(!empty($response['status']) && !empty($response['status']['code'])) {
         		if($response['status']['code'] == 200) {
         			$app_key = $response['response']['app_key'];

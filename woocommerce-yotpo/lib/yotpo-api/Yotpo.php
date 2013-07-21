@@ -9,7 +9,6 @@ class Yotpo {
 
     const VERSION = '0.0.4';
 	const TIMEOUT = 5;
-	
     protected static $app_key, $secret, $base_uri = 'https://api.yotpo.com';
     protected $request;
 
@@ -33,7 +32,7 @@ class Yotpo {
                 break;
             case 'POST':
             	curl_setopt($this->request, CURLOPT_POSTFIELDS, $vars);
-            	curl_setopt($this->request, CURLOPT_HTTPHEADER, array('Content-Type: application/json', 'Content-length: '.strlen($vars)));
+            	curl_setopt($this->request, CURLOPT_HTTPHEADER, array('Content-Type: application/json', 'Content-length: '.strlen($vars)));            	
                 curl_setopt($this->request, CURLOPT_POST, true);
                 break;
             default:
@@ -102,7 +101,7 @@ class Yotpo {
 		return json_decode($response, true);
     }
 
-    public function create_user(array $user_hash) {
+    public function create_user(array $user_hash, $install_step_done = false) {
         $user = array(
             'email' => $user_hash['email'],
             'display_name' => $user_hash['display_name'],
@@ -114,7 +113,8 @@ class Yotpo {
             'callback_url' => $user_hash['callback_url'],
             'url' => $user_hash['url']
         );
-        return $this->post('/users', array('user' => $user));
+        $data = $install_step_done ? array('install_step' => 'done', 'user' => $user) : array('user' => $user); 
+        return $this->post('/users', $data);
     }
 
     public function get_oauth_token(array $credentials_hash = array()) {
