@@ -116,22 +116,37 @@ class Yotpo_Review_Export
 		$all_reviews = array();
 		foreach ($results as $value) {
 			$product_instance = get_product($value->product_id);
-			$current_review = array();		
-			$current_review['review_title'] = $value->product_title;
-			$current_review['review_content'] = $value->review_content;
-			$current_review['display_name'] = $value->display_name;
+			$current_review = array();	
+			$review_content = $this->cleanContent($value->review_content);	
+			$current_review['review_title'] = $this->getFirstWords($review_content);
+			$current_review['review_content'] = $review_content;
+			$current_review['display_name'] = $this->cleanContent($value->display_name);
 			$current_review['user_email'] = $value->user_email;
 			$current_review['user_type'] = woocommerce_customer_bought_product($value->user_email, $value->user_id, $value->product_id) ? 'verified_buyer' : '';
 			$current_review['review_score'] = $value->review_score;
 			$current_review['date'] = $value->date;
 			$current_review['sku'] = $value->product_id;
-			$current_review['product_title'] = $value->product_title;
-			$current_review['product_description'] = strip_tags($product_instance->get_post_data()->post_excerpt);
+			$current_review['product_title'] = $this->cleanContent($value->product_title);
+			$current_review['product_description'] = $this->cleanContent($product_instance->get_post_data()->post_excerpt);
 			$current_review['product_url'] = get_permalink($value->product_id);
 			$current_review['product_image_url'] = wc_yotpo_get_product_image_url($value->product_id);
 			$all_reviews[] = $current_review;
 		}
 		return $all_reviews;
-    }        
+    }  
+
+    private function cleanContent($content) {
+    	return html_entity_decode(strip_tags(strip_shortcodes($content)));
+    }
+    
+    private function getFirstWords($content = '', $number_of_words = 5) {
+    	$words = str_word_count($content,1);
+    	if(count($words) > $number_of_words) {
+    		return join(" ",array_slice($words, 0, $number_of_words));
+    	}
+    	else {
+    		return join(" ",$words);
+    	}
+    }
 }
 ?>

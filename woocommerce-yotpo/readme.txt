@@ -42,7 +42,7 @@ http://www.youtube.com/watch?v=5yo6NVRm6mw
 = Minimum Requirements =
 
 * WordPress 3.5.1 or greater
-* PHP version 5.3.0 or greater
+* PHP version 5.2.0 or greater
 
 1. Install Yotpo Social Reviews either via the WordPress.org plugin directory, or by uploading the files to your server
 2. After activating Yotpo Social Reviews, click on the Yotpo link in the left hand side bar of your Wordpress admin.
@@ -92,5 +92,14 @@ Yes. To connect your social accounts to Yotpo, just log into yotpo.com, and clic
 == Changelog ==
 
 = 1.0.2 - 04/07/2013 =
-* Initial Release. 
+* Initial Release.
+= 1.0.3 - 16/07/2013 =
+* Changes in text.
+= 1.0.4 - 21/07/2013 =
+* Replace yotpo.phar file with Yotpo.php, and change minimum requirements from PHP 5.3.0 to PHP 5.2.0 and above .
+* Ensure that the minimum requirements are met.
+= 1.0.5 - 31/07/2013 =
+* Fix bug: remove short codes html tags and HTML entities from fields which contain data from users in the exported reviews.
+
+ 
 
