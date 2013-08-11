@@ -108,3 +108,10 @@ Alon
 2) Fix bug: remove short codes html tags and HTML entities from fields which contain data from users in the exported reviews.
 3) Fix bug: Replace <br> tags with new line, when exporting reveiews.
 4) Fix bug: Past orders issues.
+
+11-08-2013
+----
+Alon 
+1) Disable woocommerce ratings upon activation and restore value of woocommerce ratings when deactivating.
+2) Fix bug: in some situations we were disabling woocommerce review ratings.
+3) Send MAP even if review is disabled for product.

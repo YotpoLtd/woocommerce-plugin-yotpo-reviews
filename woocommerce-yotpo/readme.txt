@@ -103,6 +103,7 @@ Yes. To connect your social accounts to Yotpo, just log into yotpo.com, and clic
 * Fix bug: remove short codes html tags and HTML entities from fields which contain data from users in the exported reviews.
 * Fix bug: Replace <br> tags with new line, when exporting reveiews.
 * Fix bug: Past orders issues.
+* Disable woocommerce ratings upon activation and restore value of woocommerce ratings when deactivating.
 
 
  
