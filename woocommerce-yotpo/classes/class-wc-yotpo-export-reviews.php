@@ -136,6 +136,7 @@ class Yotpo_Review_Export
     }  
 
     private function cleanContent($content) {
+    	$content = preg_replace('/\<br(\s*)?\/?\>/i', "\n", $content);
     	return html_entity_decode(strip_tags(strip_shortcodes($content)));
     }
     

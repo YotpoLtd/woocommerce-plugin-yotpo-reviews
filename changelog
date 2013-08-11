@@ -100,3 +100,11 @@ Alon
 ----
 Alon
 1) Add flag of install step done when new user is registered.
+
+31-07-2013
+----
+Alon 
+1) Disable Mail after purchase and widget from products which are not checked with 'Enable reviews' checkbox.
+2) Fix bug: remove short codes html tags and HTML entities from fields which contain data from users in the exported reviews.
+3) Fix bug: Replace <br> tags with new line, when exporting reveiews.
+4) Fix bug: Past orders issues.

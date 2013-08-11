@@ -41,7 +41,7 @@ function wc_yotpo_redirect() {
 
 function wc_yotpo_admin_settings() {
 	add_action( 'admin_enqueue_scripts', 'wc_yotpo_admin_styles' );	
-	$page = add_menu_page( 'Yotpo', 'Yotpo', 'manage_options', 'woocommerce-yotpo-settings-page', 'wc_display_yotpo_admin_page', 'none', 81 );			
+	$page = add_menu_page( 'Yotpo', 'Yotpo', 'manage_options', 'woocommerce-yotpo-settings-page', 'wc_display_yotpo_admin_page', 'none', null );			
 }
 
 function wc_yotpo_front_end_init() {
@@ -94,19 +94,22 @@ function wc_yotpo_uninstall() {
 }
 
 function wc_yotpo_show_widget() {		 
-	$product_data = wc_yotpo_get_product_data();	
-	$yotpo_div = "<div class='yotpo reviews' 
- 				data-appkey='".$product_data['app_key']."'
-   				data-domain='".$product_data['shop_domain']."'
-   				data-product-id='".$product_data['id']."'
-   				data-product-models='".$product_data['product-models']."'
-   				data-name='".$product_data['title']."' 
-   				data-url='".$product_data['url']."' 
-   				data-image-url='".$product_data['image-url']."' 
-  				data-description='".$product_data['description']."' 
-  				data-bread-crumbs=''
-  				data-lang='".$product_data['lang']."'></div>";
-	echo $yotpo_div;						
+	$product = get_product();
+	if(comments_open($product->id)) {
+		$product_data = wc_yotpo_get_product_data($product);	
+		$yotpo_div = "<div class='yotpo reviews' 
+	 				data-appkey='".$product_data['app_key']."'
+	   				data-domain='".$product_data['shop_domain']."'
+	   				data-product-id='".$product_data['id']."'
+	   				data-product-models='".$product_data['product-models']."'
+	   				data-name='".$product_data['title']."' 
+	   				data-url='".$product_data['url']."' 
+	   				data-image-url='".$product_data['image-url']."' 
+	  				data-description='".$product_data['description']."' 
+	  				data-bread-crumbs=''
+	  				data-lang='".$product_data['lang']."'></div>";
+		echo $yotpo_div;
+	}						
 }
 
 function wc_yotpo_show_widget_in_tab($tabs) {
@@ -129,25 +132,27 @@ function wc_yotpo_is_who_commerce_installed() {
 	return in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_option('active_plugins')));
 }
 
-function wc_yotpo_show_botomline($summery) {	
-	$product_data = wc_yotpo_get_product_data();	
-	$yotpo_div = "</br><div class='yotpo bottomLine' 
-   				data-appkey='".$product_data['app_key']."'
-   				data-domain='".$product_data['shop_domain']."'
-   				data-product-id='".$product_data['id']."'
-   				data-product-models='".$product_data['product-models']."'
-   				data-name='".$product_data['title']."' 
-   				data-url='".$product_data['url']."' 
-   				data-image-url='".$product_data['image-url']."' 
-   				data-description='".$product_data['description']."' 
-   				data-bread-crumbs=''
-   				data-lang='".$product_data['lang']."'></div>";
-	echo $yotpo_div;				
+function wc_yotpo_show_botomline($summery) {
+	$product = get_product();
+	if(comments_open($product->id)) {
+		$product_data = wc_yotpo_get_product_data($product);	
+		$yotpo_div = "</br><div class='yotpo bottomLine' 
+	   				data-appkey='".$product_data['app_key']."'
+	   				data-domain='".$product_data['shop_domain']."'
+	   				data-product-id='".$product_data['id']."'
+	   				data-product-models='".$product_data['product-models']."'
+	   				data-name='".$product_data['title']."' 
+	   				data-url='".$product_data['url']."' 
+	   				data-image-url='".$product_data['image-url']."' 
+	   				data-description='".$product_data['description']."' 
+	   				data-bread-crumbs=''
+	   				data-lang='".$product_data['lang']."'></div>";
+		echo $yotpo_div;	
+	}	
+				
 }
 
-function wc_yotpo_get_product_data() {
-	
-	$product = get_product();
+function wc_yotpo_get_product_data($product) {	
 	$product_data = array();
 	$settings = get_option('yotpo_settings',wc_yotpo_get_degault_settings());
 	$product_data['app_key'] = $settings['app_key'];
@@ -215,11 +220,19 @@ function wc_yotpo_get_single_map_data($order_id) {
 		foreach ($order->get_items() as $product) 
 		{
 			$product_instance = get_product($product['product_id']);
-			$product_data = array();    
+			if(!comments_open($product['product_id'])) {
+				continue;
+			}
+ 
+			$description = '';
+			if (is_object($product_instance)) {
+				$description = strip_tags($product_instance->get_post_data()->post_excerpt);	
+			}
+			$product_data = array();   
 			$product_data['url'] = get_permalink($product['product_id']); 
 			$product_data['name'] = $product['name'];
 			$product_data['image'] = wc_yotpo_get_product_image_url($product['product_id']);
-			$product_data['description'] = strip_tags($product_instance->get_post_data()->post_excerpt);
+			$product_data['description'] = $description;
 			$product_data['price'] = $product['line_total'];
 			$products_arr[$product['product_id']] = $product_data;	
 		}	
