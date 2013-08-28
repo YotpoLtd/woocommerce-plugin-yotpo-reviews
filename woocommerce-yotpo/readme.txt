@@ -103,6 +103,8 @@ Yes. To connect your social accounts to Yotpo, just log into yotpo.com, and clic
 * Fix bugs.
 * Disable woocommerce ratings upon activation and restore value of woocommerce ratings when deactivating.
 
+= 1.0.6 - 14/08/2013 =
+* Add support to Tab manager extension.
 
  
 

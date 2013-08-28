@@ -119,7 +119,7 @@ function wc_display_yotpo_settings() {
 				         <select name='yotpo_widget_location' class='yotpo-widget-location'>
 				  	       <option value='footer' ".selected('footer',$yotpo_settings['widget_location'], false).">Page footer</option>
 			 		       <option value='tab' ".selected('tab',$yotpo_settings['widget_location'], false).">Tab</option>
-			 	           <option value='other' ".selected('other',$yotpo_settings['widget_location'], false).">Other (click update to see instructions)</option>
+			 	           <option value='other' ".selected('other',$yotpo_settings['widget_location'], false).">Other</option>
 				         </select>
 		   		       </td>
 		   		     </tr>

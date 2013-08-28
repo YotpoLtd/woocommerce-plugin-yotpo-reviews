@@ -3,7 +3,7 @@
 	Plugin Name: Yotpo Social Reviews for Woocommerce
 	Description: Yotpo Social Reviews helps Woocommerce store owners generate a ton of reviews for their products. Yotpo is the only solution which makes it easy to share your reviews automatically to your social networks to gain a boost in traffic and an increase in sales.
 	Author: Yotpo
-	Version: 1.0.5
+	Version: 1.0.6
 	Author URI: http://www.yotpo.com?utm_source=yotpo_plugin_woocommerce&utm_medium=plugin_page_link&utm_campaign=woocommerce_plugin_page_link	
 	Plugin URI: http://www.yotpo.com?utm_source=yotpo_plugin_woocommerce&utm_medium=plugin_page_link&utm_campaign=woocommerce_plugin_page_link
  */
@@ -52,7 +52,7 @@ function wc_yotpo_front_end_init() {
 		
 		$widget_location = $settings['widget_location'];	
 		if($settings['disable_native_review_system']) {
-			add_action('woocommerce_product_tabs', 'wc_yotpo_remove_native_review_system');	
+			add_filter( 'comments_open', 'wc_yotpo_remove_native_review_system', null, 2);			
 		}						
 		if($widget_location == 'footer') {		
 			add_action('woocommerce_after_single_product', 'wc_yotpo_show_widget', 10);
@@ -94,7 +94,7 @@ function wc_yotpo_uninstall() {
 
 function wc_yotpo_show_widget() {		 
 	$product = get_product();
-	if(comments_open($product->id)) {
+	if($product->post->comment_status == 'open') {		
 		$product_data = wc_yotpo_get_product_data($product);	
 		$yotpo_div = "<div class='yotpo reviews' 
 	 				data-appkey='".$product_data['app_key']."'
@@ -112,12 +112,15 @@ function wc_yotpo_show_widget() {
 }
 
 function wc_yotpo_show_widget_in_tab($tabs) {
-	$settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
- 	$tabs['yotpo_widget'] = array(
- 	'title' => $settings['widget_tab_name'],
- 	'priority' => 50,
- 	'callback' => 'wc_yotpo_show_widget'
- 	);
+	$product = get_product();
+	if($product->post->comment_status == 'open') {
+		$settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
+	 	$tabs['yotpo_widget'] = array(
+	 	'title' => $settings['widget_tab_name'],
+	 	'priority' => 50,
+	 	'callback' => 'wc_yotpo_show_widget'
+	 	);
+	}
  	return $tabs;		
 }
 
@@ -131,7 +134,7 @@ function wc_yotpo_is_who_commerce_installed() {
 	return in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_option('active_plugins')));
 }
 
-function wc_yotpo_show_buttomline($summery) {
+function wc_yotpo_show_buttomline() {
 	$product = get_product();
 	$show_bottom_line = is_product() ? comments_open($product->id) : true;
 	if($show_bottom_line) {
@@ -179,9 +182,11 @@ function wc_yotpo_get_shop_domain() {
 	return parse_url(get_bloginfo('url'),PHP_URL_HOST);
 }
 
-function wc_yotpo_remove_native_review_system($tabs) {
-	 unset($tabs['reviews']);
-	 return $tabs;
+function wc_yotpo_remove_native_review_system($open, $post_id) {
+	if(get_post_type($post_id) == 'product') {
+		return false;
+	}
+	return $open;
 }
 
 function wc_yotpo_map($order_id) {
@@ -376,4 +381,13 @@ function wc_yotpo_compatible() {
 
 function wc_yotpo_deactivate() {
 	update_option('woocommerce_enable_review_rating', get_option('native_star_ratings_enabled'));	
+}
+
+add_filter('woocommerce_tab_manager_integration_tab_allowed', 'wc_yotpo_disable_tab_manager_managment');
+
+function wc_yotpo_disable_tab_manager_managment($allowed, $tab) {
+	if($tab == 'yotpo_widget') {
+		$allowed = false;
+		return false;
+	}
 }

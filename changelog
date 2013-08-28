@@ -115,3 +115,9 @@ Alon
 1) Disable woocommerce ratings upon activation and restore value of woocommerce ratings when deactivating.
 2) Fix bug: in some situations we were disabling woocommerce review ratings.
 3) Send MAP even if review is disabled for product.
+
+14-08-2013
+----
+Alon 
+1) Add support to Tab manager extension.
+2) Bug fix in removing native review system.
