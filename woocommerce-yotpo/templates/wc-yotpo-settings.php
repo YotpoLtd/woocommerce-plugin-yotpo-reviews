@@ -17,7 +17,7 @@ function wc_display_yotpo_admin_page() {
 			check_admin_referer( 'yotpo_registration_form' );
 			$success = wc_proccess_yotpo_register();
 			if($success) {			
-				wc_display_yotpo_settings();
+				wc_display_yotpo_settings($success);
 			}
 			else {
 				wc_display_yotpo_register();	
@@ -69,7 +69,7 @@ function wc_display_yotpo_admin_page() {
 	}
 }
 
-function wc_display_yotpo_settings() {
+function wc_display_yotpo_settings($success_type = false) {
 	$yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
 	$app_key = $yotpo_settings['app_key'];
 	$secret = $yotpo_settings['secret'];
@@ -77,7 +77,11 @@ function wc_display_yotpo_settings() {
 	$widget_tab_name = $yotpo_settings['widget_tab_name'];
 
 	if(empty($yotpo_settings['app_key'])) {
-		wc_yotpo_display_message('Set your API key in order the Yotpo plugin to work correctly', false);			
+        if ($success_type == 'b2c') {
+            wc_yotpo_display_message('We have sent you a confirmation email. Please check and click on the link to get your app key and secret token to fill out below.', true);
+        } else {
+		    wc_yotpo_display_message('Set your API key in order the Yotpo plugin to work correctly', false);
+        }
 	}
 	$google_tracking_params = '&utm_source=yotpo_plugin_woocommerce&utm_medium=header_link&utm_campaign=woocommerce_customize_link';
 	if (!empty($yotpo_settings['app_key']) && !empty($yotpo_settings['secret'])) {
@@ -85,8 +89,8 @@ function wc_display_yotpo_settings() {
 	}
 	else {
 		$dashboard_link = "<a href='https://www.yotpo.com/?login=true$google_tracking_params' target='_blank'>Yotpo Dashboard.</a></div>";
-	}	
-	$read_only = isset($_POST['log_in_button']) ? '' : 'readonly';
+	}
+	$read_only = isset($_POST['log_in_button']) || $success_type == 'b2c' ? '' : 'readonly';
 	$cradentials_location_explanation = isset($_POST['log_in_button']) 	? "<tr valign='top'>  	
 		             														<th scope='row'><p class='description'>To get your api key and secret token <a href='https://www.yotpo.com/?login=true' target='_blank'>log in here</a> and go to your account settings.</p></th>
 	                 		                  							   </tr>" : '';		
@@ -284,7 +288,7 @@ function wc_proccess_yotpo_register() {
         		}
         		elseif($response['status']['code'] >= 400){
         			if(!empty($response['status']['message'])) { 
-        				if(!empty($response['status']['message']['email'])) {
+                        if(is_array($response['status']['message']) && !empty($response['status']['message']['email'])) {
         					if(is_array($response['status']['message']['email'])) {
         						wc_yotpo_display_message($response['status']['message']['email'][0], false);
         					}
@@ -300,7 +304,9 @@ function wc_proccess_yotpo_register() {
         		}
         	}
         	else {
-        		
+                if ($response == 'b2c') {
+        	        return $response;
+                }
         	}
         }
         catch (Exception $e) {

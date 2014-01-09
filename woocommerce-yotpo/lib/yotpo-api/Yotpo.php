@@ -7,7 +7,7 @@
  */
 class Yotpo {
 
-    const VERSION = '0.0.4';
+    const VERSION = '0.0.5';
 	const TIMEOUT = 5;
     protected static $app_key, $secret, $base_uri = 'https://api.yotpo.com';
     protected $request;
@@ -101,20 +101,56 @@ class Yotpo {
 		return json_decode($response, true);
     }
 
+    public function check_if_b2c_user($email) {
+        return $this->get('/users/find_by_type_and_email.json', array('type' => 'b2c', 'email' => $email));
+    }
+
+    public function create_user_migration($id, array $data) {
+        return $this->post('/users/'.$id.'/migration', array('data' => $data));
+    }
+
+    public function notify_user_migration($id) {
+        return $this->get('/users/'.$id.'/migration/notify');
+    }
+
     public function create_user(array $user_hash, $install_step_done = false) {
-        $user = array(
-            'email' => $user_hash['email'],
-            'display_name' => $user_hash['display_name'],
-            'first_name' => $user_hash['first_name'],
-            'last_name' => $user_hash['last_name'],
-            'website_name' => $user_hash['website_name'],
-            'password' => $user_hash['password'],
-            'support_url' => $user_hash['support_url'],
-            'callback_url' => $user_hash['callback_url'],
-            'url' => $user_hash['url']
-        );
-        $data = $install_step_done ? array('install_step' => 'done', 'user' => $user) : array('user' => $user); 
-        return $this->post('/users', $data);
+        $response = $this->check_if_b2c_user($user_hash['email']);
+        if (empty($response['response']['data'])){
+            $user = array(
+                'email' => $user_hash['email'],
+                'display_name' => $user_hash['display_name'],
+                'first_name' => $user_hash['first_name'],
+                'last_name' => $user_hash['last_name'],
+                'website_name' => $user_hash['website_name'],
+                'password' => $user_hash['password'],
+                'support_url' => $user_hash['support_url'],
+                'callback_url' => $user_hash['callback_url'],
+                'url' => $user_hash['url']
+            );
+
+            $data = $install_step_done ? array('install_step' => 'done', 'user' => $user) : array('user' => $user);
+            return $this->post('/users', $data);
+
+        } else {
+            $id = $response['response']['data']['id'];
+            $data = array(
+                'password'=> $user_hash['password'],
+                'display_name'=> $user_hash['display_name'],
+                'account' => array(
+                    'url' => $user_hash['url'],
+                    'custom_platform_name'=>null,
+                    'install_step'=>8,
+                    'account_platform' => array(
+                        'shop_domain'=> wc_yotpo_get_shop_domain(),
+                        'platform_type_id'=>12,
+                    )
+                )
+            );
+
+            $this->create_user_migration($id,$data);
+            $this->notify_user_migration($id);
+            return 'b2c';
+        }
     }
 
     public function get_oauth_token(array $credentials_hash = array()) {
