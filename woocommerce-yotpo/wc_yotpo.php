@@ -134,7 +134,7 @@ function wc_yotpo_is_who_commerce_installed() {
 	return in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_option('active_plugins')));
 }
 
-function wc_yotpo_show_qa_buttomline() {
+function wc_yotpo_show_qa_bottomline() {
     $product_data = wc_yotpo_get_product_data(get_product());
     echo "<div class='yotpo QABottomLine'
          data-appkey='".$product_data['app_key']."'
