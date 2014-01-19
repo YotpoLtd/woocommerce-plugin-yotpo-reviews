@@ -146,7 +146,7 @@ function wc_yotpo_show_buttomline() {
 	$show_bottom_line = is_product() ? comments_open($product->id) : true;
 	if($show_bottom_line) {
 		$product_data = wc_yotpo_get_product_data($product);	
-		$yotpo_div = "</br><div class='yotpo bottomLine' 
+		$yotpo_div = "<div class='yotpo bottomLine' 
 	   				data-appkey='".$product_data['app_key']."'
 	   				data-domain='".$product_data['shop_domain']."'
 	   				data-product-id='".$product_data['id']."'
