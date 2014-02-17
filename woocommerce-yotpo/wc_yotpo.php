@@ -12,7 +12,7 @@ register_uninstall_hook( __FILE__, 'wc_yotpo_uninstall' );
 register_deactivation_hook( __FILE__, 'wc_yotpo_deactivate' );
 add_action('plugins_loaded', 'wc_yotpo_init');
 add_action('init', 'wc_yotpo_redirect');
-		
+add_action( 'woocommerce_order_status_completed', 'wc_yotpo_map');	
 function wc_yotpo_init() {
 	$is_admin = is_admin();	
 	if($is_admin) {
@@ -25,10 +25,7 @@ function wc_yotpo_init() {
 		if(!$is_admin) {
 			add_action( 'wp_enqueue_scripts', 'wc_yotpo_load_js' );
 			add_action( 'template_redirect', 'wc_yotpo_front_end_init' );	
-		}				
-		elseif(!empty($yotpo_settings['secret'])) {
-			add_action( 'woocommerce_order_status_completed', 'wc_yotpo_map');	
-		}				
+		}							
 	}			
 }
 
@@ -143,7 +140,7 @@ function wc_yotpo_show_qa_bottomline() {
 
 function wc_yotpo_show_buttomline() {
 	$product = get_product();
-	$show_bottom_line = is_product() ? comments_open($product->id) : true;
+	$show_bottom_line = is_product() ? $product->post->comment_status == 'open' : true;
 	if($show_bottom_line) {
 		$product_data = wc_yotpo_get_product_data($product);	
 		$yotpo_div = "<div class='yotpo bottomLine' 
@@ -197,21 +194,26 @@ function wc_yotpo_remove_native_review_system($open, $post_id) {
 }
 
 function wc_yotpo_map($order_id) {
-	try {
-			$purchase_data = wc_yotpo_get_single_map_data($order_id);
-			if(!is_null($purchase_data) && is_array($purchase_data)) {
-				$yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
-				$yotpo_api = new Yotpo($yotpo_settings['app_key'], $yotpo_settings['secret']);
-				$get_oauth_token_response = $yotpo_api->get_oauth_token();
-				if(!empty($get_oauth_token_response) && !empty($get_oauth_token_response['access_token'])) {
-					$purchase_data['utoken'] = $get_oauth_token_response['access_token'];
-					$purchase_data['platform'] = 'woocommerce';
-					$response = $yotpo_api->create_purchase($purchase_data);			
-			}
-		}		
-	}
-	catch (Exception $e) {
-		error_log($e->getMessage());
+	$yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
+	$secret = $yotpo_settings['secret'];
+	$app_key = $yotpo_settings['app_key'];
+	if(!empty($app_key) && !empty($secret) && wc_yotpo_compatible()){
+		try {		
+				$purchase_data = wc_yotpo_get_single_map_data($order_id);
+				if(!is_null($purchase_data) && is_array($purchase_data)) {
+					require_once(plugin_dir_path( __FILE__ ) . 'lib/yotpo-api/Yotpo.php');					
+					$yotpo_api = new Yotpo($app_key, $secret);
+					$get_oauth_token_response = $yotpo_api->get_oauth_token();
+					if(!empty($get_oauth_token_response) && !empty($get_oauth_token_response['access_token'])) {
+						$purchase_data['utoken'] = $get_oauth_token_response['access_token'];
+						$purchase_data['platform'] = 'woocommerce';
+						$response = $yotpo_api->create_purchase($purchase_data);
+				}
+			}		
+		}
+		catch (Exception $e) {
+			error_log($e->getMessage());
+		}
 	}
 }
 
@@ -392,7 +394,7 @@ function wc_yotpo_deactivate() {
 
 add_filter('woocommerce_tab_manager_integration_tab_allowed', 'wc_yotpo_disable_tab_manager_managment');
 
-function wc_yotpo_disable_tab_manager_managment($allowed, $tab) {
+function wc_yotpo_disable_tab_manager_managment($allowed, $tab = null) {
 	if($tab == 'yotpo_widget') {
 		$allowed = false;
 		return false;

@@ -106,5 +106,9 @@ Yes. To connect your social accounts to Yotpo, just log into yotpo.com, and clic
 = 1.0.6 - 14/08/2013 =
 * Add support to Tab manager extension.
 * Bug fix in removing native review system.
- 
+
+= 1.0.7 - 19/01/2014 =
+* Async load of js file.
+* Internal changes. 
+
 

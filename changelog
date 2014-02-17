@@ -127,3 +127,15 @@ Alon
 Nimrod
 1) Added b2c2b registration support.
 2) Load yQuery asynchronously.
+
+2014-02-05
+----
+Alon
+1) Make the order status complete hook to work regardless if it is an admin page(compatible with shipstation and other remote order clients). 
+2) Fix bug in bottomline in product pages.
+3) Fix bug in tabmanager.
+
+2014-02-05
+----
+Alon
+1) Small bug fix in default MAP statuses. 
