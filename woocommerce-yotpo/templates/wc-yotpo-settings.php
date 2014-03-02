@@ -107,7 +107,7 @@ function wc_display_yotpo_settings($success_type = false) {
 			  	  "<fieldset>
 	                 <tr valign='top'>
 	                 	<th scope='row'><div>If you would like to choose a set language, please type the 2-letter language code here. You can find the supported langauge codes <a class='y-href' href='http://support.yotpo.com/entries/21861473-Languages-Customization-' target='_blank'>here.</a></div></th>
-	                 	<td><div><input type='text' class='yotpo_language_code_text' name='yotpo_widget_language_code' maxlength='2' value='$language_code'/></div></td>
+	                 	<td><div><input type='text' class='yotpo_language_code_text' name='yotpo_widget_language_code' maxlength='5' value='$language_code'/></div></td>
 	                 </tr>
 			  	     <tr valign='top'>  	
 		             	<th scope='row'><div>For multipule-language sites, mark this check box. This will choose the language according to the user's site language.</div></th>

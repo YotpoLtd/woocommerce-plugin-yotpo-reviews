@@ -135,7 +135,8 @@ Alon
 2) Fix bug in bottomline in product pages.
 3) Fix bug in tabmanager.
 
-2014-02-05
+
+2014-02-25
 ----
 Alon
-1) Small bug fix in default MAP statuses. 
+1) Allow language code to be up to 5 letters. 
