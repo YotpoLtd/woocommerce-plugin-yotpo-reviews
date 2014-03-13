@@ -139,4 +139,9 @@ Alon
 2014-02-25
 ----
 Alon
-1) Allow language code to be up to 5 letters. 
+1) Allow language code to be up to 5 letters.
+
+2014-03-13
+----
+Alon
+1) Bug fix: 0001924: Woocommerce new version 2.1.4: Currencies not pulled 

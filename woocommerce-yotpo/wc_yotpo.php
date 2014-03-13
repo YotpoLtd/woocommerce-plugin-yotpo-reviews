@@ -3,7 +3,7 @@
 	Plugin Name: Yotpo Social Reviews for Woocommerce
 	Description: Yotpo Social Reviews helps Woocommerce store owners generate a ton of reviews for their products. Yotpo is the only solution which makes it easy to share your reviews automatically to your social networks to gain a boost in traffic and an increase in sales.
 	Author: Yotpo
-	Version: 1.0.8
+	Version: 1.0.9
 	Author URI: http://www.yotpo.com?utm_source=yotpo_plugin_woocommerce&utm_medium=plugin_page_link&utm_campaign=woocommerce_plugin_page_link	
 	Plugin URI: http://www.yotpo.com?utm_source=yotpo_plugin_woocommerce&utm_medium=plugin_page_link&utm_campaign=woocommerce_plugin_page_link
  */
@@ -226,10 +226,7 @@ function wc_yotpo_get_single_map_data($order_id) {
 		$data['email'] = $order->billing_email;
 		$data['customer_name'] = $order->billing_first_name.' '.$order->billing_last_name;
 		$data['order_id'] = $order_id;
-		$data['currency_iso'] = $order->order_custom_fields['_order_currency'];
-		if(is_array($data['currency_iso'])) {
-			$data['currency_iso'] = $data['currency_iso'][0];
-		}
+		$data['currency_iso'] = $order->get_order_currency();
 		$products_arr = array();
 		foreach ($order->get_items() as $product) 
 		{
@@ -347,10 +344,7 @@ function wc_yotpo_send_past_orders() {
 function wc_yotpo_conversion_track($order_id) {
 	$yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
 	$order = new WC_Order($order_id);
-	$currency = $order->order_custom_fields['_order_currency'];
-	if(is_array($currency)) {
-		$currency = $currency[0];
-	}
+	$currency = $order->get_order_currency();
 	
 	$conversion_params = "app_key="      .$yotpo_settings['app_key'].
            				 "&order_id="    .$order_id.
