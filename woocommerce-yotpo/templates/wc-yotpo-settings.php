@@ -110,7 +110,7 @@ function wc_display_yotpo_settings($success_type = false) {
 	                 	<td><div><input type='text' class='yotpo_language_code_text' name='yotpo_widget_language_code' maxlength='5' value='$language_code'/></div></td>
 	                 </tr>
 			  	     <tr valign='top'>  	
-		             	<th scope='row'><div>For multipule-language sites, mark this check box. This will choose the language according to the user's site language.</div></th>
+		             	<th scope='row'><div>For multiple-language sites, mark this check box. This will choose the language according to the user's site language.</div></th>
 	                 	<td><input type='checkbox' name='yotpo_language_as_site' value='1' ".checked(1, $yotpo_settings['yotpo_language_as_site'], false)."/></td>	                  
 	                 </tr>
 					 <tr valign='top'>
