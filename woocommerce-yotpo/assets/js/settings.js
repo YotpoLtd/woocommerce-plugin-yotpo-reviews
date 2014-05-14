@@ -23,5 +23,10 @@ jQuery(document).ready(function () {
 		hide_tabname(1000);
 		hide_other_explanation(1000);
 	});
+	
+	jQuery('#yotpo-export-reviews').click(function() {
+	    var frame = document.getElementById('yotpo_export_reviews_frame');
+	    frame.src = download_reviews_url;	    
+	});
 });
 

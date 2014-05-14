@@ -28,27 +28,6 @@ function wc_display_yotpo_admin_page() {
 			wc_yotpo_send_past_orders();	
 			wc_display_yotpo_settings();
 		}	
-		elseif (isset($_POST['yotpo_export_reviews'])) {
-			$yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
-			if(!empty($yotpo_settings['app_key'])) {					
-				include(dirname(plugin_dir_path( __FILE__ )) . '/classes/class-wc-yotpo-export-reviews.php');
-				$export = new Yotpo_Review_Export();
-				list($file, $errors) = $export->exportReviews();
-				if(is_null($errors)) {
-					$errors = $export->downloadReviewToBrowser($file);
-					if(!is_null($errors)) {
-						wc_yotpo_display_message($errors);
-					}	
-				}
-				else {
-					wc_yotpo_display_message($errors);
-				}	
-			}
-			else {
-				wc_yotpo_display_message('Please set up your API key before exporting reviews.');	
-			}	
-			wc_display_yotpo_settings();		
-		}
 		else {
 			$yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
 			if(empty($yotpo_settings['app_key']) && empty($yotpo_settings['secret'])) {			
@@ -158,11 +137,12 @@ function wc_display_yotpo_settings($success_type = false) {
 		           </fieldset>
 		         </table></br>			  		
 		         <div class='buttons-container'>
-		        <input type='submit' name='yotpo_export_reviews' value='Export Reviews' class='button-secondary' ".disabled(true,empty($app_key) || empty($secret), false)."/>
+		        <button type='button' id='yotpo-export-reviews' class='button-secondary' ".disabled(true,empty($app_key) || empty($secret), false).">Export Reviews</button>
 				<input type='submit' name='yotpo_settings' value='Update' class='button-primary' id='save_yotpo_settings'/>$submit_past_orders_button
 			  </br></br><p class='description'>*Learn <a href='http://support.yotpo.com/entries/24454261-Exporting-reviews-for-Woocommerce' target='_blank'>how to export your existing reviews</a> into Yotpo.</p>
 			</div>
 		  </form>
+		  <iframe id='yotpo_export_reviews_frame'></iframe>
 		</div>";		
 
 	echo $settings_html;		  
