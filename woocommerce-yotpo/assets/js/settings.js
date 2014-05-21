@@ -25,8 +25,7 @@ jQuery(document).ready(function () {
 	});
 	
 	jQuery('#yotpo-export-reviews').click(function() {
-	    var frame = document.getElementById('yotpo_export_reviews_frame');
-	    frame.src = download_reviews_url;	    
+		document.getElementById('export_reviews_submit').click();    
 	});
 });
 

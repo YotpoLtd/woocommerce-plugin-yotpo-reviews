@@ -142,7 +142,11 @@ function wc_display_yotpo_settings($success_type = false) {
 			  </br></br><p class='description'>*Learn <a href='http://support.yotpo.com/entries/24454261-Exporting-reviews-for-Woocommerce' target='_blank'>how to export your existing reviews</a> into Yotpo.</p>
 			</div>
 		  </form>
-		  <iframe id='yotpo_export_reviews_frame'></iframe>
+		  <iframe name='yotpo_export_reviews_frame' style='display: none;'></iframe>
+		  <form action='' method='get' target='yotpo_export_reviews_frame' style='display: none;'>
+			<input type='hidden' name='download_exported_reviews' value='true' />
+			<input type='submit' value='Export Reviews' class='button-primary' id='export_reviews_submit'/>
+		  </form> 
 		</div>";		
 
 	echo $settings_html;		  
