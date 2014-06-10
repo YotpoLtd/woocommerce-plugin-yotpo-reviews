@@ -105,15 +105,11 @@ function wc_yotpo_show_widget() {
 	if($product->post->comment_status == 'open') {		
 		$product_data = wc_yotpo_get_product_data($product);	
 		$yotpo_div = "<div class='yotpo yotpo-main-widget'
-	 				data-appkey='".$product_data['app_key']."'
-	   				data-domain='".$product_data['shop_domain']."'
 	   				data-product-id='".$product_data['id']."'
-	   				data-product-models='".$product_data['product-models']."'
 	   				data-name='".$product_data['title']."' 
 	   				data-url='".$product_data['url']."' 
 	   				data-image-url='".$product_data['image-url']."' 
 	  				data-description='".$product_data['description']."' 
-	  				data-bread-crumbs=''
 	  				data-lang='".$product_data['lang']."'></div>";
 		echo $yotpo_div;
 	}						
@@ -157,15 +153,8 @@ function wc_yotpo_show_buttomline() {
 	if($show_bottom_line) {
 		$product_data = wc_yotpo_get_product_data($product);	
 		$yotpo_div = "<div class='yotpo bottomLine' 
-	   				data-appkey='".$product_data['app_key']."'
-	   				data-domain='".$product_data['shop_domain']."'
 	   				data-product-id='".$product_data['id']."'
-	   				data-product-models='".$product_data['product-models']."'
-	   				data-name='".$product_data['title']."' 
 	   				data-url='".$product_data['url']."' 
-	   				data-image-url='".$product_data['image-url']."' 
-	   				data-description='".$product_data['description']."' 
-	   				data-bread-crumbs=''
 	   				data-lang='".$product_data['lang']."'></div>";
 		echo $yotpo_div;	
 	}	
