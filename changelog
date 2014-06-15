@@ -135,7 +135,6 @@ Alon
 2) Fix bug in bottomline in product pages.
 3) Fix bug in tabmanager.
 
-
 2014-02-25
 ----
 Alon
@@ -160,4 +159,9 @@ Alon
 ----
 Alon
 1) Change the way the exported reviews file is downloaded. 
+
+2014-06-02
+----
+Nimrod
+1) Change in javascript and review div to work with the new widget.
 
