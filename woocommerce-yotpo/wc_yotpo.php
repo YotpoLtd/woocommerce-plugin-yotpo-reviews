@@ -3,7 +3,7 @@
 	Plugin Name: Yotpo Social Reviews for Woocommerce
 	Description: Yotpo Social Reviews helps Woocommerce store owners generate a ton of reviews for their products. Yotpo is the only solution which makes it easy to share your reviews automatically to your social networks to gain a boost in traffic and an increase in sales.
 	Author: Yotpo
-	Version: 1.1.3
+	Version: 1.1.4
 	Author URI: http://www.yotpo.com?utm_source=yotpo_plugin_woocommerce&utm_medium=plugin_page_link&utm_campaign=woocommerce_plugin_page_link	
 	Plugin URI: http://www.yotpo.com?utm_source=yotpo_plugin_woocommerce&utm_medium=plugin_page_link&utm_campaign=woocommerce_plugin_page_link
  */
@@ -259,17 +259,23 @@ function wc_yotpo_get_product_image_url($product_id) {
 function wc_yotpo_get_past_orders() {
 	$result = null;
 	$args = array(
-		'post_type'			=> 'shop_order',
-        'posts_per_page' 	=> -1,
-		'tax_query' => array(
+		'post_type'		 => 'shop_order',
+		'posts_per_page' => -1
+	);
+
+	if (defined('WC_VERSION') && (version_compare(WC_VERSION, '2.2.0') >= 0)) {
+		$args['post_status'] = 'wc-completed';
+	} else {
+		$args['tax_query'] = array(
 			array(
 				'taxonomy' => 'shop_order_status',
-				'field' => 'slug',
-				'terms' => array('completed'),
+				'field'    => 'slug',
+				'terms'    => array('completed'),
 				'operator' => 'IN'
 			)
-		)	
-	);	
+		);
+	}
+
 	add_filter( 'posts_where', 'wc_yotpo_past_order_time_query' );
 	$query = new WP_Query( $args );
 	remove_filter( 'posts_where', 'wc_yotpo_past_order_time_query' );
