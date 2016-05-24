@@ -17,7 +17,7 @@ Trusted by over 150,000+ businesses, the Yotpo WooCommerce review plugin helps y
   * Boost your customers' trust and increase conversion rate with tons of verified reviews
   * Plug & play with WooCommerce - Easy to use and setup takes only 3 minutes!
 
-Video - https://www.youtube.com/watch?v=WoVjHkgQS2A
+https://www.youtube.com/watch?v=WoVjHkgQS2A
 
 = Generate More Product Reviews =
 
