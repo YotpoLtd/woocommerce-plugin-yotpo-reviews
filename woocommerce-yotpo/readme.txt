@@ -1,13 +1,13 @@
-=== Yotpo Social Reviews for Woocommerce ===
+=== Yotpo Reviews for Woocommerce ===
 Contributors: Yotpo
 Tags: reviews, social reviews, woocommerce, woocommerce reviews, woocommerce product reviews, woocommerce extensions, woocommerce plugins, woocommerce addons, woocommerce add-ons, yotpo, yotpo reviews, yotpo social reviews
 Requires at least: 3.5.1
 Tested up to: 4.1
 Stable tag: 1.1.4
 License: GPLv2
-License URI: http://www.gnu.org/licenses/gpl-2.0.html
+License URI: http://www.gnu.org/licenses/gpl-2.0.html 
 
-Generate tons of product reviews for your Woocommerce site with Yotpo Social Reviews
+Build your shoppers confidence with trustworthy reviews and customer content. Yotpo is free and getting started takes under 5 minutes.
 
 == Description ==
 Trusted by over 150,000+ businesses, the Yotpo WooCommerce review plugin helps you generate a ton of customer content, like reviews, photos and Q&A, in order to boost traffic and sales. 
@@ -50,9 +50,6 @@ All Yotpo’s features are made with mobile in mind. When we send a review reque
   
   * [And so much more!](https://www.yotpo.com/pricing/)
 
-
-
-
 == INSTALLATION ==
 
 Installing Yotpo WooCommerce review plugin is plug and play. It should just take a few minutes. [Please refer to this document](https://support.yotpo.com/hc/en-us/articles/204101596-Woocommerce-Manual) for the most up to date setup instructions. 
@@ -68,9 +65,9 @@ Additional revenue generating features are available at additional cost. [Check 
 Yes, you can.
 For all of our FAQs, please refer to [our FAQ page.](https://www.yotpo.com/resources/#faq) 
 
-
-== SCREENSHOTS ==
-
-
+== Screenshots ==
+1. Share on social networks
+2. Mail system
+3. Different resolutions for multiple devices
 
 
