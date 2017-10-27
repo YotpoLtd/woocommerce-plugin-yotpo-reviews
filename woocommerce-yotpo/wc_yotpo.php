@@ -12,7 +12,8 @@ register_uninstall_hook( __FILE__, 'wc_yotpo_uninstall' );
 register_deactivation_hook( __FILE__, 'wc_yotpo_deactivate' );
 add_action('plugins_loaded', 'wc_yotpo_init');
 add_action('init', 'wc_yotpo_redirect');
-add_action( 'woocommerce_order_status_completed', 'wc_yotpo_map');	
+add_action( 'woocommerce_order_status_completed', 'wc_yotpo_map');
+		
 function wc_yotpo_init() {
 	$is_admin = is_admin();	
 	if($is_admin) {
@@ -26,7 +27,7 @@ function wc_yotpo_init() {
 				}
 			}
 			exit;
-		}
+		}		
 		include( plugin_dir_path( __FILE__ ) . 'templates/wc-yotpo-settings.php');
 		include(plugin_dir_path( __FILE__ ) . 'lib/yotpo-api/Yotpo.php');
 		add_action( 'admin_menu', 'wc_yotpo_admin_settings' );
@@ -36,7 +37,7 @@ function wc_yotpo_init() {
 		if(!$is_admin) {
 			add_action( 'wp_enqueue_scripts', 'wc_yotpo_load_js' );
 			add_action( 'template_redirect', 'wc_yotpo_front_end_init' );	
-		}							
+		}								
 	}			
 }
 
@@ -60,7 +61,7 @@ function wc_yotpo_front_end_init() {
 		
 		$widget_location = $settings['widget_location'];	
 		if($settings['disable_native_review_system']) {
-			add_filter( 'comments_open', 'wc_yotpo_remove_native_review_system', null, 2);			
+			add_filter( 'comments_open', 'wc_yotpo_remove_native_review_system', null, 2);	
 		}						
 		if($widget_location == 'footer') {		
 			add_action('woocommerce_after_single_product', 'wc_yotpo_show_widget', 10);
@@ -125,14 +126,14 @@ function wc_yotpo_show_widget_in_tab($tabs) {
 	 	'callback' => 'wc_yotpo_show_widget'
 	 	);
 	}
- 	return $tabs;		
+	return $tabs;		
 }
 
 function wc_yotpo_load_js(){
-	if(wc_yotpo_is_who_commerce_installed()) {
-		wp_enqueue_script('yquery', plugins_url('assets/js/headerScript.js', __FILE__) ,null,null);
+	if(wc_yotpo_is_who_commerce_installed()) {		
+    	wp_enqueue_script('yquery', plugins_url('assets/js/headerScript.js', __FILE__) ,null,null);
 		$settings = get_option('yotpo_settings',wc_yotpo_get_degault_settings());
-		wp_localize_script('yquery', 'yotpo_settings', array('app_key' => $settings['app_key']));
+		wp_localize_script('yquery', 'yotpo_settings', array('app_key' => $settings['app_key']));    	    	
 	}
 }
 
@@ -181,7 +182,13 @@ function wc_yotpo_get_product_data($product) {
 	$product_data['title'] = $product->get_title();
 	$product_data['image-url'] = wc_yotpo_get_product_image_url($product->id);
 	$product_data['product-models'] = $product->get_sku();	
-	return $product_data;
+        $product_data['product-sku'] = $product->get_sku();	
+        if($product->get_upc){  $product_data['product-upc'] = $product->get_upc(); }
+        if($product->get_isbn){ $product_data['product-upc'] = $product->get_isbn(); }
+        if($product->get_brand){    $product_data['product-upc'] = $product->get_brand(); }
+        if($product->get_mpn){  $product_data['product-upc'] = $product->get_mpn(); }
+
+        return $product_data;
 }
 
 function wc_yotpo_get_shop_domain() {
@@ -275,7 +282,7 @@ function wc_yotpo_get_past_orders() {
 			)
 		);
 	}
-
+	
 	add_filter( 'posts_where', 'wc_yotpo_past_order_time_query' );
 	$query = new WP_Query( $args );
 	remove_filter( 'posts_where', 'wc_yotpo_past_order_time_query' );
@@ -358,7 +365,6 @@ function wc_yotpo_conversion_track($order_id) {
            				 "&order_id="    .$order_id.
            				 "&order_amount=".$order->get_total().
            				 "&order_currency="  .$currency;
-
 	$APP_KEY = $yotpo_settings['app_key'];
 	$DATA = "yotpoTrackConversionData = {orderId: ".$order_id.", orderAmount: ".$order->get_total().", orderCurrency: '".$currency."'}";
 	$DATA_SCRIPT = "<script>".$DATA."</script>";
@@ -367,7 +373,6 @@ function wc_yotpo_conversion_track($order_id) {
 	width='1'
 	height='1'></img>";
 	$NO_SCRIPT = "<noscript>".$IMG."</noscript>";
-
 	echo $DATA_SCRIPT;
 	echo $NO_SCRIPT;
 }
@@ -388,7 +393,7 @@ function wc_yotpo_get_degault_settings() {
 
 function wc_yotpo_admin_styles($hook) {
 	if($hook == 'toplevel_page_woocommerce-yotpo-settings-page') {		
-		wp_enqueue_script( 'yotpoSettingsJs', plugins_url('assets/js/settings.js', __FILE__), array('jquery-effects-core'));	
+		wp_enqueue_script( 'yotpoSettingsJs', plugins_url('assets/js/settings.js', __FILE__), array('jquery-effects-core'));				
 		wp_enqueue_style( 'yotpoSettingsStylesheet', plugins_url('assets/css/yotpo.css', __FILE__));
 	}
 	wp_enqueue_style('yotpoSideLogoStylesheet', plugins_url('assets/css/side-menu-logo.css', __FILE__));
