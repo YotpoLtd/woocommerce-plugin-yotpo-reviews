@@ -311,6 +311,37 @@ function wc_yotpo_past_order_time_query( $where = '' ) {
 }
 
 function wc_yotpo_send_past_orders() {
+    $yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
+    if (!empty($yotpo_settings['app_key']) && !empty($yotpo_settings['secret'])) {
+        $past_orders = wc_yotpo_get_past_orders();
+        $is_success = true;
+        if (!is_null($past_orders) && is_array($past_orders)) {
+            $yotpo_api = new Yotpo($yotpo_settings['app_key'], $yotpo_settings['secret']);
+            $get_oauth_token_response = $yotpo_api->get_oauth_token();
+            if (!empty($get_oauth_token_response) && !empty($get_oauth_token_response['access_token'])) {
+                foreach ($past_orders as $post_bulk)
+                    if (!is_null($post_bulk)) {
+                        $post_bulk['utoken'] = $get_oauth_token_response['access_token'];
+                        $response = $yotpo_api->create_purchases($post_bulk);
+                        if ($response['code'] != 200 && $is_success) {
+                            $is_success = false;
+                            $message = !empty($response['status']) && !empty($response['status']['message']) ? $response['status']['message'] : 'Error occurred';
+                            wc_yotpo_display_message($message, true);
+                        }
+                    }
+                if ($is_success) {
+                    wc_yotpo_display_message('Past orders sent successfully', false);
+                    $yotpo_settings['show_submit_past_orders'] = false;
+                    update_option('yotpo_settings', $yotpo_settings);
+                }
+            }
+        } else {
+            wc_yotpo_display_message('Could not retrieve past orders', true);
+        }
+    } else {
+        wc_yotpo_display_message('You need to set your app key and secret token to post past orders', false);
+    }
+}
 	$yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
 	if (!empty($yotpo_settings['app_key']) && !empty($yotpo_settings['secret']))
 	{
@@ -373,17 +404,18 @@ function wc_yotpo_conversion_track($order_id) {
 }
 
 function wc_yotpo_get_degault_settings() {
-	return array( 'app_key' => '',
-				  'secret' => '',
-				  'widget_location' => 'footer',
-				  'language_code' => 'en',
-				  'widget_tab_name' => 'Reviews',
-				  'bottom_line_enabled_product' => true,
-				  'bottom_line_enabled_category' => true,
-				  'yotpo_language_as_site' => true,
-				  'show_submit_past_orders' => true,
-				  'disable_native_review_system' => true,
-				  'native_star_ratings_enabled' => 'no');
+    return array('app_key' => '',
+        'secret' => '',
+        'widget_location' => 'footer',
+        'language_code' => 'en',
+        'widget_tab_name' => 'Reviews',
+        'bottom_line_enabled_product' => true,
+        'bottom_line_enabled_category' => false,
+        'yotpo_language_as_site' => true,
+        'show_submit_past_orders' => true,
+        'yotpo_order_status'=>'',
+        'disable_native_review_system' => true,
+        'native_star_ratings_enabled' => 'no');
 }
 
 function wc_yotpo_admin_styles($hook) {
