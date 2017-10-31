@@ -73,10 +73,10 @@ function wc_yotpo_front_end_init() {
 			wp_enqueue_style('yotpoSideBootomLineStylesheet', plugins_url('assets/css/bottom-line.css', __FILE__));
 		}			
 	}
-	elseif ($settings['bottom_line_enabled_category']) {
-		add_action('woocommerce_after_shop_loop_item_title', 'wc_yotpo_show_buttomline',7);
-		wp_enqueue_style('yotpoSideBootomLineStylesheet', plugins_url('assets/css/bottom-line.css', __FILE__));
-	}							
+	 elseif ($settings['bottom_line_enabled_category']) {
+        add_action('woocommerce_after_shop_loop_item', 'wc_yotpo_show_buttomline', 7);
+        wp_enqueue_style('yotpoSideBootomLineStylesheet', plugins_url('assets/css/bottom-line.css', __FILE__));
+    }
 }
 
 function wc_yotpo_activation() {
