@@ -176,7 +176,7 @@ function wc_yotpo_get_product_data($product) {
 			$product_data['lang'] = $lang[0];	
 		}		
 	}
-	$product_data['description'] = strip_tags($product->get_post_data()->post_excerpt);
+	$product_data['description'] = strip_tags(get_post($product->id())->post_excerpt);
 	$product_data['id'] = $product->id;	
 	$product_data['title'] = $product->get_title();
 	$product_data['image-url'] = wc_yotpo_get_product_image_url($product->id);
@@ -279,7 +279,6 @@ function wc_yotpo_get_past_orders() {
 	add_filter( 'posts_where', 'wc_yotpo_past_order_time_query' );
 	$query = new WP_Query( $args );
 	remove_filter( 'posts_where', 'wc_yotpo_past_order_time_query' );
-	wp_reset_query();
 	if ($query->have_posts()) {
 		$orders = array();
 		while ($query->have_posts()) { 
