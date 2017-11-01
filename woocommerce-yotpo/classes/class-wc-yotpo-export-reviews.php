@@ -127,7 +127,7 @@ class Yotpo_Review_Export
 			$current_review['date'] = $value->date;
 			$current_review['sku'] = $value->product_id;
 			$current_review['product_title'] = $this->cleanContent($value->product_title);
-			$current_review['product_description'] = $this->cleanContent($product_instance->get_post_data()->post_excerpt);
+			$current_review['product_description'] = $this->cleanContent(get_post($value->product_id)->post_excerpt);
 			$current_review['product_url'] = get_permalink($value->product_id);
 			$current_review['product_image_url'] = wc_yotpo_get_product_image_url($value->product_id);
 			$all_reviews[] = $current_review;
