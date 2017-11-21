@@ -137,7 +137,12 @@ function wc_yotpo_load_js(){
 }
 
 function wc_yotpo_is_who_commerce_installed() {
-	return in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_option('active_plugins')));
+    $wooVer =  WooCommerce::plugin_path();
+    $findme   = "plugins";
+    $pos = strpos($wooVer, $findme);
+    $pluginCheck =  substr($wooVer, 41).'/woocommerce.php';
+    $string = WooCommerce::plugin_path();
+    return in_array($pluginCheck, apply_filters('active_plugins', get_option('active_plugins')));
 }
 
 function wc_yotpo_show_qa_bottomline() {
