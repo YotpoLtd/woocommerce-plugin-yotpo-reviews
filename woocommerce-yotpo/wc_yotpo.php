@@ -181,12 +181,14 @@ function wc_yotpo_get_product_data($product) {
 	$product_data['id'] = $product->id;	
 	$product_data['title'] = $product->get_title();
 	$product_data['image-url'] = wc_yotpo_get_product_image_url($product->id);
+	$specs_data = array();
 	$product_data['product-models'] = $product->get_sku();	
         $product_data['product-sku'] = $product->get_sku();	
-        if($product->get_upc){  $product_data['product-upc'] = $product->get_upc(); }
-        if($product->get_isbn){ $product_data['product-upc'] = $product->get_isbn(); }
-        if($product->get_brand){    $product_data['product-upc'] = $product->get_brand(); }
-        if($product->get_mpn){  $product_data['product-upc'] = $product->get_mpn(); }
+        if($product->get_upc){  $specs_data['upc'] = $product->get_upc(); }
+        if($product->get_isbn){ $specs_data['isbn'] = $product->get_isbn(); }
+        if($product->get_brand){  $specs_data['brand'] = $product->get_brand(); }
+        if($product->get_mpn){  $specs_data['mpn'] = $product->get_mpn(); }
+		if(!empty($specs_data)){ $product_data['specs'] = $specs_data;  }
 
         return $product_data;
 }
