@@ -3,3 +3,7 @@
 .project
 .settings
 .idea
+nbproject/project.xml
+nbproject/project.properties
+nbproject/private/private.xml
+nbproject/private/private.properties
