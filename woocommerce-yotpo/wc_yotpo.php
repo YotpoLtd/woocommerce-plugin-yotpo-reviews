@@ -163,6 +163,7 @@ function wc_yotpo_show_buttomline() {
 }
 
 function wc_yotpo_get_product_data($product) {	
+    
 	$product_data = array();
 	$settings = get_option('yotpo_settings',wc_yotpo_get_degault_settings());
 	$product_data['app_key'] = $settings['app_key'];
@@ -181,16 +182,14 @@ function wc_yotpo_get_product_data($product) {
 	$product_data['id'] = $product->id;	
 	$product_data['title'] = $product->get_title();
 	$product_data['image-url'] = wc_yotpo_get_product_image_url($product->id);
-	$specs_data = array();
-	$product_data['product-models'] = $product->get_sku();	
-        $product_data['product-sku'] = $product->get_sku();	
-        if($product->get_upc){  $specs_data['upc'] = $product->get_upc(); }
-        if($product->get_isbn){ $specs_data['isbn'] = $product->get_isbn(); }
-        if($product->get_brand){  $specs_data['brand'] = $product->get_brand(); }
-        if($product->get_mpn){  $specs_data['mpn'] = $product->get_mpn(); }
-		if(!empty($specs_data)){ $product_data['specs'] = $specs_data;  }
-
-        return $product_data;
+        $specs_data = array();
+            if($product->get_sku()){ $specs_data['sku'] =$product->get_sku();} 
+            if($product->get_attribute('upc')){ $specs_data['upc'] =$product->get_attribute('upc');} 
+            if($product->get_attribute('isbn')){ $specs_data['isbn'] = $product->get_attribute('isbn');} 
+            if($product->get_attribute('brand')){ $specs_data['brand'] = $product->get_attribute('brand');} 
+            if($product->get_attribute('mpn')){ $specs_data['mpn'] =$product->get_attribute('mpn');} 
+            if(!empty($specs_data)){ $product_data['specs'] = $specs_data;  }
+	return $product_data;
 }
 
 function wc_yotpo_get_shop_domain() {
@@ -241,18 +240,22 @@ function wc_yotpo_get_single_map_data($order_id) {
 		$products_arr = array();
 		foreach ($order->get_items() as $product) 
 		{
-			$product_instance = get_product($product['product_id']);
- 
-			$description = '';
-			if (is_object($product_instance)) {
-				$description = strip_tags($product_instance->get_post_data()->post_excerpt);	
-			}
-			$product_data = array();   
-			$product_data['url'] = get_permalink($product['product_id']); 
-			$product_data['name'] = $product['name'];
-			$product_data['image'] = wc_yotpo_get_product_image_url($product['product_id']);
-			$product_data['description'] = $description;
-			$product_data['price'] = $product['line_total'];
+                    $_product = wc_get_product($product['product_id']);
+                    if(is_object($_product)){
+                        $product_data = array();   
+                        $product_data['url'] = get_permalink($product['product_id']); 
+                        $product_data['name'] = $product['name'];
+                        $product_data['image'] = wc_yotpo_get_product_image_url($product['product_id']);
+                        $product_data['description'] = strip_tags($_product->get_description());
+                        $product_data['price'] = $product['line_total'];
+                        $specs_data = array();
+                        if($_product->get_sku()){ $specs_data['sku'] =$_product->get_sku();} 
+                        if($_product->get_attribute('upc')){ $specs_data['upc'] =$_product->get_attribute('upc');} 
+                        if($_product->get_attribute('isbn')){ $specs_data['isbn'] = $_product->get_attribute('isbn');} 
+                        if($_product->get_attribute('brand')){ $specs_data['brand'] = $_product->get_attribute('brand');} 
+                        if($_product->get_attribute('mpn')){ $specs_data['mpn'] =$_product->get_attribute('mpn');} 
+                        if(!empty($specs_data)){ $product_data['specs'] = $specs_data;  }
+                    }
 			$products_arr[$product['product_id']] = $product_data;	
 		}	
 		$data['products'] = $products_arr;
