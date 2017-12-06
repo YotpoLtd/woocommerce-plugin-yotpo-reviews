@@ -183,7 +183,7 @@ function wc_yotpo_get_product_data($product) {
 	$product_data['title'] = $product->get_title();
 	$product_data['image-url'] = wc_yotpo_get_product_image_url($product->id);
         $specs_data = array();
-            if($product->get_sku()){ $specs_data['sku'] =$product->get_sku();} 
+            if($product->get_sku()){ $specs_data['external_sku'] =$product->get_sku();} 
             if($product->get_attribute('upc')){ $specs_data['upc'] =$product->get_attribute('upc');} 
             if($product->get_attribute('isbn')){ $specs_data['isbn'] = $product->get_attribute('isbn');} 
             if($product->get_attribute('brand')){ $specs_data['brand'] = $product->get_attribute('brand');} 
