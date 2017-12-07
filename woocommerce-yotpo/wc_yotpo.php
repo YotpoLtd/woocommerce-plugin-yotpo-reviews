@@ -249,7 +249,7 @@ function wc_yotpo_get_single_map_data($order_id) {
                         $product_data['description'] = strip_tags($_product->get_description());
                         $product_data['price'] = $product['line_total'];
                         $specs_data = array();
-                        if($_product->get_sku()){ $specs_data['sku'] =$_product->get_sku();} 
+                        if($_product->get_sku()){ $specs_data['external_sku'] =$_product->get_sku();} 
                         if($_product->get_attribute('upc')){ $specs_data['upc'] =$_product->get_attribute('upc');} 
                         if($_product->get_attribute('isbn')){ $specs_data['isbn'] = $_product->get_attribute('isbn');} 
                         if($_product->get_attribute('brand')){ $specs_data['brand'] = $_product->get_attribute('brand');} 
