@@ -384,7 +384,7 @@ function wc_yotpo_get_degault_settings() {
 				  'language_code' => 'en',
 				  'widget_tab_name' => 'Reviews',
 				  'bottom_line_enabled_product' => true,
-				  'bottom_line_enabled_category' => true,
+				  'bottom_line_enabled_category' => false,
 				  'yotpo_language_as_site' => true,
 				  'show_submit_past_orders' => true,
 				  'disable_native_review_system' => true,
