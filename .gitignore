@@ -3,7 +3,13 @@
 .project
 .settings
 .idea
+<<<<<<< HEAD
 nbproject/project.xml
 nbproject/project.properties
 nbproject/private/private.xml
 nbproject/private/private.properties
+=======
+/nbproject/private/
+nbproject/project.xml
+nbproject/project.properties
+>>>>>>> master
