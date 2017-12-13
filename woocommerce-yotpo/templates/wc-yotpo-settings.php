@@ -1,51 +1,44 @@
 <?php
+
 function wc_display_yotpo_admin_page() {
 
-	if ( function_exists('current_user_can') && !current_user_can('manage_options') ) {
-		die(__(''));
-	}
-	if(wc_yotpo_compatible()) {			
-		if (isset($_POST['log_in_button']) ) {
-			wc_display_yotpo_settings();
-		}
-		elseif (isset($_POST['yotpo_settings'])) {
-			check_admin_referer( 'yotpo_settings_form' );
-			wc_proccess_yotpo_settings();
-			wc_display_yotpo_settings();
-		}
-		elseif (isset($_POST['yotpo_register'])) {
-			check_admin_referer( 'yotpo_registration_form' );
-			$success = wc_proccess_yotpo_register();
-			if($success) {			
-				wc_display_yotpo_settings($success);
-			}
-			else {
-				wc_display_yotpo_register();	
-			}
-			
-		}
-		elseif (isset($_POST['yotpo_past_orders'])) {
-			wc_yotpo_send_past_orders();	
-			wc_display_yotpo_settings();
-		}	
-		else {
-			$yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
-			if(empty($yotpo_settings['app_key']) && empty($yotpo_settings['secret'])) {			
-				wc_display_yotpo_register();
-			}
-			else {
-				wc_display_yotpo_settings();
-			}
-		}
-	}
-	else {
-		if(version_compare(phpversion(), '5.2.0') < 0) {
-			echo '<h1>Yotpo plugin requires PHP 5.2.0 above.</h1><br>';	
-		}	
-		if(!function_exists('curl_init')) {
-			echo '<h1>Yotpo plugin requires cURL library.</h1><br>';
-		}			
-	}
+    if (function_exists('current_user_can') && !current_user_can('manage_options')) {
+        die(__(''));
+    }
+    if (wc_yotpo_compatible()) {
+        if (isset($_POST['log_in_button'])) {
+            wc_display_yotpo_settings();
+        } elseif (isset($_POST['yotpo_settings'])) {
+            check_admin_referer('yotpo_settings_form');
+            wc_proccess_yotpo_settings();
+            wc_display_yotpo_settings();
+        } elseif (isset($_POST['yotpo_register'])) {
+            check_admin_referer('yotpo_registration_form');
+            $success = wc_proccess_yotpo_register();
+            if ($success) {
+                wc_display_yotpo_settings($success);
+            } else {
+                wc_display_yotpo_register();
+            }
+        } elseif (isset($_POST['yotpo_past_orders'])) {
+            wc_yotpo_send_past_orders();
+            wc_display_yotpo_settings();
+        } else {
+            $yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
+            if (empty($yotpo_settings['app_key']) && empty($yotpo_settings['secret'])) {
+                wc_display_yotpo_register();
+            } else {
+                wc_display_yotpo_settings();
+            }
+        }
+    } else {
+        if (version_compare(phpversion(), '5.2.0') < 0) {
+            echo '<h1>Yotpo plugin requires PHP 5.2.0 above.</h1><br>';
+        }
+        if (!function_exists('curl_init')) {
+            echo '<h1>Yotpo plugin requires cURL library.</h1><br>';
+        }
+    }
 }
 
 function wc_display_yotpo_settings($success_type = false) {
@@ -188,17 +181,16 @@ function wc_proccess_yotpo_settings() {
     }
 }
 
-function wc_display_yotpo_register() {		
-	$email = isset($_POST['yotpo_user_email']) ? $_POST['yotpo_user_email'] : '';
-	$user_name = isset($_POST['yotpo_user_name']) ? $_POST['yotpo_user_name'] : '';
-	$register_html = 
-	"<div class='wrap'>"			
-		   .screen_icon().
-		   "<h2>Yotpo Registration</h2>
+function wc_display_yotpo_register() {
+    $email = isset($_POST['yotpo_user_email']) ? $_POST['yotpo_user_email'] : '';
+    $user_name = isset($_POST['yotpo_user_name']) ? $_POST['yotpo_user_name'] : '';
+    $register_html = "<div class='wrap'>"
+            . screen_icon() .
+            "<h2>Yotpo Registration</h2>
 		<form method='post'>
 		<table class='form-table'>"
-		   .wp_nonce_field('yotpo_registration_form').		   
-		  "<fieldset>
+            . wp_nonce_field('yotpo_registration_form') .
+            "<fieldset>
 			  <h2 class='y-register-title'>Fill out the form below and click register to get started with Yotpo.</h2></br></br>    
 			  <tr valign='top'>
 			    <th scope='row'><div>Email address:</div></th>			 			  
@@ -228,102 +220,93 @@ function wc_display_yotpo_register() {
 		</form></br><p class='description'>*Learn <a href='http://support.yotpo.com/entries/24454261-Exporting-reviews-for-Woocommerce'>how to export your existing reviews</a> into Yotpo.</p></br></br>
 		<div class='yotpo-terms'>By registering I accept the <a href='https://www.yotpo.com/terms-of-service' target='_blank'>Terms of Use</a> and recognize that a 'Powered by Yotpo' link will appear on the bottom of my Yotpo widget.</div>
   </div>";
-  echo $register_html;		 
+    echo $register_html;
 }
 
 function wc_proccess_yotpo_register() {
-	$errors = array();
-	if ($_POST['yotpo_user_email'] === '') {
-		array_push($errors, 'Provide valid email address');
-	}		
-	if (strlen($_POST['yotpo_user_password']) < 6 || strlen($_POST['yotpo_user_password']) > 128) {
-		array_push($errors, 'Password must be at least 6 characters');
-	}			
-	if ($_POST['yotpo_user_password'] != $_POST['yotpo_user_confirm_password']) {
-		array_push($errors, 'Passwords are not identical');			
-	}
-	if ($_POST['yotpo_user_name'] === '') {
-		array_push($errors, 'Name is missing');
-	}		
-	if(count($errors) == 0) {		
-		$yotpo_api = new Yotpo();
-		$shop_url = get_bloginfo('url');		    
+    $errors = array();
+    if ($_POST['yotpo_user_email'] === '') {
+        array_push($errors, 'Provide valid email address');
+    }
+    if (strlen($_POST['yotpo_user_password']) < 6 || strlen($_POST['yotpo_user_password']) > 128) {
+        array_push($errors, 'Password must be at least 6 characters');
+    }
+    if ($_POST['yotpo_user_password'] != $_POST['yotpo_user_confirm_password']) {
+        array_push($errors, 'Passwords are not identical');
+    }
+    if ($_POST['yotpo_user_name'] === '') {
+        array_push($errors, 'Name is missing');
+    }
+    if (count($errors) == 0) {
+        $yotpo_api = new Yotpo();
+        $shop_url = get_bloginfo('url');
         $user = array(
             'email' => $_POST['yotpo_user_email'],
             'display_name' => $_POST['yotpo_user_name'],
-        	'first_name' => '',
+            'first_name' => '',
             'password' => $_POST['yotpo_user_password'],
             'last_name' => '',
             'website_name' => $shop_url,
             'support_url' => $shop_url,
             'callback_url' => $shop_url,
             'url' => $shop_url);
-        try {        	        	
-        	$response = $yotpo_api->create_user($user, true);        	
-        	if(!empty($response['status']) && !empty($response['status']['code'])) {
-        		if($response['status']['code'] == 200) {
-        			$app_key = $response['response']['app_key'];
-        			$secret = $response['response']['secret'];
-        			$yotpo_api->set_app_key($app_key);
-        			$yotpo_api->set_secret($secret);
-        			$shop_domain = parse_url($shop_url,PHP_URL_HOST);
-        			$account_platform_response = $yotpo_api->create_account_platform(array( 'shop_domain' => wc_yotpo_get_shop_domain(),
-        																		   			'utoken' => $response['response']['token'],
-        																					'platform_type_id' => 12));
-        			if(!empty($response['status']) && !empty($response['status']['code']) && $response['status']['code'] == 200) {
-        				$current_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
-        				$current_settings['app_key'] = $app_key;
-        				$current_settings['secret'] = $secret;
-						update_option('yotpo_settings', $current_settings);							
-						return true;			  						
-        			}
-        			elseif($response['status']['code'] >= 400){
-        				if(!empty($response['status']['message'])) {
-        					wc_yotpo_display_message($response['status']['message'], true);
-        				}
-        			}
-        		}
-        		elseif($response['status']['code'] >= 400){
-        			if(!empty($response['status']['message'])) { 
-                        if(is_array($response['status']['message']) && !empty($response['status']['message']['email'])) {
-        					if(is_array($response['status']['message']['email'])) {
-        						wc_yotpo_display_message($response['status']['message']['email'][0], false);
-        					}
-        					else {
-        						wc_yotpo_display_message($response['status']['message']['email'], false);
-        					}        					
-        				}   
-        				else {
-        					wc_yotpo_display_message($response['status']['message'], true);	
-        				}    				
-        					        						
-        			}
-        		}
-        	}
-        	else {
-                if ($response == 'b2c') {
-        	        return $response;
+        try {
+            $response = $yotpo_api->create_user($user, true);
+            if (!empty($response['status']) && !empty($response['status']['code'])) {
+                if ($response['status']['code'] == 200) {
+                    $app_key = $response['response']['app_key'];
+                    $secret = $response['response']['secret'];
+                    $yotpo_api->set_app_key($app_key);
+                    $yotpo_api->set_secret($secret);
+                    $shop_domain = parse_url($shop_url, PHP_URL_HOST);
+                    $account_platform_response = $yotpo_api->create_account_platform(array('shop_domain' => wc_yotpo_get_shop_domain(),
+                        'utoken' => $response['response']['token'],
+                        'platform_type_id' => 12));
+                    if (!empty($response['status']) && !empty($response['status']['code']) && $response['status']['code'] == 200) {
+                        $current_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
+                        $current_settings['app_key'] = $app_key;
+                        $current_settings['secret'] = $secret;
+                        update_option('yotpo_settings', $current_settings);
+                        return true;
+                    } elseif ($response['status']['code'] >= 400) {
+                        if (!empty($response['status']['message'])) {
+                            wc_yotpo_display_message($response['status']['message'], true);
+                        }
+                    }
+                } elseif ($response['status']['code'] >= 400) {
+                    if (!empty($response['status']['message'])) {
+                        if (is_array($response['status']['message']) && !empty($response['status']['message']['email'])) {
+                            if (is_array($response['status']['message']['email'])) {
+                                wc_yotpo_display_message($response['status']['message']['email'][0], false);
+                            } else {
+                                wc_yotpo_display_message($response['status']['message']['email'], false);
+                            }
+                        } else {
+                            wc_yotpo_display_message($response['status']['message'], true);
+                        }
+                    }
                 }
-        	}
+            } else {
+                if ($response == 'b2c') {
+                    return $response;
+                }
+            }
+        } catch (Exception $e) {
+            wc_yotpo_display_message($e->getMessage(), true);
         }
-        catch (Exception $e) {
-        	wc_yotpo_display_message($e->getMessage(), true);	
-        }         		
-	}
-	else {
-		wc_yotpo_display_message($errors, false);	
-	}	
-	return false;		
+    } else {
+        wc_yotpo_display_message($errors, false);
+    }
+    return false;
 }
 
 function wc_yotpo_display_message($messages = array(), $is_error = false) {
-	$class = $is_error ? 'error' : 'updated fade';
-	if(is_array($messages)) {
-		foreach ($messages as $message) {
-			echo "<div id='message' class='$class'><p><strong>$message</strong></p></div>";
-		}
-	}
-	elseif(is_string($messages)) {
-		echo "<div id='message' class='$class'><p><strong>$messages</strong></p></div>";
-	}
+    $class = $is_error ? 'error' : 'updated fade';
+    if (is_array($messages)) {
+        foreach ($messages as $message) {
+            echo "<div id='message' class='$class'><p><strong>$message</strong></p></div>";
+        }
+    } elseif (is_string($messages)) {
+        echo "<div id='message' class='$class'><p><strong>$messages</strong></p></div>";
+    }
 }
