@@ -74,10 +74,10 @@ function wc_yotpo_front_end_init() {
 			wp_enqueue_style('yotpoSideBootomLineStylesheet', plugins_url('assets/css/bottom-line.css', __FILE__));
 		}			
 	}
-	elseif ($settings['bottom_line_enabled_category']) {
-		add_action('woocommerce_after_shop_loop_item_title', 'wc_yotpo_show_buttomline',7);
-		wp_enqueue_style('yotpoSideBootomLineStylesheet', plugins_url('assets/css/bottom-line.css', __FILE__));
-	}							
+	 elseif ($settings['bottom_line_enabled_category']) {
+        add_action('woocommerce_after_shop_loop_item', 'wc_yotpo_show_buttomline', 7);
+        wp_enqueue_style('yotpoSideBootomLineStylesheet', plugins_url('assets/css/bottom-line.css', __FILE__));
+    }
 }
 
 function wc_yotpo_activation() {
@@ -138,7 +138,12 @@ function wc_yotpo_load_js(){
 }
 
 function wc_yotpo_is_who_commerce_installed() {
-	return in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_option('active_plugins')));
+    $wooVer =  WooCommerce::plugin_path();
+    $findme   = "plugins";
+    $pos = strpos($wooVer, $findme)+8;
+    $pluginCheck =  substr($wooVer, $pos).'/woocommerce.php';
+    $string = WooCommerce::plugin_path();
+    return in_array($pluginCheck, apply_filters('active_plugins', get_option('active_plugins')));
 }
 
 function wc_yotpo_show_qa_bottomline() {
@@ -389,7 +394,7 @@ function wc_yotpo_get_degault_settings() {
 				  'language_code' => 'en',
 				  'widget_tab_name' => 'Reviews',
 				  'bottom_line_enabled_product' => true,
-				  'bottom_line_enabled_category' => true,
+				  'bottom_line_enabled_category' => false,
 				  'yotpo_language_as_site' => true,
 				  'show_submit_past_orders' => true,
 				  'disable_native_review_system' => true,
