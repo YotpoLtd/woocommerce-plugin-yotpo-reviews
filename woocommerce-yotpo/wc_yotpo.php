@@ -328,38 +328,7 @@ function wc_yotpo_past_order_time_query( $where = '' ) {
 }
 
 function wc_yotpo_send_past_orders() {
-    $yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
-    if (!empty($yotpo_settings['app_key']) && !empty($yotpo_settings['secret'])) {
-        $past_orders = wc_yotpo_get_past_orders();
-        $is_success = true;
-        if (!is_null($past_orders) && is_array($past_orders)) {
-            $yotpo_api = new Yotpo($yotpo_settings['app_key'], $yotpo_settings['secret']);
-            $get_oauth_token_response = $yotpo_api->get_oauth_token();
-            if (!empty($get_oauth_token_response) && !empty($get_oauth_token_response['access_token'])) {
-                foreach ($past_orders as $post_bulk)
-                    if (!is_null($post_bulk)) {
-                        $post_bulk['utoken'] = $get_oauth_token_response['access_token'];
-                        $response = $yotpo_api->create_purchases($post_bulk);
-                        if ($response['code'] != 200 && $is_success) {
-                            $is_success = false;
-                            $message = !empty($response['status']) && !empty($response['status']['message']) ? $response['status']['message'] : 'Error occurred';
-                            wc_yotpo_display_message($message, true);
-                        }
-                    }
-                if ($is_success) {
-                    wc_yotpo_display_message('Past orders sent successfully', false);
-                    $yotpo_settings['show_submit_past_orders'] = false;
-                    update_option('yotpo_settings', $yotpo_settings);
-                }
-            }
-        } else {
-            wc_yotpo_display_message('Could not retrieve past orders', true);
-        }
-    } else {
-        wc_yotpo_display_message('You need to set your app key and secret token to post past orders', false);
-    }
-}
-	$yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
+   	$yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
 	if (!empty($yotpo_settings['app_key']) && !empty($yotpo_settings['secret']))
 	{
 		$past_orders = wc_yotpo_get_past_orders();		
