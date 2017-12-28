@@ -12,7 +12,7 @@ register_uninstall_hook( __FILE__, 'wc_yotpo_uninstall' );
 register_deactivation_hook( __FILE__, 'wc_yotpo_deactivate' );
 add_action('plugins_loaded', 'wc_yotpo_init');
 add_action('init', 'wc_yotpo_redirect');
-add_action( 'woocommerce_order_status_completed', 'wc_yotpo_map');
+add_action( 'woocommerce_order_status_changed', 'wc_yotpo_map');
 		
 function wc_yotpo_init() {
 	$is_admin = is_admin();	
@@ -209,27 +209,30 @@ function wc_yotpo_remove_native_review_system($open, $post_id) {
 }
 
 function wc_yotpo_map($order_id) {
-	$yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
-	$secret = $yotpo_settings['secret'];
-	$app_key = $yotpo_settings['app_key'];
-	if(!empty($app_key) && !empty($secret) && wc_yotpo_compatible()){
-		try {		
-				$purchase_data = wc_yotpo_get_single_map_data($order_id);
-				if(!is_null($purchase_data) && is_array($purchase_data)) {
-					require_once(plugin_dir_path( __FILE__ ) . 'lib/yotpo-api/Yotpo.php');					
-					$yotpo_api = new Yotpo($app_key, $secret);
-					$get_oauth_token_response = $yotpo_api->get_oauth_token();
-					if(!empty($get_oauth_token_response) && !empty($get_oauth_token_response['access_token'])) {
-						$purchase_data['utoken'] = $get_oauth_token_response['access_token'];
-						$purchase_data['platform'] = 'woocommerce';
-						$response = $yotpo_api->create_purchase($purchase_data);
-				}
-			}		
-		}
-		catch (Exception $e) {
-			error_log($e->getMessage());
-		}
-	}
+    $order = wc_get_order($order_id);
+    $orderStatus = 'wc-' . $order->get_status();
+    $yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
+    if ($orderStatus === $yotpo_settings['yotpo_order_status']) {
+        $secret = $yotpo_settings['secret'];
+        $app_key = $yotpo_settings['app_key'];
+        if (!empty($app_key) && !empty($secret) && wc_yotpo_compatible()) {
+            try {
+                $purchase_data = wc_yotpo_get_single_map_data($order_id);
+                if (!is_null($purchase_data) && is_array($purchase_data)) {
+                    require_once(plugin_dir_path(__FILE__) . 'lib/yotpo-api/Yotpo.php');
+                    $yotpo_api = new Yotpo($app_key, $secret);
+                    $get_oauth_token_response = $yotpo_api->get_oauth_token();
+                    if (!empty($get_oauth_token_response) && !empty($get_oauth_token_response['access_token'])) {
+                        $purchase_data['utoken'] = $get_oauth_token_response['access_token'];
+                        $purchase_data['platform'] = 'woocommerce';
+                        $response = $yotpo_api->create_purchase($purchase_data);
+                    }
+                }
+            } catch (Exception $e) {
+                error_log($e->getMessage());
+            }
+        }
+    }
 }
 
 function wc_yotpo_get_single_map_data($order_id) {
