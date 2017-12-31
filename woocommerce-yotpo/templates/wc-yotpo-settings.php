@@ -124,7 +124,22 @@ function wc_display_yotpo_settings($success_type = false) {
 		   		       <th scope='row'><div>Enable bottom line in category page:</div></th>
 		   		       <td><input type='checkbox' name='yotpo_bottom_line_enabled_category' value='1' " . checked(1, $yotpo_settings['bottom_line_enabled_category'], false) . " />		   		       
 		   		       </td>
-		   		     </tr>					 	 
+		   		     </tr>
+                                     </tr>					  	 
+					 <tr valign='top'>
+		   		       <th scope='row'><div>Order Status:</div></th>
+		   		       <td>
+                                       <select name='yotpo_order_status' class='yotpo-order-status' >
+                                            <option value='wc-pending' " . selected('wc-pending', $yotpo_settings['yotpo_order_status'], false) . ">Pending Payment</option>
+			 		    <option value='wc-processing' " . selected('wc-processing', $yotpo_settings['yotpo_order_status'], false) . ">Processing</option>
+			 	            <option value='wc-on-hold' " . selected('wc-on-hold', $yotpo_settings['yotpo_order_status'], false) . ">On Hold</option>
+                                            <option value='wc-completed' " . selected('wc-completed', $yotpo_settings['yotpo_order_status'], false) . ">Completed</option>
+			 		    <option value='wc-cancelled' " . selected('wc-cancelled', $yotpo_settings['yotpo_order_status'], false) . ">Cancelled</option>
+			 	            <option value='wc-refunded' " . selected('wc-refunded', $yotpo_settings['yotpo_order_status'], false) . ">Refunded</option>
+                                            <option value='wc-failed' " . selected('wc-failed', $yotpo_settings['yotpo_order_status'], false) . ">Failed</option>
+				         </select>
+		   		       </td>
+		   		     </tr>
 		           </fieldset>
 		         </table></br>			  		
 		         <div class='buttons-container'>
@@ -139,19 +154,20 @@ function wc_display_yotpo_settings($success_type = false) {
 			<input type='submit' value='Export Reviews' class='button-primary' id='export_reviews_submit'/>
 		  </form> 		  		  
 		</div>";
-
     echo $settings_html;
 }
+
 
 function wc_proccess_yotpo_settings() {
     $current_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
     $new_settings = array('app_key' => $_POST['yotpo_app_key'],
-        'secret' => $_POST['yotpo_oauth_token'],
+        'secret' => $_POST['yotpo_oauth_token'],    
         'widget_location' => $_POST['yotpo_widget_location'],
         'language_code' => $_POST['yotpo_widget_language_code'],
         'widget_tab_name' => $_POST['yotpo_widget_tab_name'],
         'bottom_line_enabled_product' => isset($_POST['yotpo_bottom_line_enabled_product']) ? true : false,
         'bottom_line_enabled_category' => isset($_POST['yotpo_bottom_line_enabled_category']) ? true : false,
+        'yotpo_order_status' => $_POST['yotpo_order_status'],
         'yotpo_language_as_site' => isset($_POST['yotpo_language_as_site']) ? true : false,
         'disable_native_review_system' => isset($_POST['disable_native_review_system']) ? true : false,
         'show_submit_past_orders' => $current_settings['show_submit_past_orders']);
