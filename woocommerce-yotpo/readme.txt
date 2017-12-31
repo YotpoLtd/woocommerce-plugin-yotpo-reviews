@@ -2,8 +2,8 @@
 Contributors: Yotpo
 Tags: reviews, social reviews, woocommerce, woocommerce reviews, woocommerce product reviews, woocommerce extensions, woocommerce plugins, woocommerce addons, woocommerce add-ons, yotpo, yotpo reviews, yotpo social reviews
 Requires at least: 3.5.1
-Tested up to: 4.1
-Stable tag: 1.1.5
+Tested up to: 4.9.1
+Stable tag: 1.1.6
 License: GPLv2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -130,3 +130,10 @@ Yes. To connect your social accounts to Yotpo, just log into yotpo.com, and clic
 = 1.1.5 - 11/10/2016 =
 * Update conversion pixel
 
+= 1.1.6 - 31/12/2017 =
+* Added support for woocommerce up-to version 3.2.6, Wordpress up-to version 4.9.1 and PHP up-to 7.1.x.
+* Fixed a bug with Woocommerce 3.1.0 and 3.1.1 affecting Yotpo's widget
+* Added the ability to add and customize additional specs and unique identifiers per product (Brand, ISBN, MPN, UPC) .
+* Added the ability to pull orders and send MAPs according to additional order statuses (other than "complete").
+* Added bottom-line for category page.
+* Fixed "review export" method on Yotpo's integration page.
