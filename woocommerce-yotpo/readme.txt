@@ -131,9 +131,9 @@ Yes. To connect your social accounts to Yotpo, just log into yotpo.com, and clic
 * Update conversion pixel
 
 = 1.1.6 - 31/12/2017 =
-* Added support for woocommerce up-to version 3.2.6, Wordpress up-to version 4.9.1 and PHP up-to 7.1.x
-* Fixed a bug with woocommerce 3.1.0 and 3.1.1 relating Yotpo's widget
-* Added the ability to customize and add more specs(Isbn, Brand, Mpn, Upc) peer product.
-* Ability to send MAP other based on other order status than "complete".
-* added bottom-line in category page.
-* fixed "review export" method on yotpo's integration page.
+* Added support for woocommerce up-to version 3.2.6, Wordpress up-to version 4.9.1 and PHP up-to 7.1.x.
+* Fixed a bug with Woocommerce 3.1.0 and 3.1.1 affecting Yotpo's widget
+* Added the ability to add and customize additional specs and unique identifiers per product (Brand, ISBN, MPN, UPC) .
+* Added the ability to pull orders and send MAPs according to additional order statuses (other than "complete").
+* Added bottom-line for category page.
+* Fixed "review export" method on Yotpo's integration page.
