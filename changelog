@@ -169,3 +169,12 @@ Nimrod
 ----
 Ohad
 1) Update new conversion pixel
+
+2018-01-18
+----
+Haroon
+1) Fixed a bug with Woocommerce 3.1.0 and 3.1.1 affecting Yotpo's widget
+2) Added the ability to add and customize additional specs and unique identifiers per product (Brand, ISBN, MPN, UPC) .
+3) Added the ability to pull orders and send MAPs according to additional order statuses (other than "complete").
+4) Added star rating for the product category page.
+5) Fixed "review export" method on Yotpo's integration page.
