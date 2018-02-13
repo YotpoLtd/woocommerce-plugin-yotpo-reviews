@@ -137,3 +137,6 @@ Yes. To connect your social accounts to Yotpo, just log into yotpo.com, and clic
 * Added the ability to pull orders and send MAPs according to additional order statuses (other than "complete").
 * Added bottom-line for category page.
 * Fixed "review export" method on Yotpo's integration page.
+
+= 1.1.7 - 13/02/2018 =
+* Reverted default order status to 'Completed'
