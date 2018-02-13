@@ -178,3 +178,8 @@ Haroon
 3) Added the ability to pull orders and send MAPs according to additional order statuses (other than "complete").
 4) Added star rating for the product category page.
 5) Fixed "review export" method on Yotpo's integration page.
+
+2018-01-18
+----
+Haroon
+1) Reverted default order status to 'Completed'
