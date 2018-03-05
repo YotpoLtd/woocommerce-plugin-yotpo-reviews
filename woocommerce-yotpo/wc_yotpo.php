@@ -72,7 +72,8 @@ function wc_yotpo_front_end_init() {
 		if($settings['bottom_line_enabled_product']) {	
 			add_action('woocommerce_single_product_summary', 'wc_yotpo_show_buttomline',7);	
 			wp_enqueue_style('yotpoSideBootomLineStylesheet', plugins_url('assets/css/bottom-line.css', __FILE__));
-		}			
+		}
+		add_action('woocommerce_before_single_product', 'wc_yotpo_show_rs', 5);		
 	}
 	 elseif ($settings['bottom_line_enabled_category']) {
         add_action('woocommerce_after_shop_loop_item', 'wc_yotpo_show_buttomline', 7);
@@ -114,6 +115,32 @@ function wc_yotpo_show_widget() {
 	  				data-lang='".$product_data['lang']."'></div>";
 		echo $yotpo_div;
 	}						
+}
+
+function wc_yotpo_show_rs() {
+	global $product;
+	$id = $product->get_id();
+	$title = $product->get_title();
+	$yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
+	$app_key = $yotpo_settings['app_key'];
+	$json = file_get_contents('https://api.yotpo.com/products/'.$app_key.'/'.$id.'/bottomline') ? : null;
+	if (!is_null($json)) {$data = json_decode($json);};
+	if (!is_null($data) && $data->status->code == 200) {
+		$avg = $data->response->bottomline->average_score ?: 0;
+		$total = $data->response->bottomline->total_reviews ?: 0;
+		$rs = '<script type="application/ld+json" class="y-rich-snippet-script">
+				{
+			    "@context": "http://schema.org",
+			    "@type": "Product",
+			    "aggregateRating": {
+			        "@type": "AggregateRating",
+			        "ratingValue": "'.$avg.'",
+			        "reviewCount": "'.$total.'",
+			    },
+			    "name":"'.$title.'"}
+				</script>';
+		echo $rs;
+	}
 }
 
 function wc_yotpo_show_widget_in_tab($tabs) {
