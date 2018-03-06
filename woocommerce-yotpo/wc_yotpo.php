@@ -135,7 +135,7 @@ function wc_yotpo_show_rs() {
 			    "aggregateRating": {
 			        "@type": "AggregateRating",
 			        "ratingValue": "'.$avg.'",
-			        "reviewCount": "'.$total.'",
+			        "reviewCount": "'.$total.'"
 			    },
 			    "name":"'.$title.'"}
 				</script>';
