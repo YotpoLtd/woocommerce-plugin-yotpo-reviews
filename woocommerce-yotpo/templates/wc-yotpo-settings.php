@@ -178,7 +178,6 @@ function wc_proccess_yotpo_settings() {
         'disable_native_review_system' => isset($_POST['disable_native_review_system']) ? true : false,
         'show_submit_past_orders' => $current_settings['show_submit_past_orders']);
     update_option('yotpo_settings', $new_settings);
-    var_dump($new_settings);
     if ($current_settings['disable_native_review_system'] != $new_settings['disable_native_review_system']) {
         if ($new_settings['disable_native_review_system'] == false) {
             update_option('woocommerce_enable_review_rating', get_option('native_star_ratings_enabled'));
