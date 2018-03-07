@@ -73,7 +73,9 @@ function wc_yotpo_front_end_init() {
 			add_action('woocommerce_single_product_summary', 'wc_yotpo_show_buttomline',7);	
 			wp_enqueue_style('yotpoSideBootomLineStylesheet', plugins_url('assets/css/bottom-line.css', __FILE__));
 		}
-		add_action('woocommerce_before_single_product', 'wc_yotpo_show_rs', 5);		
+		if($settings['rich_snippets_enabled']) {
+			add_action('woocommerce_before_single_product', 'wc_yotpo_show_rs', 5);
+		}
 	}
 	 elseif ($settings['bottom_line_enabled_category']) {
         add_action('woocommerce_after_shop_loop_item', 'wc_yotpo_show_buttomline', 7);
@@ -425,6 +427,7 @@ function wc_yotpo_get_degault_settings() {
         'widget_tab_name' => 'Reviews',
         'bottom_line_enabled_product' => true,
         'bottom_line_enabled_category' => false,
+        'rich_snippets_enabled' => false,
         'yotpo_language_as_site' => true,
         'show_submit_past_orders' => true,
         'yotpo_order_status' => 'wc-completed',
