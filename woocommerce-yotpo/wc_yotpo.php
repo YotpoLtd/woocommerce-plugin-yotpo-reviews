@@ -73,7 +73,7 @@ function wc_yotpo_front_end_init() {
 			add_action('woocommerce_single_product_summary', 'wc_yotpo_show_buttomline',7);	
 			wp_enqueue_style('yotpoSideBootomLineStylesheet', plugins_url('assets/css/bottom-line.css', __FILE__));
 		}
-		if($settings['rich_snippets_enabled']) {
+		if($settings['rich_snippets_enabled']) { // #SHOW_RS frontend init
 			add_action('woocommerce_before_single_product', 'wc_yotpo_show_rs', 5);
 		}
 	}
@@ -119,10 +119,16 @@ function wc_yotpo_show_widget() {
 	}						
 }
 
-function wc_yotpo_show_rs() {
+function wc_yotpo_show_rs() { // #SHOW_RS main function
 	global $product;
+	// var_dump($product);
 	$id = $product->get_id();
 	$title = $product->get_title();
+	$description = addslashes(wpautop( do_shortcode( $product->get_short_description() ? $product->get_short_description() : $product->get_description() ) ) );
+	$availability = 'https://schema.org/' . ( $product->is_in_stock() ? 'InStock' : 'OutOfStock' );
+	$price = $product->get_price();
+	$currency = get_woocommerce_currency();
+	$sku = $product->get_sku();
 	$yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
 	$app_key = $yotpo_settings['app_key'];
 	$json = file_get_contents('https://api.yotpo.com/products/'.$app_key.'/'.$id.'/bottomline') ? : null;
@@ -130,17 +136,32 @@ function wc_yotpo_show_rs() {
 	if (!is_null($data) && $data->status->code == 200) {
 		$avg = $data->response->bottomline->average_score ?: 0;
 		$total = $data->response->bottomline->total_reviews ?: 0;
-		$rs = '<script type="application/ld+json" class="y-rich-snippet-script">
+		$rs = '
+			<script type="application/ld+json">
 				{
-			    "@context": "http://schema.org",
-			    "@type": "Product",
-			    "aggregateRating": {
-			        "@type": "AggregateRating",
-			        "ratingValue": "'.$avg.'",
-			        "reviewCount": "'.$total.'"
-			    },
-			    "name":"'.$title.'"}
-				</script>';
+				    "@context": "http://schema.org",
+				    "@graph": [
+				        {
+				            "@type": "Product",
+				            "name": "'.$title.'",
+				            "sku": "'.$sku.'",
+				            "itemCondition": "http://schema.org/NewCondition",
+				            "description": "'.$description.'",
+				            "offers": {
+				                "@type": "Offer",
+				                "availability": "'.$availability.'",
+				                "price": "'.$price.'",
+				                "priceCurrency": "'.$currency.'"
+				            },
+				            "aggregateRating": {
+				                "@type": "AggregateRating",
+				                "ratingValue": "'.$avg.'",
+				                "reviewCount": "'.$total.'"
+				            }
+						}
+					]
+				}
+			</script>';
 		echo $rs;
 	}
 }
@@ -427,7 +448,7 @@ function wc_yotpo_get_degault_settings() {
         'widget_tab_name' => 'Reviews',
         'bottom_line_enabled_product' => true,
         'bottom_line_enabled_category' => false,
-        'rich_snippets_enabled' => false,
+        'rich_snippets_enabled' => false, // #SHOW_RS default setting
         'yotpo_language_as_site' => true,
         'show_submit_past_orders' => true,
         'yotpo_order_status' => 'wc-completed',
