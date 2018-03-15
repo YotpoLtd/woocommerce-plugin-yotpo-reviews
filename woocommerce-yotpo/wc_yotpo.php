@@ -277,6 +277,7 @@ function wc_yotpo_get_product_image_url($product_id) {
 }
 
 function wc_yotpo_get_past_orders() {
+	$yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
 	$result = null;
 	$args = array(
 		'post_type'		 => 'shop_order',
@@ -284,7 +285,7 @@ function wc_yotpo_get_past_orders() {
 	);
 
 	if (defined('WC_VERSION') && (version_compare(WC_VERSION, '2.2.0') >= 0)) {
-		$args['post_status'] = 'wc-completed';
+		$args['post_status'] = $yotpo_settings['yotpo_order_status'];
 	} else {
 		$args['tax_query'] = array(
 			array(
