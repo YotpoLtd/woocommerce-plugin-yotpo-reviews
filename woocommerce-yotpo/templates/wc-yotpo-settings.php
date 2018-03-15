@@ -125,6 +125,11 @@ function wc_display_yotpo_settings($success_type = false) {
 		   		       <td><input type='checkbox' name='yotpo_bottom_line_enabled_category' value='1' " . checked(1, $yotpo_settings['bottom_line_enabled_category'], false) . " />		   		       
 		   		       </td>
 		   		     </tr>
+                     <tr valign='top'>
+                       <th scope='row'><div>Enable rich snippets for product pages:</div></th>
+                       <td><input type='checkbox' name='yotpo_rich_snippets_enabled' value='1' " . checked(1, $yotpo_settings['rich_snippets_enabled'], false) . " />                    
+                       </td>
+                     </tr>
                                      </tr>					  	 
 					 <tr valign='top'>
 		   		       <th scope='row'><div>Order Status:</div></th>
@@ -167,6 +172,7 @@ function wc_proccess_yotpo_settings() {
         'widget_tab_name' => $_POST['yotpo_widget_tab_name'],
         'bottom_line_enabled_product' => isset($_POST['yotpo_bottom_line_enabled_product']) ? true : false,
         'bottom_line_enabled_category' => isset($_POST['yotpo_bottom_line_enabled_category']) ? true : false,
+        'rich_snippets_enabled' => isset($_POST['yotpo_rich_snippets_enabled']) ? true : false,
         'yotpo_order_status' => $_POST['yotpo_order_status'],
         'yotpo_language_as_site' => isset($_POST['yotpo_language_as_site']) ? true : false,
         'disable_native_review_system' => isset($_POST['disable_native_review_system']) ? true : false,
