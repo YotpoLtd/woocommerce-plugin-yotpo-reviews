@@ -3,7 +3,7 @@
 	Plugin Name: Yotpo Social Reviews for Woocommerce
 	Description: Yotpo Social Reviews helps Woocommerce store owners generate a ton of reviews for their products. Yotpo is the only solution which makes it easy to share your reviews automatically to your social networks to gain a boost in traffic and an increase in sales.
 	Author: Yotpo
-	Version: 1.1.7
+	Version: 1.1.8
 	Author URI: http://www.yotpo.com?utm_source=yotpo_plugin_woocommerce&utm_medium=plugin_page_link&utm_campaign=woocommerce_plugin_page_link	
 	Plugin URI: http://www.yotpo.com?utm_source=yotpo_plugin_woocommerce&utm_medium=plugin_page_link&utm_campaign=woocommerce_plugin_page_link
  */
@@ -23,7 +23,10 @@ function wc_yotpo_init() {
 				$export = new Yotpo_Review_Export();
 				list($file, $errors) = $export->exportReviews();	
 				if(is_null($errors)) {
+					ytdbg($file,'Reviews Export Success:');
 					$export->downloadReviewToBrowser($file);	
+				} else {
+					ytdbg($errors,'Reviews Export Fail:');
 				}
 			}
 			exit;
@@ -102,23 +105,26 @@ function wc_yotpo_uninstall() {
 }
 
 function wc_yotpo_show_widget() {		 
-	$product = get_product();
-	if($product->post->comment_status == 'open') {		
-		$product_data = wc_yotpo_get_product_data($product);	
+	global $product; // Proper way to get product
+	if($product->get_reviews_allowed() == true) { // Check if reviews allowed		
+		$product_data = wc_yotpo_get_product_data($product);
+		// Added price and currency data attrs below.
 		$yotpo_div = "<div class='yotpo yotpo-main-widget'
 	   				data-product-id='".$product_data['id']."'
 	   				data-name='".$product_data['title']."' 
 	   				data-url='".$product_data['url']."' 
 	   				data-image-url='".$product_data['image-url']."' 
 	  				data-description='".$product_data['description']."' 
-	  				data-lang='".$product_data['lang']."'></div>";
+	  				data-lang='".$product_data['lang']."'
+                    data-price='".$product->get_price()."'
+                    data-currency='".get_woocommerce_currency()."'></div>";
 		echo $yotpo_div;
 	}						
 }
 
 function wc_yotpo_show_widget_in_tab($tabs) {
-	$product = get_product();
-	if($product->post->comment_status == 'open') {
+	global $product; // Proper way to get product
+	if($product->get_reviews_allowed() == true) { // Check if reviews allowed	
 		$settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
 	 	$tabs['yotpo_widget'] = array(
 	 	'title' => $settings['widget_tab_name'],
@@ -138,24 +144,25 @@ function wc_yotpo_load_js(){
 }
 
 function wc_yotpo_is_who_commerce_installed() {
-    $wooVer =  WooCommerce::plugin_path();
+    $wooVer =  WC()->plugin_path(); // Proper path
     $findme   = "plugins";
     $pos = strpos($wooVer, $findme)+8;
+    // $string was unused.
     $pluginCheck =  substr($wooVer, $pos).'/woocommerce.php';
-    $string = WooCommerce::plugin_path();
     return in_array($pluginCheck, apply_filters('active_plugins', get_option('active_plugins')));
 }
 
 function wc_yotpo_show_qa_bottomline() {
-    $product_data = wc_yotpo_get_product_data(get_product());
+	do_action( 'woocommerce_init' );
+    $product_data = wc_yotpo_get_product_data(wc_get_product()); // Proper way to get product.
     echo "<div class='yotpo QABottomLine'
          data-appkey='".$product_data['app_key']."'
          data-product-id='".$product_data['id']."'></div>";
 }
 
 function wc_yotpo_show_buttomline() {
-	$product = get_product();
-	$show_bottom_line = is_product() ? $product->post->comment_status == 'open' : true;
+	global $product; // Proper way to get product
+	$show_bottom_line = is_product() ? $product->get_reviews_allowed() == true : true; // Proper way to check if allowed.
 	if($show_bottom_line) {
 		$product_data = wc_yotpo_get_product_data($product);	
 		$yotpo_div = "<div class='yotpo bottomLine' 
@@ -167,13 +174,12 @@ function wc_yotpo_show_buttomline() {
 				
 }
 
-function wc_yotpo_get_product_data($product) {	
-    
+function wc_yotpo_get_product_data($product) {	 
 	$product_data = array();
 	$settings = get_option('yotpo_settings',wc_yotpo_get_degault_settings());
 	$product_data['app_key'] = $settings['app_key'];
 	$product_data['shop_domain'] = wc_yotpo_get_shop_domain(); 
-	$product_data['url'] = get_permalink($product->id);
+	$product_data['url'] = get_permalink($product->get_id()); // Proper get_id
 	$product_data['lang'] = $settings['language_code']; 
 	if($settings['yotpo_language_as_site'] == true) {
 		$lang = explode('-', get_bloginfo('language'));
@@ -183,10 +189,10 @@ function wc_yotpo_get_product_data($product) {
 			$product_data['lang'] = $lang[0];	
 		}		
 	}
-	$product_data['description'] = strip_tags($product->get_post_data()->post_excerpt);
-	$product_data['id'] = $product->id;	
+	$product_data['description'] = wp_strip_all_tags($product->get_description()); // Proper get description + WP strip tags
+	$product_data['id'] = $product->get_id();	
 	$product_data['title'] = $product->get_title();
-	$product_data['image-url'] = wc_yotpo_get_product_image_url($product->id);
+	$product_data['image-url'] = wc_yotpo_get_product_image_url($product->get_id());
         $specs_data = array();
             if($product->get_sku()){ $specs_data['external_sku'] =$product->get_sku();} 
             if($product->get_attribute('upc')){ $specs_data['upc'] =$product->get_attribute('upc');} 
@@ -209,10 +215,13 @@ function wc_yotpo_remove_native_review_system($open, $post_id) {
 }
 
 function wc_yotpo_map($order_id) {
+	do_action( 'woocommerce_init' );
     $order = wc_get_order($order_id);
     $orderStatus = 'wc-' . $order->get_status();
     $yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
+    ytdbg(($orderStatus.' should be '.$yotpo_settings['yotpo_order_status']), "Order #".$order_id." status changed to");
     if ($orderStatus === $yotpo_settings['yotpo_order_status']) {
+    	ytdbg('', "Order #".$order_id." submission starting...");
         $secret = $yotpo_settings['secret'];
         $app_key = $yotpo_settings['app_key'];
         if (!empty($app_key) && !empty($secret) && wc_yotpo_compatible()) {
@@ -226,6 +235,7 @@ function wc_yotpo_map($order_id) {
                         $purchase_data['utoken'] = $get_oauth_token_response['access_token'];
                         $purchase_data['platform'] = 'woocommerce';
                         $response = $yotpo_api->create_purchase($purchase_data);
+                        ytdbg($response['code'].' '.$response['message'], "Order #".$order_id." Submitted with response");
                     }
                 }
             } catch (Exception $e) {
@@ -236,34 +246,38 @@ function wc_yotpo_map($order_id) {
 }
 
 function wc_yotpo_get_single_map_data($order_id) {
+	do_action( 'woocommerce_init' );
 	$order = new WC_Order($order_id);
 	$data = null;
-	if(!is_null($order->id)) {
+	if(!is_null($order->get_id())) { // Can't access props directly.
 		$data = array();
-		$data['order_date'] = $order->order_date;
-		$data['email'] = $order->billing_email;
-		$data['customer_name'] = $order->billing_first_name.' '.$order->billing_last_name;
+		$data['order_date'] = date('Y-m-d H:i:s', strtotime($order->get_date_created())); // Can't access props directly. You can also use get_date_completed()
+		if (!empty($order->get_billing_email())) { $data['email'] = $order->get_billing_email(); } else { return; } // If no email, drop order.
+		if (!empty($order->get_billing_first_name())) { $data['customer_name'] = $order->get_billing_first_name().' '.$order->get_billing_last_name(); } else { return; } // If no name, drop order.
 		$data['order_id'] = $order_id;
 		$data['currency_iso'] = wc_yotpo_get_order_currency($order);
 		$products_arr = array();
-		foreach ($order->get_items() as $product) 
-		{
-                    $_product = wc_get_product($product['product_id']);
-                    if(is_object($_product)){
-                        $product_data = array();   
-                        $product_data['url'] = get_permalink($product['product_id']); 
-                        $product_data['name'] = $product['name'];
-                        $product_data['image'] = wc_yotpo_get_product_image_url($product['product_id']);
-                        $product_data['description'] = strip_tags($_product->get_description());
-                        $product_data['price'] = $product['line_total'];
-                        $specs_data = array();
-                        if($_product->get_sku()){ $specs_data['external_sku'] =$_product->get_sku();} 
-                        if($_product->get_attribute('upc')){ $specs_data['upc'] =$_product->get_attribute('upc');} 
-                        if($_product->get_attribute('isbn')){ $specs_data['isbn'] = $_product->get_attribute('isbn');} 
-                        if($_product->get_attribute('brand')){ $specs_data['brand'] = $_product->get_attribute('brand');} 
-                        if($_product->get_attribute('mpn')){ $specs_data['mpn'] =$_product->get_attribute('mpn');} 
-                        if(!empty($specs_data)){ $product_data['specs'] = $specs_data;  }
-                    }
+		ytdbg("Date: ".$data['order_date']." Email: ".$data['email'], "Order #".$data['order_id']);
+		if(empty($order->get_items())) { ytdbg('','No Products'); return; } // If no products, drop order.
+		foreach ($order->get_items() as $product) {
+			if ($product['product_id'] == "0") { ytdbg('','Invalid product - ID 0'); return; } // For cases where product ID is 0, which is usually an invalid product, drop order.
+            $_product = wc_get_product($product['product_id']);
+            if(is_object($_product)){
+                $product_data = array();   
+                $product_data['url'] = get_permalink($product['product_id']); 
+                $product_data['name'] = $product['name'];
+                $product_data['image'] = wc_yotpo_get_product_image_url($product['product_id']);
+                $product_data['description'] = wp_strip_all_tags($_product->get_description()); // Proper get description + WP strip tags
+                $product_data['price'] = $_product->get_price(); // Get price of singular product instead of multiplied by quantity
+                $specs_data = array();
+                if($_product->get_sku()){ $specs_data['external_sku'] =$_product->get_sku();} 
+                if($_product->get_attribute('upc')){ $specs_data['upc'] =$_product->get_attribute('upc');} 
+                if($_product->get_attribute('isbn')){ $specs_data['isbn'] = $_product->get_attribute('isbn');} 
+                if($_product->get_attribute('brand')){ $specs_data['brand'] = $_product->get_attribute('brand');} 
+                if($_product->get_attribute('mpn')){ $specs_data['mpn'] =$_product->get_attribute('mpn');} 
+                if(!empty($specs_data)){ $product_data['specs'] = $specs_data;  }
+                ytdbg($product_data['name'].", Descr. length: ".strlen($product_data['description']).", ID: ".$product['product_id'] .", Specs: ".implode(' / ', $specs_data), "\tProduct:", false); 
+            } else { ytdbg('','Invalid product - Not an Object'); return; } // Not an object return
 			$products_arr[$product['product_id']] = $product_data;	
 		}	
 		$data['products'] = $products_arr;
@@ -277,6 +291,7 @@ function wc_yotpo_get_product_image_url($product_id) {
 }
 
 function wc_yotpo_get_past_orders() {
+	$yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings()); // Get settings
 	$result = null;
 	$args = array(
 		'post_type'		 => 'shop_order',
@@ -284,7 +299,7 @@ function wc_yotpo_get_past_orders() {
 	);
 
 	if (defined('WC_VERSION') && (version_compare(WC_VERSION, '2.2.0') >= 0)) {
-		$args['post_status'] = 'wc-completed';
+		$args['post_status'] = $yotpo_settings['yotpo_order_status']; // Take custom status into account.
 	} else {
 		$args['tax_query'] = array(
 			array(
@@ -325,39 +340,38 @@ function wc_yotpo_get_past_orders() {
 }
 
 function wc_yotpo_past_order_time_query( $where = '' ) {
-	// posts in the last 30 days
 	$where .= " AND post_date > '" . date('Y-m-d', strtotime('-90 days')) . "'";
 	return $where;
 }
 
 function wc_yotpo_send_past_orders() {
+	ytdbg('', 'Submit Past Orders Start -------------------------------------------------------------------');
    	$yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
-	if (!empty($yotpo_settings['app_key']) && !empty($yotpo_settings['secret']))
-	{
-		$past_orders = wc_yotpo_get_past_orders();		
+	if (!empty($yotpo_settings['app_key']) && !empty($yotpo_settings['secret'])) {
+		$past_orders = wc_yotpo_get_past_orders();
+		ytdbg("", "\tGot ".count($past_orders)." batches, sending...");
 		$is_success = true;
 		if(!is_null($past_orders) && is_array($past_orders)) {
 			$yotpo_api = new Yotpo($yotpo_settings['app_key'], $yotpo_settings['secret']);
 			$get_oauth_token_response = $yotpo_api->get_oauth_token();
 			if(!empty($get_oauth_token_response) && !empty($get_oauth_token_response['access_token'])) {
-				foreach ($past_orders as $post_bulk) 
-					if (!is_null($post_bulk))
-					{
+				foreach ($past_orders as $index => $post_bulk) 
+					if (!is_null($post_bulk)) {
 						$post_bulk['utoken'] = $get_oauth_token_response['access_token'];
 						$response = $yotpo_api->create_purchases($post_bulk);						
-						if ($response['code'] != 200 && $is_success)
-						{
+						if ($response['code'] != 200 && $is_success) {
+							ytdbg($response, "\tSending Past Orders failed for batch".$index." :");
 							$is_success = false;
 							$message = !empty($response['status']) && !empty($response['status']['message']) ? $response['status']['message'] : 'Error occurred';
 							wc_yotpo_display_message($message, true);
-						}
+						} else { ytdbg($response['code']." ".$response['message'], "\tBatch ".$index." sent successfully with response"); }
 					}
-				if ($is_success)
-				{
-					wc_yotpo_display_message('Past orders sent successfully' , false);
-					$yotpo_settings['show_submit_past_orders'] = false;
-					update_option('yotpo_settings', $yotpo_settings);
-				}	
+					if ($is_success) {
+						wc_yotpo_display_message('Past orders sent successfully' , false);
+						ytdbg('', 'Submit Past Orders End -------------------------------------------------------------------');
+						$yotpo_settings['show_submit_past_orders'] = false;
+						update_option('yotpo_settings', $yotpo_settings);
+					}	
 			}
 		}
 		else {
@@ -402,7 +416,8 @@ function wc_yotpo_get_degault_settings() {
         'show_submit_past_orders' => true,
         'yotpo_order_status' => 'wc-completed',
         'disable_native_review_system' => true,
-        'native_star_ratings_enabled' => 'no');
+        'native_star_ratings_enabled' => 'no',
+		'debug_mode' => false);
 }
 
 function wc_yotpo_admin_styles($hook) {
@@ -434,8 +449,8 @@ function wc_yotpo_get_order_currency($order) {
 	if(is_null($order) || !is_object($order)) {
 		return '';
 	}
-	if(method_exists($order,'get_order_currency')) { 
-		return $order->get_order_currency();
+	if(method_exists($order,'get_currency')) { // Get currency
+		return $order->get_currency();
 	}
 	if(isset($order->order_custom_fields) && isset($order->order_custom_fields['_order_currency'])) {		
  		if(is_array($order->order_custom_fields['_order_currency'])) {
@@ -443,4 +458,60 @@ function wc_yotpo_get_order_currency($order) {
  		}	
 	}
 	return '';
+}
+function ytdbg( $msg, $name = '', $date = true) {
+	$yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
+	if (!$yotpo_settings['debug_mode']) { return; }
+    $trace = debug_backtrace();
+    $name = ( '' == $name ) ? $trace[1]['function'] : $name;
+    $error_dir = plugin_dir_path( __FILE__ )."yotpo_debug.log";
+    $msg = print_r( $msg, true );
+    if ($date) {
+    	$log = "[". date("m/d/Y @ g:i:sA", time()) . "] " . $name .' '. $msg . "\n";
+    } else {
+    	$log = $name .' '. $msg . "\n";
+    }
+    $fh = fopen($error_dir, 'a+');
+    fwrite($fh, $log);
+    fclose($fh);
+}
+
+// 500 error handler
+ob_start('fatal_error_handler');
+function fatal_error_handler($buffer){
+    $error=error_get_last();
+    if($error['type'] == 1){
+        $newBuffer='<html><header><title>Fatal Error </title></header>
+                    <style>                 
+                    .error_content{                     
+                        background: ghostwhite;
+                        vertical-align: middle;
+                        margin:0 auto;
+                        padding:10px;
+                        width:50%;                              
+                     } 
+                     .error_content label{color: red;font-family: "Ubuntu Mono", Consolas, monospace;font-size: 16pt;font-style: italic;}
+                     .error_content ul li{ background: none repeat scroll 0 0 FloralWhite;                   
+                                border: 1px solid AliceBlue;
+                                display: block;
+                                font-family: "Ubuntu Mono", Consolas, monospace;
+                                padding: 2%;
+                                text-align: left;
+                      }
+                    </style>
+                    <body style="text-align: center;">  
+                      <div class="error_content">
+                          <label >Fatal Error </label>
+                          <ul>
+                            <li><b>Line</b> '.$error['line'].'</li>
+                            <li><b>Message</b> '.$error['message'].'</li>
+                            <li><b>File</b> '.$error['file'].'</li>                             
+                          </ul>
+
+                          <a href="javascript:history.back()"> Back </a>                          
+                      </div>
+                    </body></html>';
+        return $newBuffer;
+    }
+    return $buffer;
 }
