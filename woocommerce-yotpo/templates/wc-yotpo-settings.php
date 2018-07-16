@@ -1,5 +1,6 @@
 <?php
 
+define("LOG_FILE", plugin_dir_path( __FILE__ ).'../yotpo_debug.log');
 function wc_display_yotpo_admin_page() {
 
     if (function_exists('current_user_can') && !current_user_can('manage_options')) {
@@ -22,6 +23,11 @@ function wc_display_yotpo_admin_page() {
             }
         } elseif (isset($_POST['yotpo_past_orders'])) {
             wc_yotpo_send_past_orders();
+            wc_display_yotpo_settings();
+        } elseif (isset($_POST['yotdbg-clear'])) {
+            check_admin_referer('yotdbg-clear');
+            $filename = LOG_FILE;
+            file_put_contents($filename, "");
             wc_display_yotpo_settings();
         } else {
             $yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
@@ -66,15 +72,21 @@ function wc_display_yotpo_settings($success_type = false) {
 		             														<th scope='row'><p class='description'>To get your api key and secret token <a href='https://www.yotpo.com/?login=true' target='_blank'>log in here</a> and go to your account settings.</p></th>
 	                 		                  							   </tr>" : '';
     $submit_past_orders_button = $yotpo_settings['show_submit_past_orders'] ? "<input type='submit' name='yotpo_past_orders' value='Submit past orders' class='button-secondary past-orders-btn' " . disabled(true, empty($app_key) || empty($secret), false) . ">" : '';
-
-    $settings_html = "<div class='wrap'>"
-            . screen_icon() .
-            "<h2>Yotpo Settings</h2>						  
+     if (isset($yotpo_settings['debug_mode']) && $yotpo_settings['debug_mode']) {
+        $settings_dump = json_encode($yotpo_settings);
+        if (file_exists(LOG_FILE)) { $debug_log = file_get_contents(LOG_FILE); } else { $debug_log = false; };
+    }
+// Removed screen_icon() - deprecated.
+    $settings_html = "<div class='wrap'><h2>Yotpo Settings</h2>						  
 			  <h4>To customize the look and feel of the widget, and to edit your Mail After Purchase settings, just head to the " . $dashboard_link . "</h4>
 			  <form  method='post' id='yotpo_settings_form'>
 			  	<table class='form-table'>" .
             wp_nonce_field('yotpo_settings_form') .
             "<fieldset>
+                                   <tr id='yotpodbg' valign='top' style='background: #e09999; display: none;'><th scope='row'>Enable debug mode</th>
+                         <td><input type='checkbox' name='debug_mode' value='1' " . checked(1, $yotpo_settings['debug_mode'], false) . " /></td>
+                         <td><p class='description'>Enabling debug mode will output all plugin actions into <i>yotpo_debug.log</i>, output the log here and show all the settings.</p></td>
+                       </tr>
 	                 <tr valign='top'>
 	                 	<th scope='row'><div>If you would like to choose a set language, please type the 2-letter language code here. You can find the supported langauge codes <a class='y-href' href='http://support.yotpo.com/entries/21861473-Languages-Customization-' target='_blank'>here.</a></div></th>
 	                 	<td><div><input type='text' class='yotpo_language_code_text' name='yotpo_widget_language_code' maxlength='5' value='$language_code'/></div></td>
@@ -155,6 +167,16 @@ function wc_display_yotpo_settings($success_type = false) {
 		  </form> 		  		  
 		</div>";
     echo $settings_html;
+    if (isset($yotpo_settings['debug_mode']) && $yotpo_settings['debug_mode']) {
+        echo '<h3>Settings</h3><pre>'.$settings_dump.'</pre>';
+        if ($debug_log === FALSE) {
+            echo '<h3>Yotpo Debug</h3>
+            <textarea cols=170 rows=15>Problem opening yotpo_debug.log and/or file is empty</textarea>';
+        } else {
+            echo '<h3>Yotpo Debug</h3><textarea cols=170 rows=15>'.$debug_log.'</textarea>
+            <form method="post" id="yotdbg-clear">' .wp_nonce_field('yotdbg-clear') .'<input type="submit" value="Clear" class="button-primary" name="yotdbg-clear" id="yotdbg-clear-submit"/></form>';
+        }
+    }
 }
 
 
@@ -170,7 +192,8 @@ function wc_proccess_yotpo_settings() {
         'yotpo_order_status' => $_POST['yotpo_order_status'],
         'yotpo_language_as_site' => isset($_POST['yotpo_language_as_site']) ? true : false,
         'disable_native_review_system' => isset($_POST['disable_native_review_system']) ? true : false,
-        'show_submit_past_orders' => $current_settings['show_submit_past_orders']);
+        'show_submit_past_orders' => $current_settings['show_submit_past_orders'],
+        'debug_mode' => isset($_POST['debug_mode']) ? true : false);
     update_option('yotpo_settings', $new_settings);
     if ($current_settings['disable_native_review_system'] != $new_settings['disable_native_review_system']) {
         if ($new_settings['disable_native_review_system'] == false) {
@@ -184,9 +207,8 @@ function wc_proccess_yotpo_settings() {
 function wc_display_yotpo_register() {
     $email = isset($_POST['yotpo_user_email']) ? $_POST['yotpo_user_email'] : '';
     $user_name = isset($_POST['yotpo_user_name']) ? $_POST['yotpo_user_name'] : '';
-    $register_html = "<div class='wrap'>"
-            . screen_icon() .
-            "<h2>Yotpo Registration</h2>
+    // Removed screen_icon() - deprecated.
+    $register_html = "<div class='wrap'><h2>Yotpo Registration</h2>
 		<form method='post'>
 		<table class='form-table'>"
             . wp_nonce_field('yotpo_registration_form') .
