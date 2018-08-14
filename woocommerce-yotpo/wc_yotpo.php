@@ -252,7 +252,7 @@ function wc_yotpo_get_single_map_data($order_id) {
 	if(!is_null($order->get_id())) { // Can't access props directly.
 		$data = array();
 		$data['order_date'] = date('Y-m-d H:i:s', strtotime($order->get_date_created())); // Can't access props directly. You can also use get_date_completed()
-		if (!empty($order->get_billing_email())) { $data['email'] = $order->get_billing_email(); } else { return; } // If no email, drop order.
+		if (!empty($order->get_billing_email()) && !preg_match('/\d$/', $order->get_billing_email())) { $data['email'] = $order->get_billing_email(); } else { return; } // If no email, drop order.
 		if (!empty($order->get_billing_first_name())) { $data['customer_name'] = $order->get_billing_first_name().' '.$order->get_billing_last_name(); } else { return; } // If no name, drop order.
 		$data['order_id'] = $order_id;
 		$data['currency_iso'] = wc_yotpo_get_order_currency($order);
