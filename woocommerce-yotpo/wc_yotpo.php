@@ -136,20 +136,11 @@ function wc_yotpo_show_widget_in_tab($tabs) {
 }
 
 function wc_yotpo_load_js(){
-	if(wc_yotpo_is_who_commerce_installed()) {		
+	if( class_exists('woocommerce') ) {
     	wp_enqueue_script('yquery', plugins_url('assets/js/headerScript.js', __FILE__) ,null,null);
 		$settings = get_option('yotpo_settings',wc_yotpo_get_degault_settings());
 		wp_localize_script('yquery', 'yotpo_settings', array('app_key' => $settings['app_key']));    	    	
 	}
-}
-
-function wc_yotpo_is_who_commerce_installed() {
-    $wooVer =  WC()->plugin_path(); // Proper path
-    $findme   = "plugins";
-    $pos = strpos($wooVer, $findme)+8;
-    // $string was unused.
-    $pluginCheck =  substr($wooVer, $pos).'/woocommerce.php';
-    return in_array($pluginCheck, apply_filters('active_plugins', get_option('active_plugins')));
 }
 
 function wc_yotpo_show_qa_bottomline() {
