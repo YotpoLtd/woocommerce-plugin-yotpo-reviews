@@ -544,7 +544,7 @@ function wc_yotpo_product_catalog_export($mode) {
     return $is_successful;
 }
 
-function wc_yotpo_get_catalog_api(){ //NOTE TO SELF: NEED TO ADD "if product is published to site"
+function wc_yotpo_get_catalog_api(){
 	$yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings()); //Get yotpo_settings
 	$current_catalog = $yotpo_settings['product_catalog']; //Get the catalog that already exists on our end
 	$variants_status = $yotpo_settings['product_variants']; //Get if the varinats is enabled or disabled
