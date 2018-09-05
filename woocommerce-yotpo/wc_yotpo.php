@@ -628,7 +628,7 @@ function wc_yotpo_catalog_mode($arr, $mode, $yotpo_api = null, $app_key = null, 
 						return $response;
 					}
 					else if($mode == "update"){
-						$response ;//= $yotpo_api->update_mass_products($arr);
+						$response = $yotpo_api->update_mass_products($arr);
 						wc_yotpo_log("\r\n\r\n".gmdate('r', time())."\r\nAPI Call: ".$mode."_mass_products\r\nAPI Response: ".$response['code']."\r\nProducts Sent: ".implode(", ",array_keys($arr['products'])));
 						return $response;
 					}
