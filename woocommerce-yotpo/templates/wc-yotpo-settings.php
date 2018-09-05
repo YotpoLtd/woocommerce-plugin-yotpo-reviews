@@ -23,7 +23,24 @@ function wc_display_yotpo_admin_page() {
         } elseif (isset($_POST['yotpo_past_orders'])) {
             wc_yotpo_send_past_orders();
             wc_display_yotpo_settings();
-        } else {
+        } elseif (isset($_POST['yotpo_export_catalog'])) {
+            $is_successful = wc_yotpo_product_catalog_export('all');
+            $is_successful ? wc_yotpo_display_message("Done. Please note that this process might take up to 24 hours.") : wc_yotpo_display_message("Error in sending catalog.", true);
+            wc_display_yotpo_settings();
+        } elseif (isset($_POST['yotpo_export_catalog_csv'])) {
+            wc_yotpo_product_catalog_csv();
+            die();
+            wc_display_yotpo_settings();
+        } elseif (isset($_POST['yotpo_export_catalog_create'])) {
+            $is_successful = wc_yotpo_product_catalog_export('create');
+            $is_successful ? wc_yotpo_display_message("Creation Mode, Done. Please note that this process might take up to 24 hours.") : wc_yotpo_display_message("Error in catalog creation mode.", true);
+            wc_display_yotpo_settings();
+        } elseif (isset($_POST['yotpo_export_catalog_update'])) {
+            $is_successful = wc_yotpo_product_catalog_export('update');
+            $is_successful ? wc_yotpo_display_message("Update Mode, Done. Please note that this process might take up to 24 hours.") : wc_yotpo_display_message("Error in catalog creation mode.", true);
+            wc_display_yotpo_settings();
+        }
+        else {
             $yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
             if (empty($yotpo_settings['app_key']) && empty($yotpo_settings['secret'])) {
                 wc_display_yotpo_register();
@@ -125,6 +142,11 @@ function wc_display_yotpo_settings($success_type = false) {
 		   		       <td><input type='checkbox' name='yotpo_bottom_line_enabled_category' value='1' " . checked(1, $yotpo_settings['bottom_line_enabled_category'], false) . " />		   		       
 		   		       </td>
 		   		     </tr>
+                    <tr valign='top'>
+                       <th scope='row'><div>Pull product variants:</div></th>
+                       <td><input type='checkbox' name='yotpo_product_variants' value='1' " . checked(1, $yotpo_settings['product_variants'], false) . " />                    
+                       </td>
+                     </tr>
                                      </tr>					  	 
 					 <tr valign='top'>
 		   		       <th scope='row'><div>Order Status:</div></th>
@@ -141,12 +163,31 @@ function wc_display_yotpo_settings($success_type = false) {
 		   		       </td>
 		   		     </tr>
 		           </fieldset>
-		         </table></br>			  		
-		         <div class='buttons-container'>
+		         </table></br>		
+
+            <div class='buttons-container'>
+                 <input type='submit' name='yotpo_export_catalog' value='Export Product Catalog (API)' class='button-secondary' " . disabled(true, empty($app_key) || empty($secret), false) . ">
+ 
+                 <input type='submit' name='yotpo_export_catalog_csv' value='Export Product Catalog (CSV)' class='button-secondary' " . disabled(true, empty($app_key) || empty($secret), false) . ">
+                 </br></br>
+             </div>
+ 
+             <div class='buttons-container'>
+                 <input type='submit' name='yotpo_export_catalog_create' value='Create New Products (API)' class='button-secondary' " . disabled(true, empty($app_key) || empty($secret), false) . ">
+ 
+                 <input type='submit' name='yotpo_export_catalog_update' value='Update Existing Products (API)' class='button-secondary' " . disabled(true, empty($app_key) || empty($secret), false) . ">
+             
+                 </br></br>
+             </div>
+
+		    <div class='buttons-container'>
 		        <button type='button' id='yotpo-export-reviews' class='button-secondary' " . disabled(true, empty($app_key) || empty($secret), false) . ">Export Reviews</button>
+
 				<input type='submit' name='yotpo_settings' value='Update' class='button-primary' id='save_yotpo_settings'/>$submit_past_orders_button
-			  </br></br><p class='description'>*Learn <a href='http://support.yotpo.com/entries/24454261-Exporting-reviews-for-Woocommerce' target='_blank'>how to export your existing reviews</a> into Yotpo.</p>
+
+			    </br></br> <p class='description'>*Learn <a href='http://support.yotpo.com/entries/24454261-Exporting-reviews-for-Woocommerce' target='_blank'>how to export your existing reviews</a> into Yotpo.</p>
 			</div>
+
 		  </form>
 		  <iframe name='yotpo_export_reviews_frame' style='display: none;'></iframe>
 		  <form action='' method='get' target='yotpo_export_reviews_frame' style='display: none;'>
@@ -167,6 +208,7 @@ function wc_proccess_yotpo_settings() {
         'widget_tab_name' => $_POST['yotpo_widget_tab_name'],
         'bottom_line_enabled_product' => isset($_POST['yotpo_bottom_line_enabled_product']) ? true : false,
         'bottom_line_enabled_category' => isset($_POST['yotpo_bottom_line_enabled_category']) ? true : false,
+        'product_variants' => isset($_POST['yotpo_product_variants']) ? true : false,
         'yotpo_order_status' => $_POST['yotpo_order_status'],
         'yotpo_language_as_site' => isset($_POST['yotpo_language_as_site']) ? true : false,
         'disable_native_review_system' => isset($_POST['disable_native_review_system']) ? true : false,
