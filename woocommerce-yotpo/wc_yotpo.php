@@ -101,16 +101,6 @@ function wc_yotpo_uninstall() {
 	}	
 }
 
-function yotpo_get_variation_id($product){ //VARIATIONS - NEWLY ADDED
-	if ($product->get_type() == 'variable'){ //Kind of a product decision - if the product is a variant, use the product ID of the first variation.
-		$variations = $product->get_children();
-		return $variations[0];
-	}
-	else{
-		return $product->get_id();
-	}
-}
-
 function wc_yotpo_show_widget() {		 
 	$product = get_product();
 	if($product->post->comment_status == 'open') {		
@@ -178,7 +168,6 @@ function wc_yotpo_show_buttomline() {
 }
 
 function wc_yotpo_get_product_data($product) {	
-    
 	$product_data = array();
 	$settings = get_option('yotpo_settings',wc_yotpo_get_degault_settings());
 	$product_data['app_key'] = $settings['app_key'];
@@ -566,55 +555,53 @@ function wc_yotpo_get_catalog_api(){ //NOTE TO SELF: NEED TO ADD "if product is 
 		'posts_per_page' => -1
 		);
 	$loop = new WP_Query( $args ); //get the store's catalog
-	if ( $loop->have_posts() ) {
-		while ( $loop->have_posts() ){
-			$loop->the_post();
-			$product_post = &new WC_Product( $loop->post->ID );
-			$_product = wc_get_product($product_post->get_id());
-			if (get_post_status($product_post->get_id()) == 'publish'){ //only if the product is published, send to API
-				$product_data=array();
-				$product_id = $_product->get_id(); 
-				$product_data['url'] = get_permalink($product_id);
-				$product_data['name'] = $_product->get_title();
-				$product_data['description'] = $product_id; //Using the description as parent product ID in order to group the products easily.
-				$product_data['image'] = wc_yotpo_get_product_image_url($product_id);
-				$product_data['price'] = $_product->get_price();
-				$product_data['currency'] = get_woocommerce_currency();
-				if($_product->get_sku()){ $specs_data['external_sku'] = $_product->get_sku();}
-				if(!empty($specs_data)){ $product_data['specs'] = $specs_data;  }
+	while ( $loop->have_posts() ){
+		$loop->the_post();
+		$product_post = &new WC_Product( $loop->post->ID );
+		$_product = wc_get_product($product_post->get_id());
+		if (get_post_status($product_post->get_id()) == 'publish'){ //only if the product is published, send to API
+			$product_data=array();
+			$product_id = $_product->get_id(); 
+			$product_data['url'] = get_permalink($product_id);
+			$product_data['name'] = $_product->get_title();
+			$product_data['description'] = $product_id; //Using the description as parent product ID in order to group the products easily.
+			$product_data['image'] = wc_yotpo_get_product_image_url($product_id);
+			$product_data['price'] = $_product->get_price();
+			$product_data['currency'] = get_woocommerce_currency();
+			if($_product->get_sku()){ $specs_data['external_sku'] = $_product->get_sku();}
+			if(!empty($specs_data)){ $product_data['specs'] = $specs_data;  }
 
-				(!empty($current_catalog) && is_array($current_catalog) && in_array($product_id, $current_catalog)) ? $products_arr_update[$product_id] = $product_data : $products_arr_create[$product_id] = $product_data;
+			(!empty($current_catalog) && is_array($current_catalog) && in_array($product_id, $current_catalog)) ? $products_arr_update[$product_id] = $product_data : $products_arr_create[$product_id] = $product_data;
 
-				//WORKING ON VARIABLES
-				if ($_product->is_type('variable') && $variants_status) { //if product has variations and checkbox is enabled
-					$available_variations = $_product->get_available_variations();
-					if($available_variations){
-						foreach($available_variations as $variation){
-							$variation_id = $variation['variation_id'];
-							$_variation = wc_get_product($variation_id);
-							$variation_data=array();
-							$variation_data['url'] = get_permalink($product_id);
-							$variation_data['name'] = $_variation->get_name();
-							$variation_data['description'] = $product_id; //in order for grouping to be comfortable
-							$variation_data['price'] = $variation['display_price'];
-							$variation_data['currency'] = get_woocommerce_currency();
-							$variation_data['image'] = wc_yotpo_get_product_image_url($variation_id); //get variant image
-							if($variation_data['image'] == null){ //if there's no variant image, get the parent product's image
-								$variation_data['image'] = wc_yotpo_get_product_image_url($product_id);
-							}
-
-							if($_variation->get_sku()){ $specs_data['external_sku'] = $_variation->get_sku();}
-							if(!empty($specs_data)){ $variation_data['specs'] = $specs_data;  }
-
-							(!empty($current_catalog) && is_array($current_catalog) && in_array($variation_id, $current_catalog)) ? $products_arr_update[$variation_id] = $variation_data : $products_arr_create[$variation_id] = $variation_data;
+			//WORKING ON VARIABLES
+			if ($_product->is_type('variable') && $variants_status) { //if product has variations and checkbox is enabled
+				$available_variations = $_product->get_available_variations();
+				if($available_variations){
+					foreach($available_variations as $variation){
+						$variation_id = $variation['variation_id'];
+						$_variation = wc_get_product($variation_id);
+						$variation_data=array();
+						$variation_data['url'] = get_permalink($product_id);
+						$variation_data['name'] = $_variation->get_name();
+						$variation_data['description'] = $product_id; //in order for grouping to be comfortable
+						$variation_data['price'] = $variation['display_price'];
+						$variation_data['currency'] = get_woocommerce_currency();
+						$variation_data['image'] = wc_yotpo_get_product_image_url($variation_id); //get variant image
+						if($variation_data['image'] == null){ //if there's no variant image, get the parent product's image
+							$variation_data['image'] = wc_yotpo_get_product_image_url($product_id);
 						}
+
+						if($_variation->get_sku()){ $specs_data['external_sku'] = $_variation->get_sku();}
+						if(!empty($specs_data)){ $variation_data['specs'] = $specs_data;  }
+
+						(!empty($current_catalog) && is_array($current_catalog) && in_array($variation_id, $current_catalog)) ? $products_arr_update[$variation_id] = $variation_data : $products_arr_create[$variation_id] = $variation_data;
 					}
 				}
 			}
 		}
-		$data['create']['products'] = $products_arr_create;
-		$data['update']['products'] = $products_arr_update;
 	}
+	$data['create']['products'] = $products_arr_create;
+	$data['update']['products'] = $products_arr_update;
 	return $data;
 }
 
