@@ -3,7 +3,7 @@
 	Plugin Name: Yotpo Social Reviews for Woocommerce
 	Description: Yotpo Social Reviews helps Woocommerce store owners generate a ton of reviews for their products. Yotpo is the only solution which makes it easy to share your reviews automatically to your social networks to gain a boost in traffic and an increase in sales.
 	Author: Yotpo
-	Version: 1.1.7
+	Version: Project Woo, Beta
 	Author URI: http://www.yotpo.com?utm_source=yotpo_plugin_woocommerce&utm_medium=plugin_page_link&utm_campaign=woocommerce_plugin_page_link	
 	Plugin URI: http://www.yotpo.com?utm_source=yotpo_plugin_woocommerce&utm_medium=plugin_page_link&utm_campaign=woocommerce_plugin_page_link
  */
@@ -13,7 +13,7 @@ register_deactivation_hook( __FILE__, 'wc_yotpo_deactivate' );
 add_action('plugins_loaded', 'wc_yotpo_init');
 add_action('init', 'wc_yotpo_redirect');
 add_action( 'woocommerce_order_status_changed', 'wc_yotpo_map');
-		
+
 function wc_yotpo_init() {
 	$is_admin = is_admin();	
 	if($is_admin) {
@@ -101,15 +101,25 @@ function wc_yotpo_uninstall() {
 	}	
 }
 
+function yotpo_get_variation_id($product){ //VARIATIONS - NEWLY ADDED
+	if ($product->get_type() == 'variable'){ //Kind of a product decision - if the product is a variant, use the product ID of the first variation.
+		$variations = $product->get_children();
+		return $variations[0];
+	}
+	else{
+		return $product->get_id();
+	}
+}
+
 function wc_yotpo_show_widget() {		 
 	$product = get_product();
 	if($product->post->comment_status == 'open') {		
-		$product_data = wc_yotpo_get_product_data($product);	
+		$product_data = wc_yotpo_get_product_data($product);
 		$yotpo_div = "<div class='yotpo yotpo-main-widget'
 	   				data-product-id='".$product_data['id']."'
 	   				data-name='".$product_data['title']."' 
 	   				data-url='".$product_data['url']."' 
-	   				data-image-url='".$product_data['image-url']."' 
+	   				data-image-url=''
 	  				data-description='".$product_data['description']."' 
 	  				data-lang='".$product_data['lang']."'></div>";
 		echo $yotpo_div;
@@ -236,6 +246,8 @@ function wc_yotpo_map($order_id) {
 }
 
 function wc_yotpo_get_single_map_data($order_id) {
+	$yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
+	$variants_status = $yotpo_settings['product_variants']; //Get if the varinats is enabled or disabled
 	$order = new WC_Order($order_id);
 	$data = null;
 	if(!is_null($order->id)) {
@@ -248,24 +260,47 @@ function wc_yotpo_get_single_map_data($order_id) {
 		$products_arr = array();
 		foreach ($order->get_items() as $product) 
 		{
-                    $_product = wc_get_product($product['product_id']);
-                    if(is_object($_product)){
-                        $product_data = array();   
-                        $product_data['url'] = get_permalink($product['product_id']); 
-                        $product_data['name'] = $product['name'];
-                        $product_data['image'] = wc_yotpo_get_product_image_url($product['product_id']);
-                        $product_data['description'] = strip_tags($_product->get_description());
-                        $product_data['price'] = $product['line_total'];
-                        $specs_data = array();
-                        if($_product->get_sku()){ $specs_data['external_sku'] =$_product->get_sku();} 
-                        if($_product->get_attribute('upc')){ $specs_data['upc'] =$_product->get_attribute('upc');} 
-                        if($_product->get_attribute('isbn')){ $specs_data['isbn'] = $_product->get_attribute('isbn');} 
-                        if($_product->get_attribute('brand')){ $specs_data['brand'] = $_product->get_attribute('brand');} 
-                        if($_product->get_attribute('mpn')){ $specs_data['mpn'] =$_product->get_attribute('mpn');} 
-                        if(!empty($specs_data)){ $product_data['specs'] = $specs_data;  }
-                    }
-			$products_arr[$product['product_id']] = $product_data;	
-		}	
+			$use_variant = ($variants_status && $product['variation_id']); //Check if the ordered product is a variant
+            $_product = wc_get_product($product['product_id']);
+
+            if(is_object($_product)){
+				if($use_variant){ $_variant = wc_get_product($product['variation_id']); }
+                $product_data = array();   
+                $product_data['url'] = get_permalink($product['product_id']);
+
+                $use_variant ? $product_data['name'] = $product['name'] : $product_data['name'] = $_product->get_title();
+
+				if ($use_variant) { 
+					$product_data['image'] = wc_yotpo_get_product_image_url($product['variation_id']); //get variant image
+					if($product_data['image'] == null){ //if there's no variant image, get the parent product's image
+						$product_data['image'] = wc_yotpo_get_product_image_url($product['product_id']);
+					}
+				} else {
+					$product_data['image'] = wc_yotpo_get_product_image_url($product['product_id']); //no variant = take the pic of the parent product
+				}
+
+                $use_variant ? $product_data['description'] = $product['product_id'] : $product_data['description'] = strip_tags($_product->get_description());
+
+                $product_data['price'] = $product['line_total'];
+                $specs_data = array(); //there are no special specs for variants, all variants use the specs of the parent product.
+
+                if($use_variant && $_variant->get_sku()){
+                	$specs_data['external_sku'] = $_variant->get_sku();
+                }
+                else if($_product->get_sku()){
+                	$specs_data['external_sku'] = $_product->get_sku();
+                }
+
+                if($_product->get_attribute('upc')){ $specs_data['upc'] =$_product->get_attribute('upc');} 
+                if($_product->get_attribute('isbn')){ $specs_data['isbn'] = $_product->get_attribute('isbn');} 
+                if($_product->get_attribute('brand')){ $specs_data['brand'] = $_product->get_attribute('brand');} 
+                if($_product->get_attribute('mpn')){ $specs_data['mpn'] =$_product->get_attribute('mpn');} 
+                if(!empty($specs_data)){ $product_data['specs'] = $specs_data;  }
+            }
+
+			$use_variant ? $products_arr[$product['variation_id']] = $product_data : $products_arr[$product['product_id']] = $product_data;
+				
+		}
 		$data['products'] = $products_arr;
 	}
 	return $data;
@@ -400,9 +435,11 @@ function wc_yotpo_get_degault_settings() {
         'bottom_line_enabled_category' => false,
         'yotpo_language_as_site' => true,
         'show_submit_past_orders' => true,
+        'product_variants' => false,
         'yotpo_order_status' => 'wc-completed',
         'disable_native_review_system' => true,
-        'native_star_ratings_enabled' => 'no');
+        'native_star_ratings_enabled' => 'no',
+    	'product_catalog' => array());
 }
 
 function wc_yotpo_admin_styles($hook) {
@@ -443,4 +480,249 @@ function wc_yotpo_get_order_currency($order) {
  		}	
 	}
 	return '';
+}
+
+function wc_yotpo_log($log_msg)
+{
+	$log_directory = plugin_dir_path(__FILE__).'/log';
+	
+    if (!file_exists($log_directory)) 
+    {
+        // create directory/folder uploads.
+        mkdir($log_directory, 0777, true);
+    }
+    $log_file = $log_directory.'/log_wc_yotpo '.gmdate("M d Y", time()).'.log';
+    file_put_contents($log_file, $log_msg . "\n", FILE_APPEND);
+}
+
+function wc_yotpo_product_catalog_export($mode) {
+	$is_successful = true;
+    $yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
+    $secret = $yotpo_settings['secret'];
+    $app_key = $yotpo_settings['app_key'];
+    if (!empty($app_key) && !empty($secret) && wc_yotpo_compatible()) {
+        $products_data = wc_yotpo_get_catalog_api();
+        if (!is_null($products_data) && is_array($products_data)) {
+			$products_data_create = $products_data['create'];
+			$products_data_update = $products_data['update'];
+            require_once(plugin_dir_path(__FILE__) . 'lib/yotpo-api/Yotpo.php');
+            $yotpo_api = new Yotpo($app_key, $secret);
+            $get_oauth_token_response = $yotpo_api->get_oauth_token();
+            if (!empty($get_oauth_token_response) && !empty($get_oauth_token_response['access_token'])) {
+                if(!empty($products_data_create['products']) && ($mode == 'all' || $mode == 'create')){
+					if (count($products_data_create['products']) > 500){ //if contains more than 500 prods
+						$chunk_seperated = array_chunk($products_data_create['products'], 500, true);
+                		$products_data_create_chunk = array();
+                		foreach ($chunk_seperated as $products_chunk){
+                			$products_data_create_chunk['products'] = $products_chunk;
+                			$products_data_create_chunk['utoken'] = $get_oauth_token_response['access_token'];
+							$products_data_create_chunk['platform'] = 'woocommerce';
+							$response_create = wc_yotpo_catalog_mode($products_data_create_chunk, 'create', $yotpo_api, $app_key, $secret);
+							if ($response_create['code'] != 200){ $is_successful = false; }
+                		}
+					}
+
+					else{
+						$products_data_create['utoken'] = $get_oauth_token_response['access_token'];
+						$products_data_create['platform'] = 'woocommerce';
+	                	$response_create = wc_yotpo_catalog_mode($products_data_create, 'create', $yotpo_api, $app_key, $secret);
+	                	if ($response_create['code'] != 200){ $is_successful = false; }
+					}
+            	}
+            	if(!empty($products_data_update['products']) && ($mode == 'all' || $mode == 'update')){
+            		if (count($products_data_update['products']) > 500){ //if contains more than 500 prods
+                		$chunk_seperated = array_chunk($products_data_update['products'], 500, true);
+                		$products_data_update_chunk = array();
+                		foreach ($chunk_seperated as $products_chunk){
+                			$products_data_update_chunk['products'] = $products_chunk;
+                			$products_data_update_chunk['utoken'] = $get_oauth_token_response['access_token'];
+							$products_data_update_chunk['platform'] = 'woocommerce';
+							$response_update = wc_yotpo_catalog_mode($products_data_update_chunk, 'update', $yotpo_api, $app_key, $secret);
+							if ($response_update['code'] != 200){ $is_successful = false; }
+                		}
+					}
+
+					else{
+	            		$products_data_update['utoken'] = $get_oauth_token_response['access_token'];
+						$products_data_update['platform'] = 'woocommerce';
+	                	$response_update = wc_yotpo_catalog_mode($products_data_update, 'update', $yotpo_api, $app_key, $secret);
+	                	if ($response_update['code'] != 200){ $is_successful = false; }
+                	}
+            	}
+            }
+        }
+    }
+    return $is_successful;
+}
+
+function wc_yotpo_get_catalog_api(){ //NOTE TO SELF: NEED TO ADD "if product is published to site"
+	$yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings()); //Get yotpo_settings
+	$current_catalog = $yotpo_settings['product_catalog']; //Get the catalog that already exists on our end
+	$variants_status = $yotpo_settings['product_variants']; //Get if the varinats is enabled or disabled
+	$products_arr_create=array();
+	$products_arr_update=array();
+	$args = array(
+		'post_type' => 'product',
+		'posts_per_page' => -1
+		);
+	$loop = new WP_Query( $args ); //get the store's catalog
+	if ( $loop->have_posts() ) {
+		while ( $loop->have_posts() ){
+			$loop->the_post();
+			$product_post = &new WC_Product( $loop->post->ID );
+			$_product = wc_get_product($product_post->get_id());
+			if (get_post_status($product_post->get_id()) == 'publish'){ //only if the product is published, send to API
+				$product_data=array();
+				$product_id = $_product->get_id(); 
+				$product_data['url'] = get_permalink($product_id);
+				$product_data['name'] = $_product->get_title();
+				$product_data['description'] = $product_id; //Using the description as parent product ID in order to group the products easily.
+				$product_data['image'] = wc_yotpo_get_product_image_url($product_id);
+				$product_data['price'] = $_product->get_price();
+				$product_data['currency'] = get_woocommerce_currency();
+				if($_product->get_sku()){ $specs_data['external_sku'] = $_product->get_sku();}
+				if(!empty($specs_data)){ $product_data['specs'] = $specs_data;  }
+
+				(!empty($current_catalog) && is_array($current_catalog) && in_array($product_id, $current_catalog)) ? $products_arr_update[$product_id] = $product_data : $products_arr_create[$product_id] = $product_data;
+
+				//WORKING ON VARIABLES
+				if ($_product->is_type('variable') && $variants_status) { //if product has variations and checkbox is enabled
+					$available_variations = $_product->get_available_variations();
+					if($available_variations){
+						foreach($available_variations as $variation){
+							$variation_id = $variation['variation_id'];
+							$_variation = wc_get_product($variation_id);
+							$variation_data=array();
+							$variation_data['url'] = get_permalink($product_id);
+							$variation_data['name'] = $_variation->get_name();
+							$variation_data['description'] = $product_id; //in order for grouping to be comfortable
+							$variation_data['price'] = $variation['display_price'];
+							$variation_data['currency'] = get_woocommerce_currency();
+							$variation_data['image'] = wc_yotpo_get_product_image_url($variation_id); //get variant image
+							if($variation_data['image'] == null){ //if there's no variant image, get the parent product's image
+								$variation_data['image'] = wc_yotpo_get_product_image_url($product_id);
+							}
+
+							if($_variation->get_sku()){ $specs_data['external_sku'] = $_variation->get_sku();}
+							if(!empty($specs_data)){ $variation_data['specs'] = $specs_data;  }
+
+							(!empty($current_catalog) && is_array($current_catalog) && in_array($variation_id, $current_catalog)) ? $products_arr_update[$variation_id] = $variation_data : $products_arr_create[$variation_id] = $variation_data;
+						}
+					}
+				}
+			}
+		}
+		$data['create']['products'] = $products_arr_create;
+		$data['update']['products'] = $products_arr_update;
+	}
+	return $data;
+}
+
+function wc_yotpo_catalog_mode($arr, $mode, $yotpo_api = null, $app_key = null, $secret = null){ //Preparing the function for further updates in the future
+	$yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
+    if (!empty($app_key) && !empty($secret) && wc_yotpo_compatible()) {
+        try {
+            if (!is_null($arr) && is_array($arr) && !empty($arr['products'])) {
+                $get_oauth_token_response = $yotpo_api->get_oauth_token();
+                if (!empty($get_oauth_token_response) && !empty($get_oauth_token_response['access_token'])) {
+					$arr['utoken'] = $get_oauth_token_response['access_token'];
+					$arr['platform'] = 'woocommerce';
+					if ($mode == 'create'){
+                		$response = $yotpo_api->create_mass_products($arr);
+						if ($response['code'] == 200){ //Only if the call was succesfull, insert the new products into yotpo_settings.
+							if(is_null($yotpo_settings['product_catalog'])){
+								$yotpo_settings['product_catalog'] = array();
+							}
+							$yotpo_settings['product_catalog'] = array_merge($yotpo_settings['product_catalog'], array_keys($arr['products']));
+							update_option('yotpo_settings', $yotpo_settings);
+
+						}
+						wc_yotpo_log("\r\n\r\n".gmdate('r', time())."\r\nAPI Call: ".$mode."_mass_products\r\nAPI Response: ".$response['code']."\r\nProducts Sent: ".implode(", ",array_keys($arr['products'])));
+						return $response;
+					}
+					else if($mode == "update"){
+						$response ;//= $yotpo_api->update_mass_products($arr);
+						wc_yotpo_log("\r\n\r\n".gmdate('r', time())."\r\nAPI Call: ".$mode."_mass_products\r\nAPI Response: ".$response['code']."\r\nProducts Sent: ".implode(", ",array_keys($arr['products'])));
+						return $response;
+					}
+                }
+            }
+        } catch (Exception $e) {
+            error_log($e->getMessage());
+        }
+    }
+}
+
+function wc_yotpo_product_catalog_csv(){
+	$yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings()); //Get yotpo_settings
+	$variants_status = $yotpo_settings['product_variants']; //Get if the varinats is enabled or disabled
+	$args = array(
+		'post_type' => 'product',
+		'posts_per_page' => -1
+		);
+	$loop = new WP_Query( $args ); //get the store's catalog
+	$iteration = 0;
+	$saveData = array();
+	ob_end_clean();
+	header('Content-type: application/utf-8');
+	header('Content-disposition: attachment; filename="Yotpo Catalog Export.csv"');
+	$fp = fopen('php://output', 'w'); 
+	while ( $loop->have_posts() ){
+		$loop->the_post();
+		$product_post = &new WC_Product( $loop->post->ID );
+		$_product = wc_get_product($product_post->get_id());
+		if (get_post_status($product_post->get_id()) == 'publish'){
+			$product_id = $_product->get_id(); 
+			$saveData['Product ID'] = $product_id;
+			$saveData['Product Name'] = $_product->get_title();
+			$saveData['Product Description'] = '';
+			$saveData['Product URL'] = get_permalink($product_id);
+			$saveData['Product Image URL'] = wc_yotpo_get_product_image_url($product_id);
+			$saveData['Product Price'] = $_product->get_price();
+			$saveData['Currency'] = get_woocommerce_currency();
+			$saveData['Spec UPC'] = '';
+			$saveData['Spec SKU'] = $_product->get_sku();
+			$saveData['Spec Brand'] = '';
+			$saveData['Spec MPN'] = '';
+			$saveData['Spec ISBN'] = '';
+			$saveData['Blacklisted'] = 'false';
+			$saveData['Product Group'] = '';
+
+			if($iteration==0) fputcsv($fp, array_keys($saveData));
+			fputcsv($fp, $saveData);
+			$iteration++;
+
+			if ($_product->is_type('variable') && $variants_status) { //if product has variations and checkbox is enabled
+				$available_variations = $_product->get_available_variations();
+				if($available_variations){
+					foreach($available_variations as $variation){
+						$variation_id = $variation['variation_id'];
+						$_variation = wc_get_product($variation_id);
+						$saveData['Product ID'] = $variation_id;
+						$saveData['Product Name'] = $_variation->get_name();
+						$saveData['Product Description'] = '';
+						$saveData['Product URL'] = get_permalink($product_id);
+						$saveData['Product Image URL'] = wc_yotpo_get_product_image_url($variation_id);
+						if($saveData['Product Image URL'] == null){ //if there's no variant image, get the parent product's image
+							$saveData['Product Image URL'] = wc_yotpo_get_product_image_url($product_id);
+						}
+						$saveData['Product Price'] = $variation['display_price'];
+						$saveData['Currency'] = get_woocommerce_currency();
+						$saveData['Spec UPC'] = '';
+						$saveData['Spec SKU'] = $_variation->get_sku();
+						$saveData['Spec Brand'] = '';
+						$saveData['Spec MPN'] = '';
+						$saveData['Spec ISBN'] = '';
+						$saveData['Blacklisted'] = 'false';
+						$saveData['Product Group'] = '';
+						
+						fputcsv($fp, $saveData);
+						$iteration++;
+					}
+				}
+			}
+		}
+	}
+	fclose($fp);
+	exit();
 }
