@@ -32,8 +32,14 @@ class Yotpo {
                 break;
             case 'POST':
             	curl_setopt($this->request, CURLOPT_POSTFIELDS, $vars);
-            	curl_setopt($this->request, CURLOPT_HTTPHEADER, array('Content-Type: application/json', 'Content-length: '.strlen($vars)));            	
+            	curl_setopt($this->request, CURLOPT_HTTPHEADER, array('Content-Type: application/json', 'Content-length: '.strlen($vars)));
                 curl_setopt($this->request, CURLOPT_POST, true);
+                break;
+
+            case 'PUT': //There was no 'PUT' originally.
+           	 	curl_setopt($this->request, CURLOPT_CUSTOMREQUEST, 'PUT');
+           	 	curl_setopt($this->request, CURLOPT_HTTPHEADER, array('Content-Type: application/json', 'Content-length: '.strlen($vars)));
+            	curl_setopt($this->request, CURLOPT_POSTFIELDS, $vars);
                 break;
             default:
                 curl_setopt($this->request, CURLOPT_CUSTOMREQUEST, $method);
@@ -59,7 +65,7 @@ class Yotpo {
         $this->error = '';
         $this->request = curl_init();
         if (is_array($vars)) {
-        	if($method == 'POST') {
+        	if($method == 'POST' || $method == 'PUT') {
         		$vars = json_encode($vars);
         	}
         	else {
@@ -358,6 +364,27 @@ class Yotpo {
         return $array;
     }
 
+
+	public function create_mass_products(array $products_hash) {
+	$request = self::build_request(
+	                array(
+	            'utoken' => 'utoken',
+	            'products' => 'products'
+	                ), $products_hash);
+	$app_key = $this->get_app_key($products_hash);
+	return $this->post("/apps/$app_key/products/mass_create", $request);
+	}
+
+
+	public function update_mass_products(array $products_hash) { //I've added a definition to PUT calls.
+	$request = self::build_request(
+	                array(
+	            'utoken' => 'utoken',
+	            'products' => 'products'
+	                ), $products_hash);
+	$app_key = $this->get_app_key($products_hash);
+	return $this->put("/apps/$app_key/products/mass_update", $request);
+	}
 }
 
 ?>
