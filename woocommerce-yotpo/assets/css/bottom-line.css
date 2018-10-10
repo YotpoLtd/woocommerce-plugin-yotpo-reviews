@@ -14,3 +14,11 @@ li.product a img.yoStar, .woocommerce-page ul.products li.product a img.yoStar {
 .yotpo {
 	margin-bottom:.5rem;
 }
+
+.QABottomLine, .bottomLine  {
+  display: inline-block;
+}
+
+.bottomLine + .QABottomLine {
+  margin-left: .5em;
+}
