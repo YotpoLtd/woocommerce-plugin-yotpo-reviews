@@ -72,7 +72,6 @@ function wc_display_yotpo_settings($success_type = false) {
         $settings_dump = json_encode($yotpo_settings);
         if (file_exists(LOG_FILE)) { $debug_log = file_get_contents(LOG_FILE); } else { $debug_log = false; };
     }
-// Removed screen_icon() - deprecated.
     $settings_html = "<div class='wrap'><h2>Yotpo Settings</h2>						  
 			  <h4>To customize the look and feel of the widget, and to edit your Mail After Purchase settings, just head to the " . $dashboard_link . "</h4>
 			  <form  method='post' id='yotpo_settings_form'>
@@ -203,7 +202,6 @@ function wc_proccess_yotpo_settings() {
 function wc_display_yotpo_register() {
     $email = isset($_POST['yotpo_user_email']) ? $_POST['yotpo_user_email'] : '';
     $user_name = isset($_POST['yotpo_user_name']) ? $_POST['yotpo_user_name'] : '';
-    // Removed screen_icon() - deprecated.
     $register_html = "<div class='wrap'><h2>Yotpo Registration</h2>
 		<form method='post'>
 		<table class='form-table'>"
