@@ -102,10 +102,9 @@ function wc_yotpo_uninstall() {
 	}	
 }
 function wc_yotpo_show_widget() {		 
-	global $product; // Proper way to get product
-	if($product->get_reviews_allowed() == true) { // Check if reviews allowed		
+	global $product;
+	if($product->get_reviews_allowed() == true) {	
 		$product_data = wc_yotpo_get_product_data($product);
-		// Added price and currency data attrs below.
 		$yotpo_div = "<div class='yotpo yotpo-main-widget'
 	   				data-product-id='".$product_data['id']."'
 	   				data-name='".$product_data['title']."' 
@@ -119,8 +118,8 @@ function wc_yotpo_show_widget() {
 	}						
 }
 function wc_yotpo_show_widget_in_tab($tabs) {
-	global $product; // Proper way to get product
-	if($product->get_reviews_allowed() == true) { // Check if reviews allowed	
+	global $product;
+	if($product->get_reviews_allowed() == true) {	
 		$settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
 	 	$tabs['yotpo_widget'] = array(
 	 	'title' => $settings['widget_tab_name'],
@@ -139,14 +138,14 @@ function wc_yotpo_load_js(){
 }
 function wc_yotpo_show_qa_bottomline() {
 	do_action( 'woocommerce_init' );
-    $product_data = wc_yotpo_get_product_data(wc_get_product()); // Proper way to get product.
+    $product_data = wc_yotpo_get_product_data(wc_get_product());
     echo "<div class='yotpo QABottomLine'
          data-appkey='".$product_data['app_key']."'
          data-product-id='".$product_data['id']."'></div>";
 }
 function wc_yotpo_show_buttomline() {
-	global $product; // Proper way to get product
-	$show_bottom_line = is_product() ? $product->get_reviews_allowed() == true : true; // Proper way to check if allowed.
+	global $product;
+	$show_bottom_line = is_product() ? $product->get_reviews_allowed() == true : true;
 	if($show_bottom_line) {
 		$product_data = wc_yotpo_get_product_data($product);	
 		$yotpo_div = "
@@ -169,17 +168,15 @@ function wc_yotpo_get_product_data($product) {
 	$settings = get_option('yotpo_settings',wc_yotpo_get_degault_settings());
 	$product_data['app_key'] = $settings['app_key'];
 	$product_data['shop_domain'] = wc_yotpo_get_shop_domain(); 
-	$product_data['url'] = get_permalink($product->get_id()); // Proper get_id
+	$product_data['url'] = get_permalink($product->get_id());
 	$product_data['lang'] = $settings['language_code']; 
 	if($settings['yotpo_language_as_site'] == true) {
 		$lang = explode('-', get_bloginfo('language'));
-		// In some languages there is a 3 letters language code
-		//TODO map these iso-639-2 to iso-639-1 (from 3 letters language code to 2 letters language code) 
 		if(strlen($lang[0]) == 2) {
 			$product_data['lang'] = $lang[0];	
 		}		
 	}
-	$product_data['description'] = wp_strip_all_tags($product->get_description()); // Proper get description + WP strip tags
+	$product_data['description'] = wp_strip_all_tags($product->get_description());
 	$product_data['id'] = $product->get_id();	
 	$product_data['title'] = $product->get_title();
 	$product_data['image-url'] = wc_yotpo_get_product_image_url($product->get_id());
@@ -235,26 +232,26 @@ function wc_yotpo_get_single_map_data($order_id) {
 	do_action( 'woocommerce_init' );
 	$order = new WC_Order($order_id);
 	$data = null;
-	if(!is_null($order->get_id())) { // Can't access props directly.
+	if(!is_null($order->get_id())) {
 		$data = array();
-		$data['order_date'] = date('Y-m-d H:i:s', strtotime($order->get_date_created())); // Can't access props directly. You can also use get_date_completed()
-		if (!empty($order->get_billing_email()) && !preg_match('/\d$/', $order->get_billing_email())) { $data['email'] = $order->get_billing_email(); } else { return; } // If no email, drop order.
-		if (!empty($order->get_billing_first_name())) { $data['customer_name'] = $order->get_billing_first_name().' '.$order->get_billing_last_name(); } else { return; } // If no name, drop order.
+		$data['order_date'] = date('Y-m-d H:i:s', strtotime($order->get_date_created()));
+		if (!empty($order->get_billing_email()) && !preg_match('/\d$/', $order->get_billing_email())) { $data['email'] = $order->get_billing_email(); } else { return; }
+		if (!empty($order->get_billing_first_name())) { $data['customer_name'] = $order->get_billing_first_name().' '.$order->get_billing_last_name(); } else { return; }
 		$data['order_id'] = $order_id;
 		$data['currency_iso'] = wc_yotpo_get_order_currency($order);
 		$products_arr = array();
 		ytdbg("Date: ".$data['order_date']." Email: ".$data['email'], "Order #".$data['order_id']);
-		if(empty($order->get_items())) { ytdbg('','No Products'); return; } // If no products, drop order.
+		if(empty($order->get_items())) { ytdbg('','No Products'); return; }
 		foreach ($order->get_items() as $product) {
-			if ($product['product_id'] == "0") { ytdbg('','Invalid product - ID 0'); return; } // For cases where product ID is 0, which is usually an invalid product, drop order.
+			if ($product['product_id'] == "0") { ytdbg('','Invalid product - ID 0'); return; }
             $_product = wc_get_product($product['product_id']);
             if(is_object($_product)){
                 $product_data = array();   
                 $product_data['url'] = get_permalink($product['product_id']); 
                 $product_data['name'] = $product['name'];
                 $product_data['image'] = wc_yotpo_get_product_image_url($product['product_id']);
-                $product_data['description'] = wp_strip_all_tags($_product->get_description()); // Proper get description + WP strip tags
-                $product_data['price'] = $_product->get_price(); // Get price of singular product instead of multiplied by quantity
+                $product_data['description'] = wp_strip_all_tags($_product->get_description());
+                $product_data['price'] = $_product->get_price();
                 $specs_data = array();
                 if($_product->get_sku()){ $specs_data['external_sku'] =$_product->get_sku();} 
                 if($_product->get_attribute('upc')){ $specs_data['upc'] =$_product->get_attribute('upc');} 
@@ -263,7 +260,7 @@ function wc_yotpo_get_single_map_data($order_id) {
                 if($_product->get_attribute('mpn')){ $specs_data['mpn'] =$_product->get_attribute('mpn');} 
                 if(!empty($specs_data)){ $product_data['specs'] = $specs_data;  }
                 ytdbg($product_data['name'].", Descr. length: ".strlen($product_data['description']).", ID: ".$product['product_id'] .", Specs: ".implode(' / ', $specs_data), "\tProduct:", false); 
-            } else { ytdbg('','Invalid product - Not an Object'); return; } // Not an object return
+            } else { ytdbg('','Invalid product - Not an Object'); return; }
 			$products_arr[$product['product_id']] = $product_data;	
 		}	
 		$data['products'] = $products_arr;
@@ -275,14 +272,14 @@ function wc_yotpo_get_product_image_url($product_id) {
 	return $url ? $url : null;
 }
 function wc_yotpo_get_past_orders() {
-	$yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings()); // Get settings
+	$yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
 	$result = null;
 	$args = array(
 		'post_type'		 => 'shop_order',
 		'posts_per_page' => -1
 	);
 	if (defined('WC_VERSION') && (version_compare(WC_VERSION, '2.2.0') >= 0)) {
-		$args['post_status'] = $yotpo_settings['yotpo_order_status']; // Take custom status into account.
+		$args['post_status'] = $yotpo_settings['yotpo_order_status'];
 	} else {
 		$args['tax_query'] = array(
 			array(
@@ -423,7 +420,7 @@ function wc_yotpo_get_order_currency($order) {
 	if(is_null($order) || !is_object($order)) {
 		return '';
 	}
-	if(method_exists($order,'get_currency')) { // Get currency
+	if(method_exists($order,'get_currency')) {
 		return $order->get_currency();
 	}
 	if(isset($order->order_custom_fields) && isset($order->order_custom_fields['_order_currency'])) {		
@@ -449,7 +446,6 @@ function ytdbg( $msg, $name = '', $date = true) {
     fwrite($fh, $log);
     fclose($fh);
 }
-// 500 error handler
 ob_start('fatal_error_handler');
 function fatal_error_handler($buffer){
     $error=error_get_last();
