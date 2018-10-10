@@ -1,8 +1,6 @@
 <?php
-
 define("LOG_FILE", plugin_dir_path( __FILE__ ).'../yotpo_debug.log');
 function wc_display_yotpo_admin_page() {
-
     if (function_exists('current_user_can') && !current_user_can('manage_options')) {
         die(__(''));
     }
@@ -46,14 +44,12 @@ function wc_display_yotpo_admin_page() {
         }
     }
 }
-
 function wc_display_yotpo_settings($success_type = false) {
     $yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
     $app_key = $yotpo_settings['app_key'];
     $secret = $yotpo_settings['secret'];
     $language_code = $yotpo_settings['language_code'];
     $widget_tab_name = $yotpo_settings['widget_tab_name'];
-
     if (empty($yotpo_settings['app_key'])) {
         if ($success_type == 'b2c') {
             wc_yotpo_display_message('We have sent you a confirmation email. Please check and click on the link to get your app key and secret token to fill out below.', true);
@@ -124,15 +120,17 @@ function wc_display_yotpo_settings($success_type = false) {
 					 <tr valign='top'>
 		   		       <th scope='row'><div>Secret token:</div></th>
 		   		       <td><div class='y-input'><input id='secret' type='text'  name='yotpo_oauth_token' value='$secret' $read_only '/></div></td>
-		   		     </tr>	
-		   		     <tr valign='top'>
-		   		       <th scope='row'><p class='description'>Yotpo's Bottom Line shows the star rating of the product and the number of reviews for the product. <a href='http://support.yotpo.com/entries/24467793-What-is-the-Yotpo-Bottomline-' target='_blank'>learn more.</a></p></th>		   		       
 		   		     </tr>				 	 
 					 <tr valign='top'>
 		   		       <th scope='row'><div>Enable bottom line in product page:</div></th>
 		   		       <td><input type='checkbox' name='yotpo_bottom_line_enabled_product' value='1' " . checked(1, $yotpo_settings['bottom_line_enabled_product'], false) . " /></td>
 		   		     </tr>					  	 
 					 <tr valign='top'>
+		   		       <th scope='row'><div>Enable Q&A bottom line in product page:</div></th>
+		   		       <td><input type='checkbox' name='yotpo_qna_enabled_product' value='1' " . checked(1, $yotpo_settings['qna_enabled_product'], false) . " />
+		   		       </td>
+		   		     </tr>
+ 					 <tr valign='top'>
 		   		       <th scope='row'><div>Enable bottom line in category page:</div></th>
 		   		       <td><input type='checkbox' name='yotpo_bottom_line_enabled_category' value='1' " . checked(1, $yotpo_settings['bottom_line_enabled_category'], false) . " />		   		       
 		   		       </td>
@@ -171,15 +169,13 @@ function wc_display_yotpo_settings($success_type = false) {
         echo '<h3>Settings</h3><pre>'.$settings_dump.'</pre>';
         if ($debug_log === FALSE) {
             echo '<h3>Yotpo Debug</h3>
-            <textarea cols=170 rows=15>Problem opening yotpo_debug.log and/or file is empty</textarea>';
+            <textarea cols=170 rows=15>Problem opening yotpo_debug.log and/or file is empty</textarea>';
         } else {
             echo '<h3>Yotpo Debug</h3><textarea cols=170 rows=15>'.$debug_log.'</textarea>
             <form method="post" id="yotdbg-clear">' .wp_nonce_field('yotdbg-clear') .'<input type="submit" value="Clear" class="button-primary" name="yotdbg-clear" id="yotdbg-clear-submit"/></form>';
         }
     }
 }
-
-
 function wc_proccess_yotpo_settings() {
     $current_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
     $new_settings = array('app_key' => $_POST['yotpo_app_key'],
@@ -188,6 +184,7 @@ function wc_proccess_yotpo_settings() {
         'language_code' => $_POST['yotpo_widget_language_code'],
         'widget_tab_name' => $_POST['yotpo_widget_tab_name'],
         'bottom_line_enabled_product' => isset($_POST['yotpo_bottom_line_enabled_product']) ? true : false,
+        'qna_enabled_product' => isset($_POST['yotpo_qna_enabled_product']) ? true : false,
         'bottom_line_enabled_category' => isset($_POST['yotpo_bottom_line_enabled_category']) ? true : false,
         'yotpo_order_status' => $_POST['yotpo_order_status'],
         'yotpo_language_as_site' => isset($_POST['yotpo_language_as_site']) ? true : false,
@@ -203,7 +200,6 @@ function wc_proccess_yotpo_settings() {
         }
     }
 }
-
 function wc_display_yotpo_register() {
     $email = isset($_POST['yotpo_user_email']) ? $_POST['yotpo_user_email'] : '';
     $user_name = isset($_POST['yotpo_user_name']) ? $_POST['yotpo_user_name'] : '';
@@ -244,7 +240,6 @@ function wc_display_yotpo_register() {
   </div>";
     echo $register_html;
 }
-
 function wc_proccess_yotpo_register() {
     $errors = array();
     if ($_POST['yotpo_user_email'] === '') {
@@ -321,7 +316,6 @@ function wc_proccess_yotpo_register() {
     }
     return false;
 }
-
 function wc_yotpo_display_message($messages = array(), $is_error = false) {
     $class = $is_error ? 'error' : 'updated fade';
     if (is_array($messages)) {
