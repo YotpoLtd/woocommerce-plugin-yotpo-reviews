@@ -20,5 +20,10 @@ li.product a img.yoStar, .woocommerce-page ul.products li.product a img.yoStar {
 }
 
 .bottomLine + .QABottomLine {
-  margin-left: .5em;
+  margin-left: 0.5em;
+  margin-bottom: 0.615em;
+}
+
+.yotpo-icon-double-bubble, .yotpo-stars {
+    margin: 0 5px 0 0 !important;
 }
