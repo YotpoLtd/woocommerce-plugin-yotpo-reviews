@@ -139,4 +139,14 @@ Yes. To connect your social accounts to Yotpo, just log into yotpo.com, and clic
 * Fixed "review export" method on Yotpo's integration page.
 
 = 1.1.7 - 13/02/2018 =
-* Reverted default order status to 'Completed'
+* Reverted default order status to 'Completed'
+
+= 1.1.8 - 13/10/2018 =
+* Added support for:
+  * Wordpress Version 4.9.8
+  * Woocommerce Version 3.5.0
+  * Price & currency metadata in widget for Rich Snippets.
+  * Custom order status into account when retrieving past orders.
+  * Q&A bottom line in storefront and Yotpo settings.
+ * Bug fixes.
+  
