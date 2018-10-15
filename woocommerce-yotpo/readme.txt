@@ -43,6 +43,7 @@ http://www.youtube.com/watch?v=5yo6NVRm6mw
 
 * WordPress 3.5.1 or greater
 * PHP version 5.2.0 or greater
+* WooCommerce 3.0 or greater
 
 1. Install Yotpo Social Reviews either via the WordPress.org plugin directory, or by uploading the files to your server
 2. After activating Yotpo Social Reviews, click on the Yotpo link in the left hand side bar of your Wordpress admin.
