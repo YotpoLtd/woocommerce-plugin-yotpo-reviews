@@ -1,40 +1,49 @@
-=== Yotpo Social Reviews for Woocommerce ===
+=== Yotpo: Product & Photo Reviews for WooCommerce ===
 Contributors: Yotpo
-Tags: reviews, social reviews, woocommerce, woocommerce reviews, woocommerce product reviews, woocommerce extensions, woocommerce plugins, woocommerce addons, woocommerce add-ons, yotpo, yotpo reviews, yotpo social reviews
+Tags: reviews, social reviews, woocommerce, woocommerce reviews, woocommerce product reviews, woocommerce extensions, woocommerce plugins, woocommerce addons, woocommerce add-ons, yotpo, yotpo reviews, yotpo social reviews, photo reviews
 Requires at least: 3.5.1
 Tested up to: 5.2.3
 Stable tag: 1.1.8
 License: GPLv2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
-Generate tons of product reviews for your Woocommerce site with Yotpo Social Reviews
+Collect product reviews, photo reviews, site reviews & ratings
 
 == Description ==
 
-[Yotpo Social Reviews](http://www.yotpo.com/?utm_source=wordpress&utm_medium=description_link&utm_campaign=woocommerce_wordpress_page) is the world's most effective product reviews solution for eCommerce sites and is now available for Woocommerce. Generate tons of product reviews for your Woocommerce site with Yotpo.
+= What Is Yotpo? =
 
-= The many features of Yotpo Social Reviews =
+[Yotpo](https://www.yotpo.com/) is a commerce marketing cloud that helps brands of all sizes collect and showcase reviews, photos, and Q&A throughout the buyer journey and across social platforms to build buyer trust, drive traffic, and increase conversion.
 
-* Send Mail After Purchase emails to encourage customers to leave reviews (proven to dramatically increase reviews)
-* Display your reviews in a beautiful and customizable format
-* Supports all languages
-* Create a minisite to increase your SEO with User Generated Content
-* Allow users to share their reviews on their social networks
-* Import pre-existing reviews
-* Fully customize your widget's look and feel.
-* Connect your business's social pages to Yotpo, to automatically notify your followers of new reviews.
+= What can you do with Yotpo? =
+
+* Collect reviews, ratings, photos, and Q&A from your customers.
+* Increase conversion by showcasing customer content on site to help buyers with purchase decisions.
+* Drive high-intent traffic by displaying ratings in organic search results and Google Ads.
+* Share your best customer content on social networks with a click of a button.
+* Build a brand community of your biggest fans with customer content.
+* Make better business decisions using analytics and feedback from your customers.
 * It's free!
 
+= Yotpo’s Integrations =
 
-= Demos =
+Yotpo has official partnerships with Google, Facebook, and Instagram, and your favorite apps.
 
-To learn more about Yotpo head over to our website - [yotpo.com](http://www.yotpo.com/?utm_source=wordpress&utm_medium=description_link&utm_campaign=woocommerce_wordpress_page).
-To view a live demo of a store using our widget, head to [Carbonfibergear.com](http://store.carbonfibergear.com/3k-carbon-fiber-leather-wallet)
-To view a live demo of our admin panel, just login at [yotpo.com](http://www.yotpo.com/?utm_source=wordpress&utm_medium=description_link&utm_campaign=woocommerce_wordpress_page), with the following credentials: 
-Username: woocommerce@yotpo.com 
-Password: 123456
+= What’s Included In The Free Plan? =
 
-http://www.youtube.com/watch?v=5yo6NVRm6mw
+Yotpo’s Free (forever!) plan is designed to meet the needs of small businesses and stores that are just starting out. It includes:
+
+* [On-Site Display] Reviews Widget, Reviews Tab & Star Ratings - Increase conversion by showcasing product reviews and ratings across your homepage, product & category pages, and at checkout.
+* [Traffic & Social] Social Push & SEO Page - Drive traffic from Facebook and Twitter and rank higher in search results.
+* [Content Generation] Review Request Emails - Collect reviews with a single, frictionless request.
+* [Moderation & Commenting] Advanced Moderation & Commenting - Choose what to publish and where, and comment on reviews publicly or privately. And way more!
+
+= What About the Growth Plan? =
+
+Our Growth Plan (starting at $29 / month) scales with your business. It includes everything in the Free plan plus: Photos in Reviews, Reviews Carousel, Rich Snippets, Coupons, Email Upsells, and tons of other features for growing businesses.
+
+
+https://www.youtube.com/watch?v=emYQojcaQqQ&feature=youtu.be
 
 
 == Installation ==
@@ -50,6 +59,8 @@ http://www.youtube.com/watch?v=5yo6NVRm6mw
 3. You will now need to register an account with Yotpo or log in with your existing account.
 4. Customize the different settings on the Yotpo Settings page and click update when done.
 5. That's it.  You're ready to go!
+
+For full installation guide, [please click here](https://support.yotpo.com/en/installing-yotpo/woocommerce)
 
 == Frequently Asked Questions ==
 
@@ -85,10 +96,19 @@ Yes. To connect your social accounts to Yotpo, just log into yotpo.com, and clic
 
 == Screenshots ==
 
-1. Example of the mail after purchase that is sent to customers.
-2. Yotpo registration page within Wordpress admin.
-3. Yotpo settings page within Wordpress admin.
-4. Example of the Yotpo Campaigns section within the Yotpo admin.
+1.
+2.
+3.
+4.
+5.
+6.
+7.
+8.
+9.
+10.
+11.
+12.
+13.
 
 == Changelog ==
 
@@ -149,5 +169,6 @@ Yes. To connect your social accounts to Yotpo, just log into yotpo.com, and clic
   * Price & currency metadata in widget for Rich Snippets.
   * Custom order status into account when retrieving past orders.
   * Q&A bottom line in storefront and Yotpo settings.
- * Bug fixes.
+  * Bug fixes.
+
   
