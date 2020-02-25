@@ -6,6 +6,8 @@
 	Version: 1.1.8
 	Author URI: http://www.yotpo.com?utm_source=yotpo_plugin_woocommerce&utm_medium=plugin_page_link&utm_campaign=woocommerce_plugin_page_link	
 	Plugin URI: http://www.yotpo.com?utm_source=yotpo_plugin_woocommerce&utm_medium=plugin_page_link&utm_campaign=woocommerce_plugin_page_link
+	WC requires at least: 3.0
+	WC tested up to: 3.9.2
  */
 register_activation_hook(   __FILE__, 'wc_yotpo_activation' );
 register_uninstall_hook( __FILE__, 'wc_yotpo_uninstall' );
