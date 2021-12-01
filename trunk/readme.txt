@@ -2,7 +2,7 @@
 Contributors: Yotpo
 Tags: reviews, social reviews, woocommerce, woocommerce reviews, woocommerce product reviews, woocommerce extensions, woocommerce plugins, woocommerce addons, woocommerce add-ons, yotpo, yotpo reviews, yotpo social reviews, photo reviews
 Requires at least: 3.5.1
-Tested up to: 5.8
+Tested up to: 5.8.2
 Stable tag: 1.1.8
 License: GPLv2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
