@@ -48,6 +48,9 @@ function wc_display_yotpo_settings($success_type = false) {
     $yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
     $app_key = $yotpo_settings['app_key'];
     $secret = $yotpo_settings['secret'];
+    $reviews_widget_id = $yotpo_settings['reviews_widget_id'];
+    $qna_widget_id = $yotpo_settings['qna_widget_id'];
+    $star_ratings_widget_id = $yotpo_settings['star_ratings_widget_id'];
     $language_code = $yotpo_settings['language_code'];
     $widget_tab_name = $yotpo_settings['widget_tab_name'];
     if (empty($yotpo_settings['app_key'])) {
@@ -119,7 +122,23 @@ function wc_display_yotpo_settings($success_type = false) {
 					 <tr valign='top'>
 		   		       <th scope='row'><div>Secret token:</div></th>
 		   		       <td><div class='y-input'><input id='secret' type='text'  name='yotpo_oauth_token' value='$secret' $read_only '/></div></td>
-		   		     </tr>				 	 
+		   		     </tr>
+                    <tr valign='top'>
+                        <th scope='row'><div>Reviews Widget ID:</div></th>
+                        <td><div class='y-input'><input id='reviews_widget' type='text' name='yotpo_reviews_widget_id' value='$reviews_widget_id' $read_only '/></div></td>
+                    </tr>				 	 
+                    <tr valign='top'>
+                        <th scope='row'><div>Q&A Widget ID:</div></th>
+                        <td><div class='y-input'><input id='qna_widget' type='text' name='yotpo_qna_widget_id' value='$qna_widget_id' $read_only '/></div></td>
+                    </tr>				 	 
+                    <tr valign='top'>
+                        <th scope='row'><div>Star Ratings Widget ID:</div></th>
+                        <td><div class='y-input'><input id='star_ratings_widget' type='text' name='yotpo_star_ratings_widget_id' value='$star_ratings_widget_id' $read_only '/></div></td>
+                    </tr>
+					 <tr valign='top'>
+		   		       <th scope='row'><div>Use v3 widgets:</div></th>
+		   		       <td><input type='checkbox' name='yotpo_use_v3_widgets' value='1' " . checked(1, $yotpo_settings['use_v3_widgets'], false) . " /></td>
+		   		     </tr>					  	 
 					 <tr valign='top'>
 		   		       <th scope='row'><div>Enable bottom line in product page:</div></th>
 		   		       <td><input type='checkbox' name='yotpo_bottom_line_enabled_product' value='1' " . checked(1, $yotpo_settings['bottom_line_enabled_product'], false) . " /></td>
@@ -179,9 +198,13 @@ function wc_proccess_yotpo_settings() {
     $current_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
     $new_settings = array('app_key' => $_POST['yotpo_app_key'],
         'secret' => $_POST['yotpo_oauth_token'],    
+        'reviews_widget_id' => $_POST['yotpo_reviews_widget_id'],
+        'qna_widget_id' => $_POST['yotpo_qna_widget_id'],
+        'star_ratings_widget_id' => $_POST['yotpo_star_ratings_widget_id'],
         'widget_location' => $_POST['yotpo_widget_location'],
         'language_code' => $_POST['yotpo_widget_language_code'],
         'widget_tab_name' => $_POST['yotpo_widget_tab_name'],
+        'use_v3_widgets' => isset($_POST['yotpo_use_v3_widgets']) ? true : false,
         'bottom_line_enabled_product' => isset($_POST['yotpo_bottom_line_enabled_product']) ? true : false,
         'qna_enabled_product' => isset($_POST['yotpo_qna_enabled_product']) ? true : false,
         'bottom_line_enabled_category' => isset($_POST['yotpo_bottom_line_enabled_category']) ? true : false,
