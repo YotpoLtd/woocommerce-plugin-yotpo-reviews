@@ -123,22 +123,17 @@ function wc_display_yotpo_settings($success_type = false) {
 		   		       <th scope='row'><div>Secret token:</div></th>
 		   		       <td><div class='y-input'><input id='secret' type='text'  name='yotpo_oauth_token' value='$secret' $read_only '/></div></td>
 		   		     </tr>
-                    <tr valign='top'>
-                        <th scope='row'><div>Reviews Widget ID:</div></th>
-                        <td><div class='y-input'><input id='reviews_widget' type='text' name='yotpo_reviews_widget_id' value='$reviews_widget_id' $read_only '/></div></td>
-                    </tr>				 	 
-                    <tr valign='top'>
-                        <th scope='row'><div>Q&A Widget ID:</div></th>
-                        <td><div class='y-input'><input id='qna_widget' type='text' name='yotpo_qna_widget_id' value='$qna_widget_id' $read_only '/></div></td>
-                    </tr>				 	 
-                    <tr valign='top'>
-                        <th scope='row'><div>Star Ratings Widget ID:</div></th>
-                        <td><div class='y-input'><input id='star_ratings_widget' type='text' name='yotpo_star_ratings_widget_id' value='$star_ratings_widget_id' $read_only '/></div></td>
-                    </tr>
-					 <tr valign='top'>
-		   		       <th scope='row'><div>Use v3 widgets:</div></th>
-		   		       <td><input type='checkbox' name='yotpo_use_v3_widgets' value='1' " . checked(1, $yotpo_settings['use_v3_widgets'], false) . " /></td>
-		   		     </tr>					  	 
+                    <input id='reviews_widget' type='hidden' name='yotpo_reviews_widget_id' value='$reviews_widget_id' '/>
+                    <input id='qna_widget' type='hidden' name='yotpo_qna_widget_id' value='$qna_widget_id' '/>
+                    <input id='star_ratings_widget' type='hidden' name='yotpo_star_ratings_widget_id' value='$star_ratings_widget_id' '/>
+                     <tr valign='top'>
+                       <th scope='row'><div>Use v3 widgets:</div></th>
+                       <td><input type='checkbox' id='yotpo_use_v3_widgets' name='yotpo_use_v3_widgets' value='1' " . checked(1, $yotpo_settings['use_v3_widgets'], false) . " /></td>
+                     </tr>
+                     <tr valign='top' id='yotpo-sync-widget-ids-row' style='display:none'>
+                       <th scope='row'><div>Synchronise the widgets' codes:</div></th>
+                       <td><button type='button' id='yotpo-sync-widget-ids' class='button-secondary'>Sync</button></td>
+                     </tr>
 					 <tr valign='top'>
 		   		       <th scope='row'><div>Enable bottom line in product page:</div></th>
 		   		       <td><input type='checkbox' name='yotpo_bottom_line_enabled_product' value='1' " . checked(1, $yotpo_settings['bottom_line_enabled_product'], false) . " /></td>
