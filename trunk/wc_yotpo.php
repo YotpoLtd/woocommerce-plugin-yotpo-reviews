@@ -216,9 +216,12 @@ function generate_star_ratings_widget_code() {
 	$use_v3_widgets = $yotpo_settings['use_v3_widgets'];
 	$reviews_widget_id = $yotpo_settings['reviews_widget_id'];
 	$star_ratings_widget_id = $yotpo_settings['star_ratings_widget_id'];
-	return $use_v3_widgets && $reviews_widget_id && $star_ratings_widget_id
-		? generate_v3_star_ratings_widget_code($star_ratings_widget_id)
-		: generate_v2_star_ratings_widget_code();
+	if ($use_v3_widgets && $star_ratings_widget_id && $reviews_widget_id) {
+		return generate_v3_star_ratings_widget_code($star_ratings_widget_id);
+	}
+	if (!$use_v3_widgets) {
+		return generate_v2_star_ratings_widget_code();
+	}
 }
 function generate_v2_star_ratings_widget_code() {
 	global $product;

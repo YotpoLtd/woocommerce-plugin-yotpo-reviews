@@ -14,6 +14,9 @@ function wc_display_yotpo_admin_page() {
         } elseif (isset($_POST['yotpo_sync_ids'])) {
             wc_proccess_yotpo_widgets_ids_synchronisation();
             wc_display_yotpo_settings();
+        } elseif (isset($_POST['yotpo_remove_ids'])) {
+            wc_proccess_yotpo_widgets_ids_removal();
+            wc_display_yotpo_settings();
         } elseif (isset($_POST['yotpo_register'])) {
             check_admin_referer('yotpo_registration_form');
             $success = wc_proccess_yotpo_register();
@@ -135,7 +138,12 @@ function wc_display_yotpo_settings($success_type = false) {
                      </tr>
                      <tr valign='top' id='yotpo-sync-widget-ids-row' style='display:none'>
                        <th scope='row'><div>Synchronise the widgets' codes:</div></th>
+                       <!-- <td><button type='button' id='yotpo-sync-widget-ids' class='button-secondary'>Sync</button></td> -->
                        <td><input type='submit' name='yotpo_sync_ids' value='Sync' class='button-primary' id='yotpo_sync_ids'/></td>
+                     </tr>
+                     <tr valign='top'>
+                       <th scope='row'><div>Reset the widgets' codes:</div></th>
+                       <td><input type='submit' name='yotpo_remove_ids' value='Reset' class='button-secondary' id='yotpo_remove_ids'/></td>
                      </tr>
 					 <tr valign='top'>
 		   		       <th scope='row'><div>Enable bottom line in product page:</div></th>
@@ -220,6 +228,15 @@ function wc_proccess_yotpo_settings() {
         }
     }
 }
+// TODO: remove after accepting the view together with invoking and with HTML button
+function wc_proccess_yotpo_widgets_ids_removal() {
+    $new_settings = array_replace_recursive(get_option('yotpo_settings', wc_yotpo_get_degault_settings()));
+    $new_settings['use_v3_widgets'] = isset($_POST['yotpo_use_v3_widgets']) ? true : false;
+    $new_settings['reviews_widget_id'] = NULL;
+    $new_settings['qna_widget_id'] = NULL;
+    $new_settings['star_ratings_widget_id'] = NULL;
+    update_option('yotpo_settings', $new_settings);
+}
 function wc_proccess_yotpo_widgets_ids_synchronisation() {
     $widgets_instances = get_widget_instances();
     $new_settings = array_replace_recursive(get_option('yotpo_settings', wc_yotpo_get_degault_settings()));
@@ -227,7 +244,9 @@ function wc_proccess_yotpo_widgets_ids_synchronisation() {
     $new_settings['reviews_widget_id'] = $widgets_instances['reviews_widget_id'];
     $new_settings['qna_widget_id'] = $widgets_instances['qna_widget_id'];
     $new_settings['star_ratings_widget_id'] = $widgets_instances['star_ratings_widget_id'];
-    update_option('yotpo_settings', $new_settings);
+    update_option('yotpo_settings', $new_settings)
+        ? wc_yotpo_display_message('Widgets\' IDs have been synchronised')
+        : wc_yotpo_display_message('Widgets\' IDs have not been synchronised', false);
 }
 function wc_display_yotpo_register() {
     $email = isset($_POST['yotpo_user_email']) ? $_POST['yotpo_user_email'] : '';
