@@ -32,47 +32,11 @@ jQuery(document).ready(function () {
 });
 
 function monitorDynamicElements() {
-
-	const reviewsWidgetInput = jQuery('#reviews_widget');
-	const qnaWidgetInput = jQuery('#qna_widget');
-	const starRatingsWidgetInput = jQuery('#star_ratings_widget');
 	const yotpoUseV3Widgets = jQuery('#yotpo_use_v3_widgets');
 	const yotpoSyncWidgetIdsRow = jQuery('#yotpo-sync-widget-ids-row');
-	const yotpoSyncWidgetIds = jQuery('#yotpo-sync-widget-ids');
-	const saveYotpoSettingsButton = jQuery('#save_yotpo_settings');
 
 	function updateWidgetSyncRowState(widgetSyncRow, visible) {
 		visible ? widgetSyncRow.show() : widgetSyncRow.hide();
-	}
-
-	const widgetsIds = {
-		reviewsWidget: 355852,
-		qnaWidget: 355862,
-		starRatings: 355851
-	}
-
-	function getWidgetsIDs() {
-		return new Promise((resolve) => {
-			setTimeout(() => {
-				resolve(widgetsIds);
-			}, 2000);
-		});
-	}
-
-	function saveWidgetsIDs(widgetsIds) {
-		reviewsWidgetInput.val(widgetsIds.reviewsWidget);
-		qnaWidgetInput.val(widgetsIds.qnaWidget);
-		starRatingsWidgetInput.val(widgetsIds.starRatings);
-		saveYotpoSettingsButton.click();
-	}
-
-	function getAndSaveWidgetsIDs() {
-		getWidgetsIDs().then(widgetsIds => saveWidgetsIDs(widgetsIds));
-	}
-
-	function monitorSyncIDsButton() {
-		const syncIDsButton = yotpoSyncWidgetIds;
-		syncIDsButton.on('click', () => getAndSaveWidgetsIDs());
 	}
 
 	function monitorV3WidgetsCheckbox() {
@@ -84,6 +48,5 @@ function monitorDynamicElements() {
 		);
 	}
 
-	monitorSyncIDsButton();
 	monitorV3WidgetsCheckbox();
 }

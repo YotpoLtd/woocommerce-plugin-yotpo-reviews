@@ -11,6 +11,9 @@ function wc_display_yotpo_admin_page() {
             check_admin_referer('yotpo_settings_form');
             wc_proccess_yotpo_settings();
             wc_display_yotpo_settings();
+        } elseif (isset($_POST['yotpo_sync_ids'])) {
+            wc_proccess_yotpo_widgets_ids_synchronisation();
+            wc_display_yotpo_settings();
         } elseif (isset($_POST['yotpo_register'])) {
             check_admin_referer('yotpo_registration_form');
             $success = wc_proccess_yotpo_register();
@@ -132,7 +135,7 @@ function wc_display_yotpo_settings($success_type = false) {
                      </tr>
                      <tr valign='top' id='yotpo-sync-widget-ids-row' style='display:none'>
                        <th scope='row'><div>Synchronise the widgets' codes:</div></th>
-                       <td><button type='button' id='yotpo-sync-widget-ids' class='button-secondary'>Sync</button></td>
+                       <td><input type='submit' name='yotpo_sync_ids' value='Sync' class='button-primary' id='yotpo_sync_ids'/></td>
                      </tr>
 					 <tr valign='top'>
 		   		       <th scope='row'><div>Enable bottom line in product page:</div></th>
@@ -216,6 +219,15 @@ function wc_proccess_yotpo_settings() {
             update_option('woocommerce_enable_review_rating', 'no');
         }
     }
+}
+function wc_proccess_yotpo_widgets_ids_synchronisation() {
+    $widgets_instances = get_widget_instances();
+    $new_settings = array_replace_recursive(get_option('yotpo_settings', wc_yotpo_get_degault_settings()));
+    $new_settings['use_v3_widgets'] = isset($_POST['yotpo_use_v3_widgets']) ? true : false;
+    $new_settings['reviews_widget_id'] = $widgets_instances['reviews_widget_id'];
+    $new_settings['qna_widget_id'] = $widgets_instances['qna_widget_id'];
+    $new_settings['star_ratings_widget_id'] = $widgets_instances['star_ratings_widget_id'];
+    update_option('yotpo_settings', $new_settings);
 }
 function wc_display_yotpo_register() {
     $email = isset($_POST['yotpo_user_email']) ? $_POST['yotpo_user_email'] : '';
@@ -341,4 +353,30 @@ function wc_yotpo_display_message($messages = array(), $is_error = false) {
     } elseif (is_string($messages)) {
         echo "<div id='message' class='$class'><p><strong>$messages</strong></p></div>";
     }
+}
+
+function get_yotpo_widget_field_name($widget_type_name) {
+    switch ($widget_type_name) {
+        case 'ReviewsMainWidget':
+            return 'reviews_widget_id';
+        case 'QuestionsAndAnswers':
+            return 'qna_widget_id';
+        case 'ReviewsStarRatingsWidget':
+            return 'star_ratings_widget_id';
+    }
+}
+
+function receive_widget_instances() {
+    $yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
+    $yotpo_api = new Yotpo($yotpo_settings['app_key'], $yotpo_settings['secret']);
+    return $yotpo_api->get_widget_instances();
+}
+
+function get_widget_instances() {
+    $response = receive_widget_instances()['widget_instances'];
+    $ids_object = array();
+    foreach($response as &$val) {
+        $ids_object[get_yotpo_widget_field_name($val['widget_type_name'])] = $val['widget_instance_id'];
+    }
+    return $ids_object;
 }
