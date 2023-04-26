@@ -14,7 +14,7 @@ jQuery(document).ready(function () {
 		}
 		else {
 			jQuery('#yotpo_settings_form .yotpo-widget-location-other-explain').hide(duration);
-		}	
+		}
 	};
 	
 	hide_tabname(0);
@@ -32,20 +32,21 @@ jQuery(document).ready(function () {
 });
 
 function monitorDynamicElements() {
-	const yotpoUseV3Widgets = jQuery('#yotpo_use_v3_widgets');
-	const yotpoSyncWidgetIdsRow = jQuery('#yotpo-sync-widget-ids-row');
+	const yotpoWidgetVersion = jQuery('#yotpo-widget-version');
+	const yotpoV3Enablers = jQuery('#yotpo-v3-enablers');
+	const yotpoV2Enablers = jQuery('#yotpo-v2-enablers');
 
-	function updateWidgetSyncRowState(widgetSyncRow, visible) {
+	function changeElementVisibility(widgetSyncRow, visible) {
 		visible ? widgetSyncRow.show() : widgetSyncRow.hide();
 	}
 
 	function monitorV3WidgetsCheckbox() {
-		const checkbox = yotpoUseV3Widgets;
-		const widgetSyncRow = yotpoSyncWidgetIdsRow;
-		updateWidgetSyncRowState(widgetSyncRow, checkbox.is(':checked'));
-		checkbox.on('change',
-			() => updateWidgetSyncRowState(widgetSyncRow, checkbox.is(':checked'))
-		);
+		changeElementVisibility(yotpoV3Enablers, yotpoWidgetVersion.val() === 'v3');
+		changeElementVisibility(yotpoV2Enablers, yotpoWidgetVersion.val() === 'v2');
+		yotpoWidgetVersion.on('change', () => {
+			changeElementVisibility(yotpoV3Enablers, yotpoWidgetVersion.val() === 'v3');
+			changeElementVisibility(yotpoV2Enablers, yotpoWidgetVersion.val() === 'v2');
+		});
 	}
 
 	monitorV3WidgetsCheckbox();
