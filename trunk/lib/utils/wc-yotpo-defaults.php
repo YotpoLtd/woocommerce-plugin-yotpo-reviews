@@ -5,7 +5,8 @@ function wc_yotpo_get_default_settings() {
         'secret' => '',
         'widget_location' => 'footer',
         'language_code' => 'en',
-        'widget_tab_name' => 'Reviews',
+        'main_widget_tab_name' => 'Reviews',
+        'qna_widget_tab_name' => 'Q&A',
         'widget_version' => 'v2',
 				'v3_widgets_ids' => array(
 					'reviews_widget' => '',

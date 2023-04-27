@@ -35,18 +35,23 @@ function monitorDynamicElements() {
 	const yotpoWidgetVersion = jQuery('#yotpo-widget-version');
 	const yotpoV3Enablers = jQuery('#yotpo-v3-enablers');
 	const yotpoV2Enablers = jQuery('#yotpo-v2-enablers');
+	const yotpoQNAWidgetTabName = jQuery('#yotpo_settings_form .yotpo-qna-widget-tab-name');
 
 	function changeElementVisibility(widgetSyncRow, visible) {
 		visible ? widgetSyncRow.show() : widgetSyncRow.hide();
 	}
 
-	function monitorV3WidgetsCheckbox() {
+	function modifyFormPositionsVisibility() {
 		changeElementVisibility(yotpoV3Enablers, yotpoWidgetVersion.val() === 'v3');
 		changeElementVisibility(yotpoV2Enablers, yotpoWidgetVersion.val() === 'v2');
-		yotpoWidgetVersion.on('change', () => {
-			changeElementVisibility(yotpoV3Enablers, yotpoWidgetVersion.val() === 'v3');
-			changeElementVisibility(yotpoV2Enablers, yotpoWidgetVersion.val() === 'v2');
-		});
+		yotpoWidgetVersion.val() === 'v3'
+			? yotpoQNAWidgetTabName.removeClass('yotpo-qna-widget-tab-name--hidden')
+			: yotpoQNAWidgetTabName.addClass('yotpo-qna-widget-tab-name--hidden');
+	}
+
+	function monitorV3WidgetsCheckbox() {
+		modifyFormPositionsVisibility();
+		yotpoWidgetVersion.on('change', () => modifyFormPositionsVisibility());
 	}
 
 	monitorV3WidgetsCheckbox();

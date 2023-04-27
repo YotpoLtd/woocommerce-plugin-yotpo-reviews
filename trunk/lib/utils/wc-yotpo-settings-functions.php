@@ -37,7 +37,8 @@ function wc_proccess_yotpo_settings() {
       'secret' => $_POST['yotpo_oauth_token'],
       'widget_location' => $_POST['yotpo_widget_location'],
       'language_code' => $_POST['yotpo_widget_language_code'],
-      'widget_tab_name' => $_POST['yotpo_widget_tab_name'],
+      'main_widget_tab_name' => $_POST['yotpo_main_widget_tab_name'],
+      'qna_widget_tab_name' => $_POST['yotpo_qna_widget_tab_name'],
       'widget_version' => $_POST['yotpo_widget_version'],
       'v3_widgets_ids' => array(
           'reviews_widget' => $widgets_instances['reviews_widget'],

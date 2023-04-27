@@ -19,6 +19,8 @@ require 'lib/widgets/qna-widget.php';
 require 'lib/widgets/reviews-widget.php';
 require 'lib/widgets/stars-widget.php';
 require 'lib/utils/wc-yotpo-defaults.php';
+require 'lib/utils/wc-yotpo-functions.php';
+require 'lib/utils/widgets-rendering-logic.php';
 		
 function wc_yotpo_init() {
 	$is_admin = is_admin();	
@@ -49,21 +51,6 @@ function wc_yotpo_init() {
 		}								
 	}			
 }
-function wc_yotpo_redirect() {
-	if ( get_option('wc_yotpo_just_installed', false)) {
-		delete_option('wc_yotpo_just_installed');
-		wp_redirect( ( ( is_ssl() || force_ssl_admin() || force_ssl_login() ) ? str_replace( 'http:', 'https:', admin_url( 'admin.php?page=woocommerce-yotpo-settings-page' ) ) : str_replace( 'https:', 'http:', admin_url( 'admin.php?page=woocommerce-yotpo-settings-page' ) ) ) );
-		exit;
-	}	
-}
-function use_v3_widgets() {
-	$settings = get_option('yotpo_settings',wc_yotpo_get_default_settings());
-	return $settings['widget_version'] === 'v3';
-}
-function wc_yotpo_admin_settings() {
-	add_action( 'admin_enqueue_scripts', 'wc_yotpo_admin_styles' );	
-	$page = add_menu_page( 'Yotpo', 'Yotpo', 'manage_options', 'woocommerce-yotpo-settings-page', 'wc_display_yotpo_admin_page', 'none', null );			
-}
 function wc_yotpo_front_end_init() {
 	$settings = get_option('yotpo_settings',wc_yotpo_get_default_settings());
 	add_action('woocommerce_thankyou', 'wc_yotpo_conversion_track');		
@@ -72,46 +59,18 @@ function wc_yotpo_front_end_init() {
 		if($settings['disable_native_review_system']) {
 			add_filter( 'comments_open', 'wc_yotpo_remove_native_review_system', null, 2);	
 		}
-		elseif($widget_location == 'tab') {
-			add_action('woocommerce_product_tabs', 'wc_yotpo_show_widget_in_tab');		
+		if($widget_location == 'footer') {
+			render_widgets_in_footer();
 		}
-		if (!use_v3_widgets()) {
-			v2_product_widgets_render($settings['v2_widgets_enables'], $widget_location);
-		} else {
-			v3_product_widgets_render($settings['v3_widgets_enables']);
-		}			
+		elseif($widget_location == 'tab') {
+			render_widgets_in_tabs();
+		}
+		render_bottom_line_widgets();
 	}
 	elseif (star_rating_category_for_v2_or_v3_enabled($settings)) {
 		add_action('woocommerce_after_shop_loop_item', 'wc_yotpo_show_buttomline', 7);
 		wp_enqueue_style('yotpoSideBootomLineStylesheet', plugins_url('assets/css/bottom-line.css', __FILE__));
 	}
-}
-function v2_product_widgets_render($v2_widgets_enables, $widget_location) {
-	if($v2_widgets_enables['bottom_line_product']) {	
-		add_action('woocommerce_single_product_summary', 'wc_yotpo_show_buttomline',7);	
-		wp_enqueue_style('yotpoSideBootomLineStylesheet', plugins_url('assets/css/bottom-line.css', __FILE__));
-	}
-	if($v2_widgets_enables['qna_product']) {	
-		add_action('woocommerce_single_product_summary', 'wc_yotpo_show_qa_bottomline',8);
-	}
-	if($widget_location == 'footer') {		
-		add_action('woocommerce_after_single_product', 'wc_yotpo_show_reviews_widget', 10);
-	}
-}
-function v3_product_widgets_render($v3_widgets_enables) {
-	if($v3_widgets_enables['star_rating_product']) {	
-		add_action('woocommerce_single_product_summary', 'wc_yotpo_show_buttomline',7);	
-	}
-	if($v3_widgets_enables['qna_product']) {	
-		add_action('woocommerce_after_single_product', 'wc_yotpo_show_qna_widget',8);
-	}
-	if($v3_widgets_enables['reviews_widget_product']) {
-		add_action('woocommerce_after_single_product', 'wc_yotpo_show_reviews_widget', 10);
-	}
-}
-function star_rating_category_for_v2_or_v3_enabled($settings) {
-	return (!use_v3_widgets() && $settings['v2_widgets_enables']['bottom_line_category'])
-		|| (use_v3_widgets() && $settings['v3_widgets_enables']['star_rating_category']);
 }
 function wc_yotpo_activation() {
 	if(current_user_can( 'activate_plugins' )) {
@@ -132,15 +91,14 @@ function wc_yotpo_uninstall() {
 		delete_option('yotpo_settings');	
 	}	
 }
-// reviews widget
+// REVIEWS WIDGET
 function wc_yotpo_show_reviews_widget() {		 
 	global $product;
 	if($product->get_reviews_allowed() == true) {
-		echo generate_reviews_widget_code();
+		echo generate_reviews_widget_code($product);
 	}						
 }
-function generate_reviews_widget_code() {
-	global $product;
+function generate_reviews_widget_code($product) {
 	$yotpo_settings = get_option('yotpo_settings',wc_yotpo_get_default_settings());
 	$reviews_widget_id = $yotpo_settings['v3_widgets_ids']['reviews_widget'];
 	if (!use_v3_widgets()) {
@@ -148,7 +106,7 @@ function generate_reviews_widget_code() {
 	}
 	return $reviews_widget_id ? generate_v3_reviews_widget_code($product, $reviews_widget_id, get_woocommerce_currency()) : '';
 }
-// Q&A widget
+// Q&A WIDGET
 function wc_yotpo_show_qna_widget() {		 
 	global $product;
 	$yotpo_settings = get_option('yotpo_settings',wc_yotpo_get_default_settings());
@@ -157,14 +115,26 @@ function wc_yotpo_show_qna_widget() {
 		echo generate_v3_qna_widget_code($product, $qna_widget_id);
 	}						
 }
-function wc_yotpo_show_widget_in_tab($tabs) {
+function wc_yotpo_show_main_widget_in_tab($tabs) {
 	global $product;
 	if($product->get_reviews_allowed() == true) {	
 		$settings = get_option('yotpo_settings', wc_yotpo_get_default_settings());
-	 	$tabs['yotpo_widget'] = array(
-	 	'title' => $settings['widget_tab_name'],
+	 	$tabs['yotpo_main_widget'] = array(
+	 	'title' => $settings['main_widget_tab_name'],
 	 	'priority' => 50,
 	 	'callback' => 'wc_yotpo_show_reviews_widget'
+	);
+}
+return $tabs;		
+}
+function wc_yotpo_show_qna_widget_in_tab($tabs) {
+	global $product;
+	if($product->get_reviews_allowed() == true) {	
+		$settings = get_option('yotpo_settings', wc_yotpo_get_default_settings());
+		$tabs['yotpo_qna_widget'] = array(
+			'title' => $settings['qna_widget_tab_name'],
+			'priority' => 60,
+			'callback' => 'wc_yotpo_show_qna_widget'
 	 	);
 	}
 	return $tabs;		
@@ -182,25 +152,19 @@ function wc_yotpo_load_js(){
 	}
 }
 function wc_yotpo_show_qa_bottomline() {
-	if (use_v3_widgets()) {
-		return;
-	}
-
 	do_action( 'woocommerce_init' );
     $product_data = wc_yotpo_get_product_data(wc_get_product());
     echo "<div class='yotpo QABottomLine'
          data-appkey='".$product_data['app_key']."'
          data-product-id='".$product_data['id']."'></div>";
 }
-// Star Ratings widget
+// STAR RATINGS WIDGET
 function wc_yotpo_show_buttomline() {
 	global $product;
 	$show_bottom_line = is_product() ? $product->get_reviews_allowed() == true : true;
 	if($show_bottom_line) {
-		$yotpo_div = generate_star_ratings_widget_code();
-		echo $yotpo_div;	
+		echo generate_star_ratings_widget_code();
 	}	
-				
 }
 function generate_star_ratings_widget_code() {
 	global $product;
@@ -447,7 +411,7 @@ function wc_yotpo_deactivate() {
 }
 add_filter('woocommerce_tab_manager_integration_tab_allowed', 'wc_yotpo_disable_tab_manager_managment');
 function wc_yotpo_disable_tab_manager_managment($allowed, $tab = null) {
-	if($tab == 'yotpo_widget') {
+	if($tab == 'yotpo_main_widget') {
 		$allowed = false;
 		return false;
 	}

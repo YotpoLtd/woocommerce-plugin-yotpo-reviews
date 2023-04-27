@@ -60,7 +60,8 @@ function wc_display_yotpo_settings($success_type = false) {
     $qna_widget_id = $yotpo_settings['v3_widgets_ids']['qna'];
     $star_ratings_widget_id = $yotpo_settings['v3_widgets_ids']['star_rating'];
     $language_code = $yotpo_settings['language_code'];
-    $widget_tab_name = $yotpo_settings['widget_tab_name'];
+    $main_widget_tab_name = $yotpo_settings['main_widget_tab_name'];
+    $qna_widget_tab_name = $yotpo_settings['qna_widget_tab_name'];
     if (empty($yotpo_settings['app_key'])) {
         if ($success_type == 'b2c') {
             wc_yotpo_display_message('We have sent you a confirmation email. Please check and click on the link to get your app key and secret token to fill out below.', true);
@@ -116,11 +117,24 @@ function wc_display_yotpo_settings($success_type = false) {
 		   		       </td>
 		   		     </tr>
 		   		     <tr valign='top' class='yotpo-widget-location-other-explain'>
-                 		<th scope='row'><p class='description'>In order to locate the widget in a custome location open 'wp-content/plugins/woocommerce/templates/content-single-product.php' and add the following line <code>wc_yotpo_show_widget();</code> in the requested location.</p></th>	                 																	
+                 		<th scope='row'>
+                            <p class='description'>
+                                In order to locate the widget in a custome location open 'wp-content/plugins/woocommerce/templates/content-single-product.php'
+                                and add the following functions
+                                <code>wc_yotpo_show_reviews_widget();</code>,
+                                <code>wc_yotpo_show_qna_widget();</code>,
+                                <code>wc_yotpo_show_buttomline();</code>
+                                in the requested location.
+                            </p>
+                        </th>	                 																	
 	                 </tr>
 		   		     <tr valign='top' class='yotpo-widget-tab-name'>
-		   		       <th scope='row'><div>Select tab name:</div></th>
-		   		       <td><div><input type='text' name='yotpo_widget_tab_name' value='$widget_tab_name' /></div></td>
+		   		       <th scope='row'><div>Select tab name of reviews widget:</div></th>
+		   		       <td><div><input type='text' name='yotpo_main_widget_tab_name' value='$main_widget_tab_name' /></div></td>
+		   		     </tr>
+		   		     <tr valign='top' class='yotpo-widget-tab-name yotpo-qna-widget-tab-name'>
+		   		       <th scope='row'><div>Select tab name of Q&A widget:</div></th>
+		   		       <td><div><input type='text' name='yotpo_qna_widget_tab_name' value='$qna_widget_tab_name' /></div></td>
 		   		     </tr>
 		   		     $cradentials_location_explanation
 					 <tr valign='top'>
