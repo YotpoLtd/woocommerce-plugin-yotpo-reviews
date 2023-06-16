@@ -16,9 +16,6 @@ function wc_display_yotpo_admin_page() {
         } elseif (isset($_POST['yotpo_sync_ids'])) {
             wc_proccess_yotpo_widgets_ids_synchronisation();
             wc_display_yotpo_settings();
-        } elseif (isset($_POST['yotpo_remove_ids'])) {
-            wc_proccess_yotpo_widgets_ids_removal();
-            wc_display_yotpo_settings();
         } elseif (isset($_POST['yotpo_register'])) {
             check_admin_referer('yotpo_registration_form');
             $success = wc_proccess_yotpo_register();
@@ -105,32 +102,6 @@ function wc_display_yotpo_settings($success_type = false) {
 					 <tr valign='top'>
 		   		       <th scope='row'><div>Disable native reviews system:</div></th>
 		   		       <td><input type='checkbox' name='disable_native_review_system' value='1' " . checked(1, $yotpo_settings['disable_native_review_system'], false) . " /></td>
-		   		     </tr>	                 	                 
-	    	         <tr valign='top'>			
-				       <th scope='row'><div>Select widget location</div></th>
-				       <td>
-				         <select name='yotpo_widget_location' class='yotpo-widget-location'>
-				  	       <option value='footer' " . selected('footer', $yotpo_settings['widget_location'], false) . ">Page footer</option>
-			 		       <option value='tab' " . selected('tab', $yotpo_settings['widget_location'], false) . ">Tab</option>
-			 	           <option value='other' " . selected('other', $yotpo_settings['widget_location'], false) . ">Other</option>
-				         </select>
-		   		       </td>
-		   		     </tr>
-		   		     <tr valign='top' class='yotpo-widget-location-other-explain'>
-                 		<th scope='row'>
-                            <p class='description'>
-                                In order to locate the widget in a custome location open 'wp-content/plugins/woocommerce/templates/content-single-product.php'
-                                and add the following functions
-                                <code>wc_yotpo_show_reviews_widget();</code>,
-                                <code>wc_yotpo_show_qna_widget();</code>,
-                                <code>wc_yotpo_show_buttomline();</code>
-                                in the requested location.
-                            </p>
-                        </th>	                 																	
-	                 </tr>
-		   		     <tr valign='top' class='yotpo-widget-tab-name'>
-		   		       <th scope='row'><div>Select tab name of reviews widget:</div></th>
-		   		       <td><div><input type='text' name='yotpo_main_widget_tab_name' value='$main_widget_tab_name' /></div></td>
 		   		     </tr>
 		   		     <tr valign='top' class='yotpo-widget-tab-name yotpo-qna-widget-tab-name'>
 		   		       <th scope='row'><div>Select tab name of Q&A widget:</div></th>
@@ -157,29 +128,80 @@ function wc_display_yotpo_settings($success_type = false) {
 				         </select>
 		   		       </td>
 		   		     </tr>
+                     <tbody id='yotpo-v2-locations' style='display:none'>
+                       <tr valign='top'>
+                         <th scope='row'><div>Select v2 widget location:</div></th>
+                         <td>
+                           <select name='yotpo_v2_widget_location' class='yotpo-v2-widget-location'>
+                             <option value='footer' " . selected('footer', $yotpo_settings['v2_widget_location'], false) . ">Page footer</option>
+                             <option value='tab' " . selected('tab', $yotpo_settings['v2_widget_location'], false) . ">Tab</option>
+                             <option value='other' " . selected('other', $yotpo_settings['v2_widget_location'], false) . ">Other</option>
+                           </select>
+                         </td>
+                       </tr>
+                       <tr valign='top' class='yotpo-widget-tab-name'>
+                         <th scope='row'><div>Select tab name of reviews widget:</div></th>
+                         <td><div><input type='text' name='yotpo_main_widget_tab_name' value='$main_widget_tab_name' /></div></td>
+                       </tr>
+                       <tr valign='top' class='yotpo-widget-location-other-explain'>
+                         <th scope='row'>
+                           <p class='description'>
+                                In order to locate the widget in a custome location open 'wp-content/plugins/woocommerce/templates/content-single-product.php'
+                                and add the following functions
+                                <code>wc_yotpo_show_reviews_widget();</code>,
+                                <code>wc_yotpo_show_buttomline();</code>
+                                in the requested location.
+                           </p>
+                         </th>
+                       </tr>
+                     </tbody>
+                     <tbody id='yotpo-v3-locations' style='display:none'>
+                       <tr valign='top'>
+                         <th scope='row'><div>Select v3 widget location:</div></th>
+                         <td>
+                           <select name='yotpo_v3_widget_location' class='yotpo-v3-widget-location'>
+                             <option value='automatic' " . selected('automatic', $yotpo_settings['v3_widget_location'], false) . ">Automatic</option>
+                             <option value='manual' " . selected('manual', $yotpo_settings['v3_widget_location'], false) . ">Manual</option>
+                           </select>
+                        </td>
+                       </tr>
+                       <tr valign='top' class='yotpo-widget-location-manual-explain'>
+                         <th scope='row'>
+                           <p class='description'>
+                                In order to locate the widget in a custome location open 'wp-content/plugins/woocommerce/templates/content-single-product.php'
+                                and add the following functions
+                                <code>wc_yotpo_show_reviews_widget();</code>,
+                                <code>wc_yotpo_show_qna_widget();</code>,
+                                <code>wc_yotpo_show_buttomline();</code>
+                                in the requested location.
+                           </p>
+                         </th>
+                       </tr>
+                     </tbody>
                      <tr valign='top' id='yotpo-sync-widget-ids-row' style='display:none'>
                        <th scope='row'><div>Synchronise the widgets' codes:</div></th>
                        <!-- <td><button type='button' id='yotpo-sync-widget-ids' class='button-secondary'>Sync</button></td> -->
                        <td><input type='submit' name='yotpo_sync_ids' value='Sync' class='button-primary' id='yotpo_sync_ids'/></td>
                      </tr>
-                     <tr valign='top'>
-                       <th scope='row'><div>Reset the widgets' codes:</div></th>
-                       <td><input type='submit' name='yotpo_remove_ids' value='Reset' class='button-secondary' id='yotpo_remove_ids'/></td>
-                     </tr>
                      <tbody id='yotpo-v3-enablers' style='display:none'>
-                        <tr valign='top'>
-                            <th scope='row'><div>Enable Star Rating in product page:</div></th>
-                            <td><input type='checkbox' name='yotpo_star_rating_enabled_product' value='1' " . checked(1, $yotpo_settings['v3_widgets_enables']['star_rating_product'], false) . " /></td>
-                        </tr>					  	 
-                        <tr valign='top'>
-                            <th scope='row'><div>Enable Q&A Widget in product page:</div></th>
-                            <td><input type='checkbox' name='yotpo_qna_widget_enabled_product' value='1' " . checked(1, $yotpo_settings['v3_widgets_enables']['qna_product'], false) . " /></td>
-                        </tr>
                         <tr valign='top'>
                             <th scope='row'><div>Enable Reviews Widget in product page:</div></th>
                             <td>
                                 <input type='checkbox' name='yotpo_reviews_widget_enabled_product' value='1' " . checked(1, $yotpo_settings['v3_widgets_enables']['reviews_widget_product'], false) . " />
                             </td>
+                        </tr>
+                        <tr valign='top'>
+                            <th scope='row'><div>Enable Star Rating in product page:</div></th>
+                            <td><input type='checkbox' name='yotpo_star_rating_enabled_product' value='1' " . checked(1, $yotpo_settings['v3_widgets_enables']['star_rating_product'], false) . " /></td>
+                        </tr>					  	 
+                        <tr valign='top'>
+                            <th scope='row'>
+                                <div>Enable Q&A Widget in product page:</div>
+                                <p style='margin: unset;font-weight: normal;'>
+                                    (If you set Q&A on second tab, disable this one to avoid widget duplication)
+                                </p>
+                            </th>
+                            <td><input type='checkbox' name='yotpo_qna_widget_enabled_product' value='1' " . checked(1, $yotpo_settings['v3_widgets_enables']['qna_product'], false) . " /></td>
                         </tr>
                             <tr valign='top'>
                             <th scope='row'><div>Enable Star Rating in category page:</div></th>
@@ -246,15 +268,6 @@ function wc_display_yotpo_settings($success_type = false) {
             <form method="post" id="yotdbg-clear">' .wp_nonce_field('yotdbg-clear') .'<input type="submit" value="Clear" class="button-primary" name="yotdbg-clear" id="yotdbg-clear-submit"/></form>';
         }
     }
-}
-// TODO: remove after accepting the view together with invoking and with HTML button
-function wc_proccess_yotpo_widgets_ids_removal() {
-    $new_settings = array_replace_recursive(get_option('yotpo_settings', wc_yotpo_get_default_settings()));
-    $new_settings['widget_version'] = $_POST['yotpo_widget_version'];
-    $new_settings['v3_widgets_ids']['reviews_widget'] = NULL;
-    $new_settings['v3_widgets_ids']['qna'] = NULL;
-    $new_settings['v3_widgets_ids']['star_rating'] = NULL;
-    update_option('yotpo_settings', $new_settings);
 }
 function wc_proccess_yotpo_widgets_ids_synchronisation() {
     $widgets_instances = get_widget_instances();

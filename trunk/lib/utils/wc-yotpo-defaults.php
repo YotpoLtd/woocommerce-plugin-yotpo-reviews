@@ -3,7 +3,8 @@
 function wc_yotpo_get_default_settings() {
     return array('app_key' => '',
         'secret' => '',
-        'widget_location' => 'footer',
+        'v2_widget_location' => 'footer',
+        'v3_widget_location' => 'automatic',
         'language_code' => 'en',
         'main_widget_tab_name' => 'Reviews',
         'qna_widget_tab_name' => 'Q&A',
