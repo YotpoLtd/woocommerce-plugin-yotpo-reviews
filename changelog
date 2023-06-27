@@ -193,3 +193,8 @@ Paul:
 5) Added Q&A bottom line in storefront and Yotpo settings
 6) Added debug mode
 7) Bug Fixes
+
+2023-06-27
+----
+1) Bug fix in method fatal_error_handler
+
