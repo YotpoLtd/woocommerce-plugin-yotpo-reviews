@@ -10,6 +10,7 @@ class Yotpo {
     const VERSION = '0.0.5';
 	const TIMEOUT = 5;
     protected static $app_key, $secret, $base_uri = 'https://api.yotpo.com';
+    protected static $widgets_url = '/api/v2/widgets';
     protected $request;
 
     public function __construct($app_key = null, $secret = null, $base_uri = null) {
@@ -76,7 +77,12 @@ class Yotpo {
         
         return self::process_response($response);
     }
- 	
+
+    function get_widget_instances() {
+        $params = $this->prepare_wigdets_request_params();
+        return $this->request( 'GET', self::$widgets_url.'?'.$params );
+    }
+
     protected function get($url, $vars = array()) {
         if (!empty($vars)) {
             $url .= (stripos($url, '?') !== false) ? '&' : '?';
@@ -358,6 +364,14 @@ class Yotpo {
         return $array;
     }
 
+    protected function prepare_wigdets_request_params() {
+        return http_build_query(
+            array(
+                'app_key' => self::$app_key,
+                'utoken' => $this->get_oauth_token()['access_token']
+            )
+        );
+    }
 }
 
 ?>
