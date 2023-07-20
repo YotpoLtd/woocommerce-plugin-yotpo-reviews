@@ -3,7 +3,7 @@
 	Plugin Name: Yotpo Social Reviews for Woocommerce
 	Description: Yotpo Social Reviews helps Woocommerce store owners generate a ton of reviews for their products. Yotpo is the only solution which makes it easy to share your reviews automatically to your social networks to gain a boost in traffic and an increase in sales.
 	Author: Yotpo
-	Version: 1.2
+	Version: 1.2.1
 	Author URI: http://www.yotpo.com?utm_source=yotpo_plugin_woocommerce&utm_medium=plugin_page_link&utm_campaign=woocommerce_plugin_page_link	
 	Plugin URI: http://www.yotpo.com?utm_source=yotpo_plugin_woocommerce&utm_medium=plugin_page_link&utm_campaign=woocommerce_plugin_page_link
 	WC requires at least: 3.0
@@ -15,12 +15,12 @@ register_deactivation_hook( __FILE__, 'wc_yotpo_deactivate' );
 add_action('plugins_loaded', 'wc_yotpo_init');
 add_action('init', 'wc_yotpo_redirect');
 add_action( 'woocommerce_order_status_changed', 'wc_yotpo_map');
-require 'lib/widgets/qna-widget.php';
-require 'lib/widgets/reviews-widget.php';
-require 'lib/widgets/stars-widget.php';
-require 'lib/utils/wc-yotpo-defaults.php';
-require 'lib/utils/wc-yotpo-functions.php';
-require 'lib/utils/widgets-rendering-logic.php';
+require plugin_dir_path( __FILE__ ) . 'lib/widgets/qna-widget.php';
+require plugin_dir_path( __FILE__ ) . 'lib/widgets/reviews-widget.php';
+require plugin_dir_path( __FILE__ ) . 'lib/widgets/stars-widget.php';
+require plugin_dir_path( __FILE__ ) . 'lib/utils/wc-yotpo-defaults.php';
+require plugin_dir_path( __FILE__ ) . 'lib/utils/wc-yotpo-functions.php';
+require plugin_dir_path( __FILE__ ) . 'lib/utils/widgets-rendering-logic.php';
 		
 function wc_yotpo_init() {
 	$is_admin = is_admin();	
