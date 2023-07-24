@@ -1,5 +1,7 @@
 <?php
 define("LOG_FILE", plugin_dir_path( __FILE__ ).'../yotpo_debug.log');
+require __DIR__.'/../lib/utils/wc-yotpo-settings-functions.php';
+
 function wc_display_yotpo_admin_page() {
     if (function_exists('current_user_can') && !current_user_can('manage_options')) {
         die(__(''));
@@ -10,6 +12,9 @@ function wc_display_yotpo_admin_page() {
         } elseif (isset($_POST['yotpo_settings'])) {
             check_admin_referer('yotpo_settings_form');
             wc_proccess_yotpo_settings();
+            wc_display_yotpo_settings();
+        } elseif (isset($_POST['yotpo_sync_ids'])) {
+            wc_proccess_yotpo_widgets_ids_synchronisation();
             wc_display_yotpo_settings();
         } elseif (isset($_POST['yotpo_register'])) {
             check_admin_referer('yotpo_registration_form');
@@ -28,7 +33,7 @@ function wc_display_yotpo_admin_page() {
             file_put_contents($filename, "");
             wc_display_yotpo_settings();
         } else {
-            $yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
+            $yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_default_settings());
             if (empty($yotpo_settings['app_key']) && empty($yotpo_settings['secret'])) {
                 wc_display_yotpo_register();
             } else {
@@ -45,11 +50,15 @@ function wc_display_yotpo_admin_page() {
     }
 }
 function wc_display_yotpo_settings($success_type = false) {
-    $yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
+    $yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_default_settings());
     $app_key = $yotpo_settings['app_key'];
     $secret = $yotpo_settings['secret'];
+    $reviews_widget_id = $yotpo_settings['v3_widgets_ids']['reviews_widget'];
+    $qna_widget_id = $yotpo_settings['v3_widgets_ids']['qna'];
+    $star_ratings_widget_id = $yotpo_settings['v3_widgets_ids']['star_rating'];
     $language_code = $yotpo_settings['language_code'];
-    $widget_tab_name = $yotpo_settings['widget_tab_name'];
+    $main_widget_tab_name = $yotpo_settings['main_widget_tab_name'];
+    $qna_widget_tab_name = $yotpo_settings['qna_widget_tab_name'];
     if (empty($yotpo_settings['app_key'])) {
         if ($success_type == 'b2c') {
             wc_yotpo_display_message('We have sent you a confirmation email. Please check and click on the link to get your app key and secret token to fill out below.', true);
@@ -93,23 +102,10 @@ function wc_display_yotpo_settings($success_type = false) {
 					 <tr valign='top'>
 		   		       <th scope='row'><div>Disable native reviews system:</div></th>
 		   		       <td><input type='checkbox' name='disable_native_review_system' value='1' " . checked(1, $yotpo_settings['disable_native_review_system'], false) . " /></td>
-		   		     </tr>	                 	                 
-	    	         <tr valign='top'>			
-				       <th scope='row'><div>Select widget location</div></th>
-				       <td>
-				         <select name='yotpo_widget_location' class='yotpo-widget-location'>
-				  	       <option value='footer' " . selected('footer', $yotpo_settings['widget_location'], false) . ">Page footer</option>
-			 		       <option value='tab' " . selected('tab', $yotpo_settings['widget_location'], false) . ">Tab</option>
-			 	           <option value='other' " . selected('other', $yotpo_settings['widget_location'], false) . ">Other</option>
-				         </select>
-		   		       </td>
 		   		     </tr>
-		   		     <tr valign='top' class='yotpo-widget-location-other-explain'>
-                 		<th scope='row'><p class='description'>In order to locate the widget in a custome location open 'wp-content/plugins/woocommerce/templates/content-single-product.php' and add the following line <code>wc_yotpo_show_widget();</code> in the requested location.</p></th>	                 																	
-	                 </tr>
-		   		     <tr valign='top' class='yotpo-widget-tab-name'>
-		   		       <th scope='row'><div>Select tab name:</div></th>
-		   		       <td><div><input type='text' name='yotpo_widget_tab_name' value='$widget_tab_name' /></div></td>
+		   		     <tr valign='top' class='yotpo-widget-tab-name yotpo-qna-widget-tab-name'>
+		   		       <th scope='row'><div>Select tab name of Q&A widget:</div></th>
+		   		       <td><div><input type='text' name='yotpo_qna_widget_tab_name' value='$qna_widget_tab_name' /></div></td>
 		   		     </tr>
 		   		     $cradentials_location_explanation
 					 <tr valign='top'>
@@ -119,21 +115,119 @@ function wc_display_yotpo_settings($success_type = false) {
 					 <tr valign='top'>
 		   		       <th scope='row'><div>Secret token:</div></th>
 		   		       <td><div class='y-input'><input id='secret' type='text'  name='yotpo_oauth_token' value='$secret' $read_only '/></div></td>
-		   		     </tr>				 	 
-					 <tr valign='top'>
-		   		       <th scope='row'><div>Enable bottom line in product page:</div></th>
-		   		       <td><input type='checkbox' name='yotpo_bottom_line_enabled_product' value='1' " . checked(1, $yotpo_settings['bottom_line_enabled_product'], false) . " /></td>
-		   		     </tr>					  	 
-					 <tr valign='top'>
-		   		       <th scope='row'><div>Enable Q&A bottom line in product page:</div></th>
-		   		       <td><input type='checkbox' name='yotpo_qna_enabled_product' value='1' " . checked(1, $yotpo_settings['qna_enabled_product'], false) . " />
+		   		     </tr>
+                    <input id='reviews_widget' type='hidden' name='yotpo_reviews_widget_id' value='$reviews_widget_id' '/>
+                    <input id='qna_widget' type='hidden' name='yotpo_qna_widget_id' value='$qna_widget_id' '/>
+                    <input id='star_ratings_widget' type='hidden' name='yotpo_star_ratings_widget_id' value='$star_ratings_widget_id' '/>
+                    <tr valign='top'>
+				       <th scope='row'><div>Widgets version:</div></th>
+				       <td>
+				         <select name='yotpo_widget_version' id='yotpo-widget-version'>
+				  	       <option value='v2' " . selected('v2', $yotpo_settings['widget_version'], false) . ">v2</option>
+			 		       <option value='v3' " . selected('v3', $yotpo_settings['widget_version'], false) . ">v3</option>
+				         </select>
 		   		       </td>
 		   		     </tr>
- 					 <tr valign='top'>
-		   		       <th scope='row'><div>Enable bottom line in category page:</div></th>
-		   		       <td><input type='checkbox' name='yotpo_bottom_line_enabled_category' value='1' " . checked(1, $yotpo_settings['bottom_line_enabled_category'], false) . " />		   		       
-		   		       </td>
-		   		     </tr>
+                     <tbody id='yotpo-v2-locations' style='display:none'>
+                       <tr valign='top'>
+                         <th scope='row'><div>Select v2 widget location:</div></th>
+                         <td>
+                           <select name='yotpo_v2_widget_location' class='yotpo-v2-widget-location'>
+                             <option value='footer' " . selected('footer', $yotpo_settings['v2_widget_location'], false) . ">Page footer</option>
+                             <option value='tab' " . selected('tab', $yotpo_settings['v2_widget_location'], false) . ">Tab</option>
+                             <option value='other' " . selected('other', $yotpo_settings['v2_widget_location'], false) . ">Other</option>
+                           </select>
+                         </td>
+                       </tr>
+                       <tr valign='top' class='yotpo-widget-tab-name'>
+                         <th scope='row'><div>Select tab name of reviews widget:</div></th>
+                         <td><div><input type='text' name='yotpo_main_widget_tab_name' value='$main_widget_tab_name' /></div></td>
+                       </tr>
+                       <tr valign='top' class='yotpo-widget-location-other-explain'>
+                         <th scope='row'>
+                           <p class='description'>
+                                In order to locate the widget in a custome location open 'wp-content/plugins/woocommerce/templates/content-single-product.php'
+                                and add the following functions
+                                <code>wc_yotpo_show_reviews_widget();</code>,
+                                <code>wc_yotpo_show_buttomline();</code>
+                                in the requested location.
+                           </p>
+                         </th>
+                       </tr>
+                     </tbody>
+                     <tbody id='yotpo-v3-locations' style='display:none'>
+                       <tr valign='top'>
+                         <th scope='row'><div>Select v3 widget location:</div></th>
+                         <td>
+                           <select name='yotpo_v3_widget_location' class='yotpo-v3-widget-location'>
+                             <option value='automatic' " . selected('automatic', $yotpo_settings['v3_widget_location'], false) . ">Automatic</option>
+                             <option value='manual' " . selected('manual', $yotpo_settings['v3_widget_location'], false) . ">Manual</option>
+                           </select>
+                        </td>
+                       </tr>
+                       <tr valign='top' class='yotpo-widget-location-manual-explain'>
+                         <th scope='row'>
+                           <p class='description'>
+                                In order to locate the widget in a custome location open 'wp-content/plugins/woocommerce/templates/content-single-product.php'
+                                and add the following functions
+                                <code>wc_yotpo_show_reviews_widget();</code>,
+                                <code>wc_yotpo_show_qna_widget();</code>,
+                                <code>wc_yotpo_show_buttomline();</code>
+                                in the requested location.
+                           </p>
+                         </th>
+                       </tr>
+                     </tbody>
+                     <tr valign='top' id='yotpo-sync-widget-ids-row' style='display:none'>
+                       <th scope='row'><div>Synchronise the widgets' codes:</div></th>
+                       <!-- <td><button type='button' id='yotpo-sync-widget-ids' class='button-secondary'>Sync</button></td> -->
+                       <td><input type='submit' name='yotpo_sync_ids' value='Sync' class='button-primary' id='yotpo_sync_ids'/></td>
+                     </tr>
+                     <tbody id='yotpo-v3-enablers' style='display:none'>
+                        <tr valign='top'>
+                            <th scope='row'><div>Enable Reviews Widget in product page:</div></th>
+                            <td>
+                                <input type='checkbox' name='yotpo_reviews_widget_enabled_product' value='1' " . checked(1, $yotpo_settings['v3_widgets_enables']['reviews_widget_product'], false) . " />
+                            </td>
+                        </tr>
+                        <tr valign='top'>
+                            <th scope='row'><div>Enable Star Rating in product page:</div></th>
+                            <td><input type='checkbox' name='yotpo_star_rating_enabled_product' value='1' " . checked(1, $yotpo_settings['v3_widgets_enables']['star_rating_product'], false) . " /></td>
+                        </tr>					  	 
+                        <tr valign='top'>
+                            <th scope='row'>
+                                <div>Enable Q&A Widget in product page:</div>
+                                <p style='margin: unset;font-weight: normal;'>
+                                    (If you set Q&A on second tab, disable this one to avoid widget duplication)
+                                </p>
+                            </th>
+                            <td><input type='checkbox' name='yotpo_qna_widget_enabled_product' value='1' " . checked(1, $yotpo_settings['v3_widgets_enables']['qna_product'], false) . " /></td>
+                        </tr>
+                            <tr valign='top'>
+                            <th scope='row'><div>Enable Star Rating in category page:</div></th>
+                            <td>
+                                <input type='checkbox' name='yotpo_star_rating_enabled_category' value='1' " . checked(1, $yotpo_settings['v3_widgets_enables']['star_rating_category'], false) . " />		   		       
+                            </td>
+                        </tr>
+                     </tbody>
+                     <tbody id='yotpo-v2-enablers' style='display:none'>
+                        <tr valign='top'>
+                            <th scope='row'><div>Enable bottom line in product page:</div></th>
+                            <td>
+                                <input type='checkbox' name='yotpo_bottom_line_enabled_product' value='1' " . checked(1, $yotpo_settings['v2_widgets_enables']['bottom_line_product'], false) . " />
+                            </td>
+                        </tr>					  	 
+                        <tr valign='top'>
+                            <th scope='row'><div>Enable Q&A bottom line in product page:</div></th>
+                            <td><input type='checkbox' name='yotpo_qna_enabled_product' value='1' " . checked(1, $yotpo_settings['v2_widgets_enables']['qna_product'], false) . " /></td>
+                        </tr>
+                        <tr valign='top'>
+                            <th scope='row'><div>Enable bottom line in category page:</div></th>
+                            <td>
+                                <input type='checkbox' name='yotpo_bottom_line_enabled_category' value='1' " . checked(1, $yotpo_settings['v2_widgets_enables']['bottom_line_category'], false) . " />		   		       
+                            </td>
+                        </tr>
+                     </tbody>
                                      </tr>					  	 
 					 <tr valign='top'>
 		   		       <th scope='row'><div>Order Status:</div></th>
@@ -175,68 +269,16 @@ function wc_display_yotpo_settings($success_type = false) {
         }
     }
 }
-function wc_proccess_yotpo_settings() {
-    $current_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
-    $new_settings = array('app_key' => $_POST['yotpo_app_key'],
-        'secret' => $_POST['yotpo_oauth_token'],    
-        'widget_location' => $_POST['yotpo_widget_location'],
-        'language_code' => $_POST['yotpo_widget_language_code'],
-        'widget_tab_name' => $_POST['yotpo_widget_tab_name'],
-        'bottom_line_enabled_product' => isset($_POST['yotpo_bottom_line_enabled_product']) ? true : false,
-        'qna_enabled_product' => isset($_POST['yotpo_qna_enabled_product']) ? true : false,
-        'bottom_line_enabled_category' => isset($_POST['yotpo_bottom_line_enabled_category']) ? true : false,
-        'yotpo_order_status' => $_POST['yotpo_order_status'],
-        'yotpo_language_as_site' => isset($_POST['yotpo_language_as_site']) ? true : false,
-        'disable_native_review_system' => isset($_POST['disable_native_review_system']) ? true : false,
-        'show_submit_past_orders' => $current_settings['show_submit_past_orders'],
-        'debug_mode' => isset($_POST['debug_mode']) ? true : false);
-    update_option('yotpo_settings', $new_settings);
-    if ($current_settings['disable_native_review_system'] != $new_settings['disable_native_review_system']) {
-        if ($new_settings['disable_native_review_system'] == false) {
-            update_option('woocommerce_enable_review_rating', get_option('native_star_ratings_enabled'));
-        } else {
-            update_option('woocommerce_enable_review_rating', 'no');
-        }
-    }
-}
-function wc_display_yotpo_register() {
-    $email = isset($_POST['yotpo_user_email']) ? $_POST['yotpo_user_email'] : '';
-    $user_name = isset($_POST['yotpo_user_name']) ? $_POST['yotpo_user_name'] : '';
-    $register_html = "<div class='wrap'><h2>Yotpo Registration</h2>
-		<form method='post'>
-		<table class='form-table'>"
-            . wp_nonce_field('yotpo_registration_form') .
-            "<fieldset>
-			  <h2 class='y-register-title'>Fill out the form below and click register to get started with Yotpo.</h2></br></br>    
-			  <tr valign='top'>
-			    <th scope='row'><div>Email address:</div></th>			 			  
-			    <td><div><input type='text' name='yotpo_user_email' value='$email' /></div></td>
-			  </tr>
-			  <tr valign='top'>
-			    <th scope='row'><div>Name:</div></th>			 			  
-			    <td><div><input type='text' name='yotpo_user_name' value='$user_name' /></div></td>
-			  </tr>
-			  <tr valign='top'>
-			    <th scope='row'><div>Password:</div></th>			 			  
-			    <td><div><input type='password' name='yotpo_user_password' /></div></td>
-			  </tr>
-			  <tr valign='top'>
-			    <th scope='row'><div>Confirm password:</div></th>			 			  
-			    <td><div><input type='password' name='yotpo_user_confirm_password' /></div></td>
-			  </tr>
-			  <tr valign='top'>
-			    <th scope='row'></th>
-			    <td><div><input type='submit' name='yotpo_register' value='Register' class='button-primary submit-btn' /></div></td>
-			  </tr>			  
-			</fieldset>			
-			<table/>
-		</form>
-		<form method='post'>
-		  <div>Already registered to Yotpo?<input type='submit' name='log_in_button' value='click here' class='button-secondary not-user-btn' /></div>
-		</form></br><p class='description'>*Learn <a href='http://support.yotpo.com/entries/24454261-Exporting-reviews-for-Woocommerce'>how to export your existing reviews</a> into Yotpo.</p></br></br>
-		<div class='yotpo-terms'>By registering I accept the <a href='https://www.yotpo.com/terms-of-service' target='_blank'>Terms of Use</a> and recognize that a 'Powered by Yotpo' link will appear on the bottom of my Yotpo widget.</div>
-  </div>";
-    echo $register_html;
+function wc_proccess_yotpo_widgets_ids_synchronisation() {
+    $widgets_instances = get_widget_instances();
+    $new_settings = array_replace_recursive(get_option('yotpo_settings', wc_yotpo_get_default_settings()));
+    $new_settings['widget_version'] = $_POST['yotpo_widget_version'];
+    $new_settings['v3_widgets_ids']['reviews_widget'] = $widgets_instances['reviews_widget'];
+    $new_settings['v3_widgets_ids']['qna'] = $widgets_instances['qna'];
+    $new_settings['v3_widgets_ids']['star_rating'] = $widgets_instances['star_rating'];
+    update_option('yotpo_settings', $new_settings)
+        ? wc_yotpo_display_message('Widgets\' IDs have been synchronised')
+        : wc_yotpo_display_message('Widgets\' IDs have not been synchronised', false);
 }
 function wc_proccess_yotpo_register() {
     $errors = array();
@@ -278,7 +320,7 @@ function wc_proccess_yotpo_register() {
                         'utoken' => $response['response']['token'],
                         'platform_type_id' => 12));
                     if (!empty($response['status']) && !empty($response['status']['code']) && $response['status']['code'] == 200) {
-                        $current_settings = get_option('yotpo_settings', wc_yotpo_get_degault_settings());
+                        $current_settings = get_option('yotpo_settings', wc_yotpo_get_default_settings());
                         $current_settings['app_key'] = $app_key;
                         $current_settings['secret'] = $secret;
                         update_option('yotpo_settings', $current_settings);
