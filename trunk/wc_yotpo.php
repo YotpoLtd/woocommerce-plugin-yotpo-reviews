@@ -3,7 +3,7 @@
 	Plugin Name: Yotpo Social Reviews for Woocommerce
 	Description: Yotpo Social Reviews helps Woocommerce store owners generate a ton of reviews for their products. Yotpo is the only solution which makes it easy to share your reviews automatically to your social networks to gain a boost in traffic and an increase in sales.
 	Author: Yotpo
-	Version: 1.4.0
+	Version: 1.5.0
 	Author URI: http://www.yotpo.com?utm_source=yotpo_plugin_woocommerce&utm_medium=plugin_page_link&utm_campaign=woocommerce_plugin_page_link	
 	Plugin URI: http://www.yotpo.com?utm_source=yotpo_plugin_woocommerce&utm_medium=plugin_page_link&utm_campaign=woocommerce_plugin_page_link
 	WC requires at least: 3.0
@@ -136,15 +136,19 @@ function wc_yotpo_show_main_widget_in_tab($tabs) {
 }
 function wc_yotpo_load_js(){
 	if( class_exists('woocommerce') ) {
-    	wp_enqueue_script('yquery', plugins_url('assets/js/headerScript.js', __FILE__) ,null,null);
-		$settings = get_option('yotpo_settings',wc_yotpo_get_default_settings());
-		wp_localize_script('yquery', 'yotpo_settings', array(
-			'app_key' => $settings['app_key'],
-			'reviews_widget_id' => $settings['v3_widgets_ids']['reviews_widget'],
-			'qna_widget_id' => $settings['v3_widgets_ids']['qna'],
-			'star_ratings_widget_id' => $settings['v3_widgets_ids']['star_rating']
-		));
-	}
+    if (use_v3_widgets()) {
+      wp_enqueue_script('yquery', plugins_url('assets/js/v3HeaderScript.js', __FILE__), null, null);
+    } else {
+      wp_enqueue_script('yquery', plugins_url('assets/js/v2HeaderScript.js', __FILE__), null, null);
+    }
+    $settings = get_option('yotpo_settings',wc_yotpo_get_default_settings());
+    wp_localize_script('yquery', 'yotpo_settings', array(
+      'app_key' => $settings['app_key'],
+      'reviews_widget_id' => $settings['v3_widgets_ids']['reviews_widget'],
+      'qna_widget_id' => $settings['v3_widgets_ids']['qna'],
+      'star_ratings_widget_id' => $settings['v3_widgets_ids']['star_rating']
+    ));
+  }
 }
 function wc_yotpo_show_qa_bottomline() {
 	do_action( 'woocommerce_init' );
