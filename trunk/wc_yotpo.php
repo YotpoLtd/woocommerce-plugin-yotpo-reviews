@@ -3,7 +3,7 @@
 	Plugin Name: Yotpo Social Reviews for Woocommerce
 	Description: Yotpo Social Reviews helps Woocommerce store owners generate a ton of reviews for their products. Yotpo is the only solution which makes it easy to share your reviews automatically to your social networks to gain a boost in traffic and an increase in sales.
 	Author: Yotpo
-	Version: 1.5.0
+	Version: 1.5.1
 	Author URI: http://www.yotpo.com?utm_source=yotpo_plugin_woocommerce&utm_medium=plugin_page_link&utm_campaign=woocommerce_plugin_page_link	
 	Plugin URI: http://www.yotpo.com?utm_source=yotpo_plugin_woocommerce&utm_medium=plugin_page_link&utm_campaign=woocommerce_plugin_page_link
 	WC requires at least: 3.0
@@ -112,6 +112,10 @@ function generate_reviews_widget_code($product) {
 	$yotpo_settings = get_option('yotpo_settings',wc_yotpo_get_default_settings());
 	$reviews_widget_id = $yotpo_settings['v3_widgets_ids']['reviews_widget'];
 	return $reviews_widget_id ? generate_v3_reviews_widget_code($product, $reviews_widget_id, get_woocommerce_currency()) : '';
+}
+// alias of 'generate_reviews_widget_code' - backward compatibility
+function wc_yotpo_show_widget() {
+	wc_yotpo_show_reviews_widget();
 }
 // Q&A WIDGET
 function wc_yotpo_show_qna_widget() {		 
