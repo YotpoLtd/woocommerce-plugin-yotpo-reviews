@@ -65,11 +65,11 @@ function monitorV2WidgetLocation() {
 	function hideTabName(duration) {
 		changeElementVisibility(yotpoWidgetTabName, yotpoV2WidgetLocation.val() == 'tab', duration);
 	};
-	
+
 	function hideOtherExplanation(duration) {
 		changeElementVisibility(yotpoWidgetLocationOtherExplain, yotpoV2WidgetLocation.val() == 'other', duration);
 	};
-	
+
 	hideTabName(0);
 	hideOtherExplanation(0);
 	yotpoV2WidgetLocation.change(() => {
@@ -82,19 +82,32 @@ function monitorV3WidgetLocation() {
 	function hideManualExplanation(duration) {
 		changeElementVisibility(yotpoWidgetLocationManualExplain, yotpoV3WidgetLocation.val() == 'manual', duration);
 	};
-	
+
 	hideManualExplanation(0);
 	yotpoV3WidgetLocation.change(() => {
 		hideManualExplanation(1000);
 	});
 }
 
+function openInfoDialogIfExists() {
+	const infoDialog = jQuery('#info-dialog')[0];
+	if (infoDialog) {
+		infoDialog.showModal();
+
+		jQuery('#close-info-modal').click(() => {
+			infoDialog.close();
+			window.open('https://reviews.yotpo.com/#/display-reviews/on-site-widgets', '_blank').focus();
+		});
+	}
+}
+
 jQuery(document).ready(function () {
 	defineSelectors();
-	
+
 	jQuery('#yotpo-export-reviews').click(function() {
-		document.getElementById('export_reviews_submit').click();    
+		document.getElementById('export_reviews_submit').click();
 	});
 
 	monitorDynamicElements();
+	openInfoDialogIfExists();
 });
