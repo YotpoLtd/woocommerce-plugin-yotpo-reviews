@@ -202,3 +202,7 @@ Paul:
 ---
 1) Support CRUD objects in submit past order feature flow to support HPOS feature
 2) Flagged that HPOS is supported
+
+2023-08-22
+---
+1) Fix broken submit past order flow
