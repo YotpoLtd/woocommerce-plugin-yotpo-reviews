@@ -15,6 +15,7 @@ register_deactivation_hook( __FILE__, 'wc_yotpo_deactivate' );
 add_action('plugins_loaded', 'wc_yotpo_init');
 add_action('init', 'wc_yotpo_redirect');
 add_action( 'woocommerce_order_status_changed', 'wc_yotpo_map');
+add_action( 'before_woocommerce_init', 'wc_declare_hops_support' );
 require plugin_dir_path( __FILE__ ) . 'lib/widgets/qna-widget.php';
 require plugin_dir_path( __FILE__ ) . 'lib/widgets/reviews-widget.php';
 require plugin_dir_path( __FILE__ ) . 'lib/widgets/stars-widget.php';
@@ -291,6 +292,55 @@ function wc_yotpo_get_product_image_url($product_id) {
 	return $url ? $url : null;
 }
 function wc_yotpo_get_past_orders() {
+	if (defined('WC_VERSION') && (version_compare(WC_VERSION, '3.0') >= 0)) {
+		$orders = wc_yotpo_get_past_orders_crud();
+	} else {
+		$orders = wc_yotpo_get_past_orders_legacy();
+	}
+
+	if (is_null($orders) || count($orders) == 0) {
+		return null;
+	}
+
+	$post_bulk_orders = array_chunk($orders, 200);
+	$result = array();
+	foreach ($post_bulk_orders as $index => $bulk)
+	{
+		$result[$index] = array();
+		$result[$index]['orders'] = $bulk;
+		$result[$index]['platform'] = 'woocommerce';
+	}
+	return $result;
+}
+function wc_yotpo_get_past_orders_crud() {
+	ytdbg("","wc_yotpo_get_past_orders_crud");
+	$yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_default_settings());
+	$result = null;
+	$args = array(
+		'type' => 'shop_order',
+		'paginate' => false
+	);
+	$args['status'] = $yotpo_settings['yotpo_order_status'];
+	$args['date_created'] = '>' . date('Y-m-d', strtotime('-90 days'));
+
+	$orders_from_db = wc_get_orders( $args );
+
+	if (is_null(orders_from_db)) {
+		return null;
+	}
+
+	$orders = array();
+	foreach ( $orders_from_db as $order ) {
+		$single_order_data = wc_yotpo_get_single_map_data($order->id);
+		if(!is_null($single_order_data)) {
+			$orders[] = $single_order_data;
+		}
+	}
+
+	return $orders;
+}
+function wc_yotpo_get_past_orders_legacy() {
+	ytdbg("","wc_yotpo_get_past_orders_legacy");
 	$yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_default_settings());
 	$result = null;
 	$args = array(
@@ -309,33 +359,24 @@ function wc_yotpo_get_past_orders() {
 			)
 		);
 	}
-	
 	add_filter( 'posts_where', 'wc_yotpo_past_order_time_query' );
 	$query = new WP_Query( $args );
 	remove_filter( 'posts_where', 'wc_yotpo_past_order_time_query' );
 	wp_reset_query();
-	if ($query->have_posts()) {
-		$orders = array();
-		while ($query->have_posts()) { 
-			$query->the_post();
-			$order = $query->post;		
-			$single_order_data = wc_yotpo_get_single_map_data($order->ID);
-			if(!is_null($single_order_data)) {
-				$orders[] = $single_order_data;
-			}      	
-		}
-		if(count($orders) > 0) {
-			$post_bulk_orders = array_chunk($orders, 200);
-			$result = array();
-			foreach ($post_bulk_orders as $index => $bulk)
-			{
-				$result[$index] = array();
-				$result[$index]['orders'] = $bulk;
-				$result[$index]['platform'] = 'woocommerce';			
-			}
-		}		
+	if (!$query->have_posts()) {
+		return null;
 	}
-	return $result;
+
+	$orders = array();
+	while ($query->have_posts()) {
+		$query->the_post();
+		$order = $query->post;
+		$single_order_data = wc_yotpo_get_single_map_data($order->ID);
+		if(!is_null($single_order_data)) {
+			$orders[] = $single_order_data;
+		}
+	}
+	return $orders;
 }
 function wc_yotpo_past_order_time_query( $where = '' ) {
 	$where .= " AND post_date > '" . date('Y-m-d', strtotime('-90 days')) . "'";
@@ -369,6 +410,9 @@ function wc_yotpo_send_past_orders() {
 						$yotpo_settings['show_submit_past_orders'] = false;
 						update_option('yotpo_settings', $yotpo_settings);
 					}	
+			}
+			else {
+			    ytdbg("", "failed creating utoken");
 			}
 		}
 		else {
@@ -432,6 +476,11 @@ function wc_yotpo_get_order_currency($order) {
  		}	
 	}
 	return '';
+}
+function wc_declare_hops_support() {
+	if ( class_exists( \Automattic\WooCommerce\Utilities\FeaturesUtil::class ) ) {
+		\Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility( 'custom_order_tables', __FILE__, true );
+	}
 }
 function ytdbg( $msg, $name = '', $date = true) {
 	$yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_default_settings());
