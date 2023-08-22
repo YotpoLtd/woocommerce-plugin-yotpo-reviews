@@ -325,7 +325,7 @@ function wc_yotpo_get_past_orders_crud() {
 
 	$orders_from_db = wc_get_orders( $args );
 
-	if (is_null(orders_from_db)) {
+	if (is_null($orders_from_db)) {
 		return null;
 	}
 
