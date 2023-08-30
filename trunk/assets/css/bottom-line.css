@@ -7,15 +7,15 @@ li.product a img.yoStar, .woocommerce-page ul.products li.product a img.yoStar {
   -webkit-box-shadow: 0 0px 0px 0 rgba(0,0,0,0.3);
   -moz-box-shadow: 0 0px 0px 0 rgba(0,0,0,0.3);
 }
-.post-type-archive .standalone-bottomline{
+.post-type-archive .standalone-bottomline {
 	display: flex;
-    justify-content: center;
+  justify-content: center;
 }
 .yotpo {
 	margin-bottom:.5rem;
 }
 
-.QABottomLine, .bottomLine  {
+.QABottomLine, .bottomLine {
   display: inline-block;
 }
 
@@ -25,5 +25,5 @@ li.product a img.yoStar, .woocommerce-page ul.products li.product a img.yoStar {
 }
 
 .yotpo-icon-double-bubble, .yotpo-stars {
-    margin: 0 5px 0 0 !important;
+  margin: 0 5px 0 0 !important;
 }
