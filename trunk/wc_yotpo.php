@@ -3,7 +3,7 @@
 	Plugin Name: Yotpo Social Reviews for Woocommerce
 	Description: Yotpo Social Reviews helps Woocommerce store owners generate a ton of reviews for their products. Yotpo is the only solution which makes it easy to share your reviews automatically to your social networks to gain a boost in traffic and an increase in sales.
 	Author: Yotpo
-	Version: 1.6.3
+	Version: 1.6.4
 	Author URI: http://www.yotpo.com?utm_source=yotpo_plugin_woocommerce&utm_medium=plugin_page_link&utm_campaign=woocommerce_plugin_page_link	
 	Plugin URI: http://www.yotpo.com?utm_source=yotpo_plugin_woocommerce&utm_medium=plugin_page_link&utm_campaign=woocommerce_plugin_page_link
 	WC requires at least: 3.0
@@ -184,30 +184,36 @@ function generate_star_ratings_widget_code() {
 	}
 }
 function wc_yotpo_get_product_data($product) {	 
-	$product_data = array();
 	$settings = get_option('yotpo_settings',wc_yotpo_get_default_settings());
-	$product_data['app_key'] = $settings['app_key'];
-	$product_data['shop_domain'] = wc_yotpo_get_shop_domain(); 
-	$product_data['url'] = get_permalink($product->get_id());
-	$product_data['lang'] = $settings['language_code']; 
+	$product_data = array(
+		'app_key' => esc_attr($settings['app_key']),
+		'shop_domain' => esc_attr(wc_yotpo_get_shop_domain()),
+		'url' => esc_attr(get_permalink($product->get_id())),
+		'lang' => esc_attr($settings['language_code']),
+		'description' => esc_attr(wp_strip_all_tags($product->get_description())),
+		'id' => esc_attr($product->get_id()),
+		'title' => esc_attr($product->get_title()),
+		'image-url' => esc_attr(wc_yotpo_get_product_image_url($product->get_id()))
+	);
 	if($settings['yotpo_language_as_site'] == true) {
 		$lang = explode('-', get_bloginfo('language'));
 		if(strlen($lang[0]) == 2) {
 			$product_data['lang'] = $lang[0];	
 		}		
 	}
-	$product_data['description'] = wp_strip_all_tags($product->get_description());
-	$product_data['id'] = $product->get_id();	
-	$product_data['title'] = $product->get_title();
-	$product_data['image-url'] = wc_yotpo_get_product_image_url($product->get_id());
-        $specs_data = array();
-            if($product->get_sku()){ $specs_data['external_sku'] =$product->get_sku();} 
-            if($product->get_attribute('upc')){ $specs_data['upc'] =$product->get_attribute('upc');} 
-            if($product->get_attribute('isbn')){ $specs_data['isbn'] = $product->get_attribute('isbn');} 
-            if($product->get_attribute('brand')){ $specs_data['brand'] = $product->get_attribute('brand');} 
-            if($product->get_attribute('mpn')){ $specs_data['mpn'] =$product->get_attribute('mpn');} 
-            if(!empty($specs_data)){ $product_data['specs'] = $specs_data;  }
+	$specs_data = get_specs_data($product);
+	if(!empty($specs_data)){ $product_data['specs'] = $specs_data;  }
+
 	return $product_data;
+}
+function get_specs_data($product) {
+	$specs_data = array();
+	if($product->get_sku()){ $specs_data['external_sku'] =$product->get_sku();}
+	if($product->get_attribute('upc')){ $specs_data['upc'] =$product->get_attribute('upc');}
+	if($product->get_attribute('isbn')){ $specs_data['isbn'] = $product->get_attribute('isbn');}
+	if($product->get_attribute('brand')){ $specs_data['brand'] = $product->get_attribute('brand');}
+	if($product->get_attribute('mpn')){ $specs_data['mpn'] =$product->get_attribute('mpn');}
+	return $specs_data;
 }
 function wc_yotpo_get_shop_domain() {
 	return parse_url(get_bloginfo('url'),PHP_URL_HOST);
