@@ -36,7 +36,7 @@ function wc_yotpo_get_default_settings() {
 
 function fatal_error_handler($buffer){
   $error=error_get_last();
-  if($error['type'] == 1){
+  if(!is_null($error) && $error['type'] == 1){
       $newBuffer='<html><header><title>Fatal Error </title></header>
                   <style>                 
                   .error_content{                     
