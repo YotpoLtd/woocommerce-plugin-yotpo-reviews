@@ -11,6 +11,12 @@ function v3_product_widgets_render_in_footer($v3_widgets_enables) {
 	if($v3_widgets_enables['reviews_widget_product']) {
 		add_action('woocommerce_after_single_product', 'wc_yotpo_show_reviews_widget', 10);
 	}
+	if($v3_widgets_enables['promoted_products_product']) {
+		add_action('woocommerce_after_single_product', 'wc_yotpo_show_promoted_products_widget', 10);
+	}
+	if($v3_widgets_enables['reviews_carousel_product']) {
+		add_action('woocommerce_after_single_product', 'wc_yotpo_show_reviews_carousel_widget', 10);
+	}
 }
 
 // TABS RENDER

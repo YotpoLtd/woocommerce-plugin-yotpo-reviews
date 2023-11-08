@@ -19,6 +19,8 @@ add_action( 'before_woocommerce_init', 'wc_declare_hops_support' );
 require plugin_dir_path( __FILE__ ) . 'lib/widgets/qna-widget.php';
 require plugin_dir_path( __FILE__ ) . 'lib/widgets/reviews-widget.php';
 require plugin_dir_path( __FILE__ ) . 'lib/widgets/stars-widget.php';
+require plugin_dir_path( __FILE__ ) . 'lib/widgets/reviews-carousel.php';
+require plugin_dir_path( __FILE__ ) . 'lib/widgets/promoted-products.php';
 require plugin_dir_path( __FILE__ ) . 'lib/utils/wc-yotpo-defaults.php';
 require plugin_dir_path( __FILE__ ) . 'lib/utils/wc-yotpo-functions.php';
 require plugin_dir_path( __FILE__ ) . 'lib/utils/widgets-rendering-logic.php';
@@ -59,6 +61,7 @@ function wc_yotpo_front_end_init() {
 		if (use_v3_widgets()) {
 			$v3_widget_location = $settings['v3_widget_location'];
 			if($v3_widget_location == 'automatic') {
+				render_bottom_line_widgets();
 				v3_product_widgets_render_in_footer($settings['v3_widgets_enables']);
 			}
 		} else {
@@ -69,11 +72,11 @@ function wc_yotpo_front_end_init() {
 			elseif($v2_widget_location == 'tab') {
 				v2_product_widgets_render_in_tabs();
 			}
+			render_bottom_line_widgets();
 		}
 		if($settings['disable_native_review_system']) {
 			add_filter( 'comments_open', 'wc_yotpo_remove_native_review_system', null, 2);	
 		}
-		render_bottom_line_widgets();
 	}
 	elseif (star_rating_category_for_v2_or_v3_enabled($settings)) {
 		add_action('woocommerce_after_shop_loop_item', 'wc_yotpo_show_buttomline', 7);
@@ -125,6 +128,24 @@ function wc_yotpo_show_qna_widget() {
 	$qna_widget_id = $yotpo_settings['v3_widgets_ids']['qna'];
 	if($product->get_reviews_allowed() == true && $qna_widget_id) {
 		echo generate_v3_qna_widget_code($product, $qna_widget_id);
+	}						
+}
+// PROMOTED PRODUCTS WIDGET
+function wc_yotpo_show_promoted_products_widget() {		 
+	global $product;
+	$yotpo_settings = get_option('yotpo_settings',wc_yotpo_get_default_settings());
+	$promoted_products_widget_id = $yotpo_settings['v3_widgets_ids']['promoted_products'];
+	if($product->get_reviews_allowed() == true && $promoted_products_widget_id) {
+		echo generate_v3_promoted_products_widget_code($product, $promoted_products_widget_id);
+	}						
+}
+// REVIEWS CAROUSEL WIDGET
+function wc_yotpo_show_reviews_carousel_widget() {		 
+	global $product;
+	$yotpo_settings = get_option('yotpo_settings',wc_yotpo_get_default_settings());
+	$reviews_carousel_widget_id = $yotpo_settings['v3_widgets_ids']['reviews_carousel'];
+	if($product->get_reviews_allowed() == true && $reviews_carousel_widget_id) {
+		echo generate_v3_reviews_carousel_widget_code($product, $reviews_carousel_widget_id);
 	}						
 }
 function wc_yotpo_show_main_widget_in_tab($tabs) {

@@ -13,12 +13,16 @@ function wc_yotpo_get_default_settings() {
       'reviews_widget' => '',
       'qna' => '',
       'star_rating' => '',
+      'reviews_carousel' => '',
+      'promoted_products' => '',
     ),
     'v3_widgets_enables' => array(
       'reviews_widget_product' => true,
       'qna_product' => true,
       'star_rating_product' => true,
       'star_rating_category' => true,
+      'reviews_carousel_product' => true,
+      'promoted_products_product' => true,
     ),
     'v2_widgets_enables' => array(
       'qna_product' => false,
