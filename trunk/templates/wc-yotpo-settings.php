@@ -60,6 +60,8 @@ function wc_display_yotpo_settings($success_type = false) {
     $star_ratings_widget_id = $yotpo_settings['v3_widgets_ids']['star_rating'];
     $reviews_carousel_widget_id = $yotpo_settings['v3_widgets_ids']['reviews_carousel'];
     $promoted_products_widget_id = $yotpo_settings['v3_widgets_ids']['promoted_products'];
+    $reviews_tab_widget_id = $yotpo_settings['v3_widgets_ids']['reviews_tab'];
+    $reviews_seo_page_widget_id = $yotpo_settings['v3_widgets_ids']['reviews_seo_page'];
     $language_code = $yotpo_settings['language_code'];
     $main_widget_tab_name = $yotpo_settings['main_widget_tab_name'];
     $qna_widget_tab_name = $yotpo_settings['qna_widget_tab_name'];
@@ -134,6 +136,8 @@ function wc_display_yotpo_settings($success_type = false) {
                     <input id='star_ratings_widget' type='hidden' name='yotpo_star_ratings_widget_id' value='$star_ratings_widget_id' '/>
                     <input id='reviews_carousel_widget' type='hidden' name='yotpo_reviews_carousel_widget_id' value='$reviews_carousel_widget_id' '/>
                     <input id='promoted_products_widget' type='hidden' name='yotpo_promoted_products_widget_id' value='$promoted_products_widget_id' '/>
+                    <input id='reviews_carousel_widget' type='hidden' name='yotpo_tab_widget_id' value='$reviews_tab_widget_id' '/>
+                    <input id='promoted_products_widget' type='hidden' name='yotpo_reviews_seo_page_widget_id' value='$reviews_seo_page_widget_id' '/>
                     " .
                     version_selector($yotpo_settings) .
                     v2_locations($yotpo_settings, $main_widget_tab_name) .
@@ -175,7 +179,19 @@ function wc_display_yotpo_settings($success_type = false) {
         </form>
     </div>
     <div class='featured-cars'></div>
-    " . info_dialog(use_v3_widgets(), dialog_error_info($yotpo_settings['v3_widgets_enables'], $reviews_widget_id, $qna_widget_id, $star_ratings_widget_id, $reviews_carousel_widget_id, $promoted_products_widget_id));
+    " . info_dialog(
+        use_v3_widgets(),
+        dialog_error_info(
+            $yotpo_settings['v3_widgets_enables'],
+            $reviews_widget_id,
+            $qna_widget_id,
+            $star_ratings_widget_id,
+            $reviews_carousel_widget_id,
+            $promoted_products_widget_id,
+            $reviews_tab_widget_id,
+            $reviews_seo_page_widget_id
+        )
+    );
     echo $settings_html;
     if (isset($yotpo_settings['debug_mode']) && $yotpo_settings['debug_mode']) {
         echo '<h3>Settings</h3><pre>'.$settings_dump.'</pre>';
@@ -197,6 +213,8 @@ function wc_proccess_yotpo_widgets_ids_synchronisation() {
     $new_settings['v3_widgets_ids']['star_rating'] = $widgets_instances['star_rating'];
     $new_settings['v3_widgets_ids']['reviews_carousel'] = $widgets_instances['reviews_carousel'];
     $new_settings['v3_widgets_ids']['promoted_products'] = $widgets_instances['promoted_products'];
+    $new_settings['v3_widgets_ids']['reviews_tab'] = $widgets_instances['reviews_tab'];
+    $new_settings['v3_widgets_ids']['reviews_seo_page'] = $widgets_instances['reviews_seo_page'];
     update_option('yotpo_settings', $new_settings)
         ? wc_yotpo_display_message('Widgets\' IDs have been synchronised')
         : wc_yotpo_display_message('Widgets\' IDs have not been synchronised', false);

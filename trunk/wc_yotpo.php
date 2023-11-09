@@ -21,6 +21,9 @@ require plugin_dir_path( __FILE__ ) . 'lib/widgets/reviews-widget.php';
 require plugin_dir_path( __FILE__ ) . 'lib/widgets/stars-widget.php';
 require plugin_dir_path( __FILE__ ) . 'lib/widgets/reviews-carousel.php';
 require plugin_dir_path( __FILE__ ) . 'lib/widgets/promoted-products.php';
+require plugin_dir_path( __FILE__ ) . 'lib/widgets/reviews-tab.php';
+require plugin_dir_path( __FILE__ ) . 'lib/widgets/seo-page.php';
+require plugin_dir_path( __FILE__ ) . 'lib/widgets/custom-widgets.php';
 require plugin_dir_path( __FILE__ ) . 'lib/utils/wc-yotpo-defaults.php';
 require plugin_dir_path( __FILE__ ) . 'lib/utils/wc-yotpo-functions.php';
 require plugin_dir_path( __FILE__ ) . 'lib/utils/widgets-rendering-logic.php';
@@ -131,7 +134,7 @@ function wc_yotpo_show_qna_widget() {
 	}						
 }
 // PROMOTED PRODUCTS WIDGET
-function wc_yotpo_show_promoted_products_widget() {		 
+function wc_yotpo_show_promoted_products_widget() {
 	global $product;
 	$yotpo_settings = get_option('yotpo_settings',wc_yotpo_get_default_settings());
 	$promoted_products_widget_id = $yotpo_settings['v3_widgets_ids']['promoted_products'];
@@ -140,12 +143,38 @@ function wc_yotpo_show_promoted_products_widget() {
 	}						
 }
 // REVIEWS CAROUSEL WIDGET
-function wc_yotpo_show_reviews_carousel_widget() {		 
+function wc_yotpo_show_reviews_carousel_widget() {
 	global $product;
 	$yotpo_settings = get_option('yotpo_settings',wc_yotpo_get_default_settings());
 	$reviews_carousel_widget_id = $yotpo_settings['v3_widgets_ids']['reviews_carousel'];
 	if($product->get_reviews_allowed() == true && $reviews_carousel_widget_id) {
 		echo generate_v3_reviews_carousel_widget_code($product, $reviews_carousel_widget_id);
+	}						
+}
+// REVIEWS TAB WIDGET
+function wc_yotpo_show_reviews_tab_widget() {
+	global $product;
+	$yotpo_settings = get_option('yotpo_settings',wc_yotpo_get_default_settings());
+	$reviews_tab_widget_id = $yotpo_settings['v3_widgets_ids']['reviews_tab'];
+	if($product->get_reviews_allowed() == true && $reviews_tab_widget_id) {
+		echo generate_v3_reviews_tab_widget_code($product, $reviews_tab_widget_id);
+	}						
+}
+// SEO WIDGET
+function wc_yotpo_show_seo_widget() {
+	global $product;
+	$yotpo_settings = get_option('yotpo_settings',wc_yotpo_get_default_settings());
+	$seo_widget_id = $yotpo_settings['v3_widgets_ids']['reviews_seo_page'];
+	if($product->get_reviews_allowed() == true && $seo_widget_id) {
+		echo generate_v3_seo_widget_code($product, $seo_widget_id);
+	}						
+}
+// CUSTOM WIDGETS
+function wc_yotpo_show_custom_widgets() {
+	global $product;
+	if($product->get_reviews_allowed() == true) {
+		foreach (generate_v3_custom_widgets_code($product) as $widget_code);
+		echo $widget_code;
 	}						
 }
 function wc_yotpo_show_main_widget_in_tab($tabs) {

@@ -15,6 +15,8 @@ function wc_yotpo_get_default_settings() {
       'star_rating' => '',
       'reviews_carousel' => '',
       'promoted_products' => '',
+      'reviews_tab' => '',
+      'reviews_seo_page' => '',
     ),
     'v3_widgets_enables' => array(
       'reviews_widget_product' => true,
@@ -23,6 +25,8 @@ function wc_yotpo_get_default_settings() {
       'star_rating_category' => true,
       'reviews_carousel_product' => true,
       'promoted_products_product' => true,
+      'reviews_tab_product' => true,
+      'reviews_seo_page_product' => true,
     ),
     'v2_widgets_enables' => array(
       'qna_product' => false,

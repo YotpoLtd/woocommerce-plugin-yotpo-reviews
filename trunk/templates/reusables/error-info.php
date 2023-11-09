@@ -18,7 +18,9 @@ function dialog_error_info(
   $qna_widget_id,
   $star_ratings_widget_id,
   $reviews_carousel_widget_id,
-  $promoted_products_widget_id
+  $promoted_products_widget_id,
+  $reviews_tab_widget_id,
+  $reviews_seo_page_widget_id
 ): string {
   $widgets_to_customize = array();
   if (!$reviews_widget_id && is_option_checked($v3_widgets_enables['reviews_widget_product'])) {
@@ -32,6 +34,12 @@ function dialog_error_info(
   }
   if (!$promoted_products_widget_id && is_option_checked($v3_widgets_enables['promoted_products_product'])) {
     array_push($widgets_to_customize, 'Promoted Products');
+  }
+  if (!$reviews_tab_widget_id && is_option_checked($v3_widgets_enables['reviews_tab_product'])) {
+    array_push($widgets_to_customize, 'Reviews Tab');
+  }
+  if (!$reviews_seo_page_widget_id && is_option_checked($v3_widgets_enables['reviews_seo_page_product'])) {
+    array_push($widgets_to_customize, 'SEO Page');
   }
   if (
     !$star_ratings_widget_id
