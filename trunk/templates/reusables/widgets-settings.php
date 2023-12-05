@@ -121,12 +121,6 @@ function v3_enablers($yotpo_settings) {
         'yotpo_reviews_tab_enabled_product',
         'Enable Reviews Tab in product page'
       )
-      .
-      v3_enabler(
-        checked(1, $yotpo_settings['v3_widgets_enables']['reviews_seo_page_product'], false),
-        'yotpo_seo_page_enabled_product',
-        'Enable SEO Page in product page'
-      )
       . "
     </tbody>
   ";

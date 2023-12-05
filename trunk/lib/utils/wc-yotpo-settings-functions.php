@@ -14,8 +14,6 @@ function get_yotpo_widget_field_name($widget_type_name) {
           return 'promoted_products';
       case 'ReviewsTab':
           return 'reviews_tab';
-      case 'ReviewsSeoPage':
-          return 'reviews_seo_page';
   }
 }
 
@@ -58,7 +56,6 @@ function wc_proccess_yotpo_settings() {
           'reviews_carousel' => $widgets_instances['reviews_carousel'],
           'promoted_products' => $widgets_instances['promoted_products'],
           'reviews_tab' => $widgets_instances['reviews_tab'],
-          'reviews_seo_page' => $widgets_instances['reviews_seo_page'],
       ),
       'v3_widgets_enables' => array(
           'reviews_widget_product' => isset($_POST['yotpo_reviews_widget_enabled_product']) ? true : false,
@@ -68,7 +65,6 @@ function wc_proccess_yotpo_settings() {
           'reviews_carousel_product' => isset($_POST['yotpo_reviews_carousel_enabled_product']) ? true : false,
           'promoted_products_product' => isset($_POST['yotpo_promoted_products_enabled_product']) ? true : false,
           'reviews_tab_product' => isset($_POST['yotpo_reviews_tab_enabled_product']) ? true : false,
-          'reviews_seo_page_product' => isset($_POST['yotpo_seo_page_enabled_product']) ? true : false,
       ),
       'v2_widgets_enables' => array(
           'qna_product' => isset($_POST['yotpo_qna_enabled_product']) ? true : false,
