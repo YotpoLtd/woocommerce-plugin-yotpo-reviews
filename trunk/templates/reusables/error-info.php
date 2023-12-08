@@ -28,10 +28,21 @@ function dialog_error_info(
   if (!$qna_widget_id && is_option_checked($v3_widgets_enables['qna_product'])) {
     array_push($widgets_to_customize, 'Q&A');
   }
-  if (!$reviews_carousel_widget_id && is_option_checked($v3_widgets_enables['reviews_carousel_product'])) {
+  if (!$reviews_carousel_widget_id
+    && (
+      is_option_checked($v3_widgets_enables['reviews_carousel_product'])
+      || is_option_checked($v3_widgets_enables['reviews_carousel_category'])
+      || is_option_checked($v3_widgets_enables['reviews_carousel_home'])
+    )) {
     array_push($widgets_to_customize, 'Carousel Widget');
   }
-  if (!$promoted_products_widget_id && is_option_checked($v3_widgets_enables['promoted_products_product'])) {
+  if (!$promoted_products_widget_id
+    && (
+      is_option_checked($v3_widgets_enables['promoted_products_product'])
+      || is_option_checked($v3_widgets_enables['promoted_products_category'])
+      || is_option_checked($v3_widgets_enables['promoted_products_home'])
+    )
+  ) {
     array_push($widgets_to_customize, 'Promoted Products');
   }
   if (!$reviews_tab_widget_id && is_option_checked($v3_widgets_enables['reviews_tab_product'])) {

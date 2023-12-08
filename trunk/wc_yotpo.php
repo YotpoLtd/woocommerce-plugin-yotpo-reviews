@@ -82,6 +82,7 @@ function wc_yotpo_front_end_init() {
 	}
 	elseif (star_rating_category_for_v2_or_v3_enabled($settings)) {
 		add_action('woocommerce_after_shop_loop_item', 'wc_yotpo_show_buttomline', 7);
+		v3_category_page_renders($settings['v3_widgets_enables']);
 		wp_enqueue_style('yotpoSideBootomLineStylesheet', plugins_url('assets/css/bottom-line.css', __FILE__));
 	}
 }
@@ -137,18 +138,30 @@ function wc_yotpo_show_promoted_products_widget() {
 	global $product;
 	$yotpo_settings = get_option('yotpo_settings',wc_yotpo_get_default_settings());
 	$promoted_products_widget_id = $yotpo_settings['v3_widgets_ids']['promoted_products'];
-	if($product->get_reviews_allowed() == true && $promoted_products_widget_id) {
-		echo generate_v3_promoted_products_widget_code($product, $promoted_products_widget_id);
-	}						
+	if (!$promoted_products_widget_id) {
+		return;
+	}
+	if(is_product() && $product->get_reviews_allowed() == true) {
+		$product_data = wc_yotpo_get_product_data($product);
+		echo generate_v3_promoted_products_widget_code($promoted_products_widget_id, $product_data['id']);
+	} else {
+		echo generate_v3_promoted_products_widget_code($promoted_products_widget_id);
+	}
 }
 // REVIEWS CAROUSEL WIDGET
-function wc_yotpo_show_reviews_carousel_widget() {
+function wc_yotpo_show_reviews_carousel_widget(): void {
 	global $product;
 	$yotpo_settings = get_option('yotpo_settings',wc_yotpo_get_default_settings());
 	$reviews_carousel_widget_id = $yotpo_settings['v3_widgets_ids']['reviews_carousel'];
-	if($product->get_reviews_allowed() == true && $reviews_carousel_widget_id) {
-		echo generate_v3_reviews_carousel_widget_code($product, $reviews_carousel_widget_id);
-	}						
+	if (!$reviews_carousel_widget_id) {
+		return;
+	}
+	if(is_product() && $product->get_reviews_allowed() == true) {
+		$product_data = wc_yotpo_get_product_data($product);
+		echo generate_v3_reviews_carousel_widget_code($reviews_carousel_widget_id, $product_data['id']);
+	} else {
+		echo generate_v3_reviews_carousel_widget_code($reviews_carousel_widget_id);
+	}
 }
 // REVIEWS TAB WIDGET
 function wc_yotpo_show_reviews_tab_widget() {

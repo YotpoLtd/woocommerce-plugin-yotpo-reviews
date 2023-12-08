@@ -51,3 +51,23 @@ function v3_render_bottom_line_widgets($v3_widgets_enables) {
 		add_action('woocommerce_single_product_summary', 'wc_yotpo_show_buttomline',7);	
 	}
 }
+
+// CATEGORY PAGE RENDER
+function v3_category_page_renders($v3_widgets_enables): void {
+	if ($v3_widgets_enables['reviews_carousel_category']) {
+		add_action('woocommerce_after_shop_loop', 'wc_yotpo_show_reviews_carousel_widget', 10);
+	}
+	if ($v3_widgets_enables['promoted_products_category']) {
+		add_action('woocommerce_after_shop_loop', 'wc_yotpo_show_promoted_products_widget', 10);
+	}
+}
+
+// HOME PAGE RENDER
+function v3_home_page_renders($v3_widgets_enables): void {
+	if ($v3_widgets_enables['reviews_carousel_home']) {
+		add_action('woocommerce_before_main_content', 'wc_yotpo_show_reviews_carousel_widget', 10);
+	}
+	if ($v3_widgets_enables['promoted_products_home']) {
+		add_action('woocommerce_after_main_content', 'wc_yotpo_show_promoted_products_widget', 10);
+	}
+}

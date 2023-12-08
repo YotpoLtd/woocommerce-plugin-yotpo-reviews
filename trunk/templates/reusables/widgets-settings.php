@@ -104,17 +104,43 @@ function v3_enablers($yotpo_settings) {
         'Enable Star Rating in category page'
       )
       .
-      v3_enabler(
-        checked(1, $yotpo_settings['v3_widgets_enables']['reviews_carousel_product'], false),
-        'yotpo_reviews_carousel_enabled_product',
-        'Enable Reviews Carousel in product page'
-      )
+      v3_multifield_enabler([
+        [
+          'text' => 'On product page',
+          'name' => 'yotpo_reviews_carousel_enabled_product',
+          'checked' => checked(1, $yotpo_settings['v3_widgets_enables']['reviews_carousel_product'], false)
+        ],
+        [
+          'text' => 'On category page',
+          'name' => 'yotpo_reviews_carousel_enabled_category',
+          'checked' => checked(1, $yotpo_settings['v3_widgets_enables']['reviews_carousel_category'], false)
+        ],
+        [
+          'text' => 'On home page',
+          'name' => 'yotpo_reviews_carousel_enabled_home',
+          'checked' => checked(1, $yotpo_settings['v3_widgets_enables']['reviews_carousel_home'], false)
+        ],
+      ],
+      'Enable Reviews Carousel')
       .
-      v3_enabler(
-        checked(1, $yotpo_settings['v3_widgets_enables']['promoted_products_product'], false),
-        'yotpo_promoted_products_enabled_product',
-        'Enable Promoted Products in product page'
-      )
+      v3_multifield_enabler([
+        [
+          'text' => 'On product page',
+          'name' => 'yotpo_promoted_products_enabled_product',
+          'checked' => checked(1, $yotpo_settings['v3_widgets_enables']['promoted_products_product'], false)
+        ],
+        [
+          'text' => 'On category page',
+          'name' => 'yotpo_promoted_products_enabled_category',
+          'checked' => checked(1, $yotpo_settings['v3_widgets_enables']['promoted_products_category'], false)
+        ],
+        [
+          'text' => 'On home page',
+          'name' => 'yotpo_promoted_products_enabled_home',
+          'checked' => checked(1, $yotpo_settings['v3_widgets_enables']['promoted_products_home'], false)
+        ],
+      ],
+      'Enable Promoted Products')
       .
       v3_enabler(
         checked(1, $yotpo_settings['v3_widgets_enables']['reviews_tab_product'], false),
