@@ -63,11 +63,11 @@ function v3_category_page_renders($v3_widgets_enables): void {
 }
 
 // HOME PAGE RENDER
-function v3_home_page_renders($v3_widgets_enables): void {
-	if ($v3_widgets_enables['reviews_carousel_home']) {
-		add_action('woocommerce_before_main_content', 'wc_yotpo_show_reviews_carousel_widget', 10);
-	}
-	if ($v3_widgets_enables['promoted_products_home']) {
-		add_action('woocommerce_after_main_content', 'wc_yotpo_show_promoted_products_widget', 10);
-	}
-}
+// function v3_home_page_renders($v3_widgets_enables): void {
+// 	if ($v3_widgets_enables['reviews_carousel_home']) {
+// 		add_action('woocommerce_before_main_content', 'wc_yotpo_show_reviews_carousel_widget', 10);
+// 	}
+// 	if ($v3_widgets_enables['promoted_products_home']) {
+// 		add_action('woocommerce_after_main_content', 'wc_yotpo_show_promoted_products_widget', 10);
+// 	}
+// }
