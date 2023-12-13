@@ -114,13 +114,7 @@ function v3_enablers($yotpo_settings) {
           'text' => 'On category page',
           'name' => 'yotpo_reviews_carousel_enabled_category',
           'checked' => checked(1, $yotpo_settings['v3_widgets_enables']['reviews_carousel_category'], false)
-        ],
-        // temporarly disabled
-        // [
-        //   'text' => 'On home page',
-        //   'name' => 'yotpo_reviews_carousel_enabled_home',
-        //   'checked' => checked(1, $yotpo_settings['v3_widgets_enables']['reviews_carousel_home'], false)
-        // ],
+        ]
       ],
       'Enable Reviews Carousel')
       .
@@ -134,13 +128,7 @@ function v3_enablers($yotpo_settings) {
           'text' => 'On category page',
           'name' => 'yotpo_promoted_products_enabled_category',
           'checked' => checked(1, $yotpo_settings['v3_widgets_enables']['promoted_products_category'], false)
-        ],
-        // temporarly disabled
-        // [
-        //   'text' => 'On home page',
-        //   'name' => 'yotpo_promoted_products_enabled_home',
-        //   'checked' => checked(1, $yotpo_settings['v3_widgets_enables']['promoted_products_home'], false)
-        // ],
+        ]
       ],
       'Enable Promoted Products')
       .
