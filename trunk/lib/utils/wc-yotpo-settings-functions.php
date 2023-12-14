@@ -40,6 +40,7 @@ function wc_proccess_yotpo_settings() {
       'star_rating' => $_POST['yotpo_star_ratings_widget_id'],
       'reviews_carousel' => $_POST['yotpo_reviews_carousel_widget_id'],
       'promoted_products' => $_POST['yotpo_promoted_products_widget_id'],
+      'reviews_tab' => $_POST['yotpo_tab_widget_id'],
   );
   $new_settings = array('app_key' => $_POST['yotpo_app_key'],
       'secret' => $_POST['yotpo_oauth_token'],

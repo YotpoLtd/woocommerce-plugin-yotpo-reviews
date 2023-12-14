@@ -12,13 +12,13 @@ function v3_product_widgets_render_in_footer($v3_widgets_enables) {
 		add_action('woocommerce_after_single_product', 'wc_yotpo_show_reviews_widget', 10);
 	}
 	if($v3_widgets_enables['promoted_products_product']) {
-		add_action('woocommerce_after_single_product', 'wc_yotpo_show_promoted_products_widget', 10);
+		add_action('woocommerce_after_single_product', 'wc_yotpo_show_promoted_products_widget', 11);
 	}
 	if($v3_widgets_enables['reviews_carousel_product']) {
 		add_action('woocommerce_after_single_product', 'wc_yotpo_show_reviews_carousel_widget', 10);
 	}
 	if($v3_widgets_enables['reviews_tab_product']) {
-		add_action('woocommerce_after_single_product', 'wc_yotpo_show_reviews_tab_widget', 10);
+		add_action('woocommerce_after_single_product', 'wc_yotpo_show_reviews_tab_widget', 12);
 	}
 }
 
@@ -53,11 +53,18 @@ function v3_render_bottom_line_widgets($v3_widgets_enables) {
 }
 
 // CATEGORY PAGE RENDER
-function v3_category_page_renders($v3_widgets_enables): void {
+function category_page_renders($settings): void {
+	$v3_widgets_enables = $settings['v3_widgets_enables'];
+	$v2_widgets_enables = $settings['v2_widgets_enables'];
 	if ($v3_widgets_enables['reviews_carousel_category']) {
 		add_action('woocommerce_after_shop_loop', 'wc_yotpo_show_reviews_carousel_widget', 10);
 	}
 	if ($v3_widgets_enables['promoted_products_category']) {
-		add_action('woocommerce_after_shop_loop', 'wc_yotpo_show_promoted_products_widget', 10);
+		add_action('woocommerce_after_shop_loop', 'wc_yotpo_show_promoted_products_widget', 11);
+	}
+	if (!use_v3_widgets() && $v2_widgets_enables['bottom_line_category']
+		|| (use_v3_widgets() && $v3_widgets_enables['star_rating_category'])
+	) {
+			add_action('woocommerce_after_shop_loop_item', 'wc_yotpo_show_buttomline', 7);
 	}
 }

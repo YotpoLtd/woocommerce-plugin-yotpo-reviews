@@ -80,9 +80,8 @@ function wc_yotpo_front_end_init() {
 			add_filter( 'comments_open', 'wc_yotpo_remove_native_review_system', null, 2);	
 		}
 	}
-	elseif (star_rating_category_for_v2_or_v3_enabled($settings)) {
-		add_action('woocommerce_after_shop_loop_item', 'wc_yotpo_show_buttomline', 7);
-		v3_category_page_renders($settings['v3_widgets_enables']);
+	else {
+		category_page_renders($settings);
 		wp_enqueue_style('yotpoSideBootomLineStylesheet', plugins_url('assets/css/bottom-line.css', __FILE__));
 	}
 }

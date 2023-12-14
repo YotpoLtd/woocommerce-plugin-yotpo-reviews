@@ -106,12 +106,12 @@ function v3_enablers($yotpo_settings) {
       .
       v3_multifield_enabler([
         [
-          'text' => 'On product page',
+          'text' => 'On Product Page',
           'name' => 'yotpo_reviews_carousel_enabled_product',
           'checked' => checked(1, $yotpo_settings['v3_widgets_enables']['reviews_carousel_product'], false)
         ],
         [
-          'text' => 'On category page',
+          'text' => 'On Category Page',
           'name' => 'yotpo_reviews_carousel_enabled_category',
           'checked' => checked(1, $yotpo_settings['v3_widgets_enables']['reviews_carousel_category'], false)
         ]
