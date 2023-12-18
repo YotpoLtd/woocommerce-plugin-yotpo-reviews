@@ -3,7 +3,7 @@
 	Plugin Name: Yotpo Social Reviews for Woocommerce
 	Description: Yotpo Social Reviews helps Woocommerce store owners generate a ton of reviews for their products. Yotpo is the only solution which makes it easy to share your reviews automatically to your social networks to gain a boost in traffic and an increase in sales.
 	Author: Yotpo
-	Version: 1.6.6
+	Version: 1.7.0
 	Author URI: http://www.yotpo.com?utm_source=yotpo_plugin_woocommerce&utm_medium=plugin_page_link&utm_campaign=woocommerce_plugin_page_link	
 	Plugin URI: http://www.yotpo.com?utm_source=yotpo_plugin_woocommerce&utm_medium=plugin_page_link&utm_campaign=woocommerce_plugin_page_link
 	WC requires at least: 3.0
@@ -19,6 +19,10 @@ add_action( 'before_woocommerce_init', 'wc_declare_hops_support' );
 require plugin_dir_path( __FILE__ ) . 'lib/widgets/qna-widget.php';
 require plugin_dir_path( __FILE__ ) . 'lib/widgets/reviews-widget.php';
 require plugin_dir_path( __FILE__ ) . 'lib/widgets/stars-widget.php';
+require plugin_dir_path( __FILE__ ) . 'lib/widgets/reviews-carousel.php';
+require plugin_dir_path( __FILE__ ) . 'lib/widgets/promoted-products.php';
+require plugin_dir_path( __FILE__ ) . 'lib/widgets/reviews-tab.php';
+require plugin_dir_path( __FILE__ ) . 'lib/widgets/custom-widgets.php';
 require plugin_dir_path( __FILE__ ) . 'lib/utils/wc-yotpo-defaults.php';
 require plugin_dir_path( __FILE__ ) . 'lib/utils/wc-yotpo-functions.php';
 require plugin_dir_path( __FILE__ ) . 'lib/utils/widgets-rendering-logic.php';
@@ -59,6 +63,7 @@ function wc_yotpo_front_end_init() {
 		if (use_v3_widgets()) {
 			$v3_widget_location = $settings['v3_widget_location'];
 			if($v3_widget_location == 'automatic') {
+				render_bottom_line_widgets();
 				v3_product_widgets_render_in_footer($settings['v3_widgets_enables']);
 			}
 		} else {
@@ -69,14 +74,14 @@ function wc_yotpo_front_end_init() {
 			elseif($v2_widget_location == 'tab') {
 				v2_product_widgets_render_in_tabs();
 			}
+			render_bottom_line_widgets();
 		}
 		if($settings['disable_native_review_system']) {
 			add_filter( 'comments_open', 'wc_yotpo_remove_native_review_system', null, 2);	
 		}
-		render_bottom_line_widgets();
 	}
-	elseif (star_rating_category_for_v2_or_v3_enabled($settings)) {
-		add_action('woocommerce_after_shop_loop_item', 'wc_yotpo_show_buttomline', 7);
+	else {
+		category_page_renders($settings);
 		wp_enqueue_style('yotpoSideBootomLineStylesheet', plugins_url('assets/css/bottom-line.css', __FILE__));
 	}
 }
@@ -125,6 +130,53 @@ function wc_yotpo_show_qna_widget() {
 	$qna_widget_id = $yotpo_settings['v3_widgets_ids']['qna'];
 	if($product->get_reviews_allowed() == true && $qna_widget_id) {
 		echo generate_v3_qna_widget_code($product, $qna_widget_id);
+	}						
+}
+// PROMOTED PRODUCTS WIDGET
+function wc_yotpo_show_promoted_products_widget() {
+	global $product;
+	$yotpo_settings = get_option('yotpo_settings',wc_yotpo_get_default_settings());
+	$promoted_products_widget_id = $yotpo_settings['v3_widgets_ids']['promoted_products'];
+	if (!$promoted_products_widget_id) {
+		return;
+	}
+	if(is_product() && $product->get_reviews_allowed() == true) {
+		$product_data = wc_yotpo_get_product_data($product);
+		echo generate_v3_promoted_products_widget_code($promoted_products_widget_id, $product_data['id']);
+	} else {
+		echo generate_v3_promoted_products_widget_code($promoted_products_widget_id);
+	}
+}
+// REVIEWS CAROUSEL WIDGET
+function wc_yotpo_show_reviews_carousel_widget(): void {
+	global $product;
+	$yotpo_settings = get_option('yotpo_settings',wc_yotpo_get_default_settings());
+	$reviews_carousel_widget_id = $yotpo_settings['v3_widgets_ids']['reviews_carousel'];
+	if (!$reviews_carousel_widget_id) {
+		return;
+	}
+	if(is_product() && $product->get_reviews_allowed() == true) {
+		$product_data = wc_yotpo_get_product_data($product);
+		echo generate_v3_reviews_carousel_widget_code($reviews_carousel_widget_id, $product_data['id']);
+	} else {
+		echo generate_v3_reviews_carousel_widget_code($reviews_carousel_widget_id);
+	}
+}
+// REVIEWS TAB WIDGET
+function wc_yotpo_show_reviews_tab_widget() {
+	global $product;
+	$yotpo_settings = get_option('yotpo_settings',wc_yotpo_get_default_settings());
+	$reviews_tab_widget_id = $yotpo_settings['v3_widgets_ids']['reviews_tab'];
+	if($product->get_reviews_allowed() == true && $reviews_tab_widget_id) {
+		echo generate_v3_reviews_tab_widget_code($product, $reviews_tab_widget_id);
+	}						
+}
+// CUSTOM WIDGETS
+function wc_yotpo_show_custom_widgets() {
+	global $product;
+	if($product->get_reviews_allowed() == true) {
+		foreach (generate_v3_custom_widgets_code($product) as $widget_code);
+		echo $widget_code;
 	}						
 }
 function wc_yotpo_show_main_widget_in_tab($tabs) {

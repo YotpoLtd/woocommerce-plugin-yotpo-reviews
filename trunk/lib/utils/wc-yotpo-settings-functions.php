@@ -8,6 +8,12 @@ function get_yotpo_widget_field_name($widget_type_name) {
           return 'qna';
       case 'ReviewsStarRatingsWidget':
           return 'star_rating';
+      case 'ReviewsCarousel':
+          return 'reviews_carousel';
+      case 'PromotedProducts':
+          return 'promoted_products';
+      case 'ReviewsTab':
+          return 'reviews_tab';
   }
 }
 
@@ -31,7 +37,10 @@ function wc_proccess_yotpo_settings() {
   $widgets_instances = $_POST['yotpo_widget_version'] === 'v3' ? get_widget_instances() : array(
       'reviews_widget' => $_POST['yotpo_reviews_widget_id'],
       'qna' => $_POST['yotpo_qna_widget_id'],
-      'star_rating' => $_POST['yotpo_star_ratings_widget_id']
+      'star_rating' => $_POST['yotpo_star_ratings_widget_id'],
+      'reviews_carousel' => $_POST['yotpo_reviews_carousel_widget_id'],
+      'promoted_products' => $_POST['yotpo_promoted_products_widget_id'],
+      'reviews_tab' => $_POST['yotpo_tab_widget_id'],
   );
   $new_settings = array('app_key' => $_POST['yotpo_app_key'],
       'secret' => $_POST['yotpo_oauth_token'],
@@ -45,12 +54,20 @@ function wc_proccess_yotpo_settings() {
           'reviews_widget' => $widgets_instances['reviews_widget'],
           'qna' => $widgets_instances['qna'],
           'star_rating' => $widgets_instances['star_rating'],
+          'reviews_carousel' => $widgets_instances['reviews_carousel'],
+          'promoted_products' => $widgets_instances['promoted_products'],
+          'reviews_tab' => $widgets_instances['reviews_tab'],
       ),
       'v3_widgets_enables' => array(
           'reviews_widget_product' => isset($_POST['yotpo_reviews_widget_enabled_product']) ? true : false,
           'qna_product' => isset($_POST['yotpo_qna_widget_enabled_product']) ? true : false,
           'star_rating_product' => isset($_POST['yotpo_star_rating_enabled_product']) ? true : false,
           'star_rating_category' => isset($_POST['yotpo_star_rating_enabled_category']) ? true : false,
+          'reviews_carousel_product' => isset($_POST['yotpo_reviews_carousel_enabled_product']) ? true : false,
+          'reviews_carousel_category' => isset($_POST['yotpo_reviews_carousel_enabled_category']) ? true : false,
+          'promoted_products_product' => isset($_POST['yotpo_promoted_products_enabled_product']) ? true : false,
+          'promoted_products_category' => isset($_POST['yotpo_promoted_products_enabled_category']) ? true : false,
+          'reviews_tab_product' => isset($_POST['yotpo_reviews_tab_enabled_product']) ? true : false,
       ),
       'v2_widgets_enables' => array(
           'qna_product' => isset($_POST['yotpo_qna_enabled_product']) ? true : false,
