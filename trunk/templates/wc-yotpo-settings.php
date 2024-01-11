@@ -180,7 +180,7 @@ function wc_display_yotpo_settings($success_type = false) {
     " . info_dialog(
         use_v3_widgets(),
         dialog_error_info(
-            $yotpo_settings['v3_widgets_enables'],
+            is_array($yotpo_settings['v3_widgets_enables']) ? $yotpo_settings['v3_widgets_enables'] : [],
             $reviews_widget_id,
             $qna_widget_id,
             $star_ratings_widget_id,
