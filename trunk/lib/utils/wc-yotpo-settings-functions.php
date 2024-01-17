@@ -68,6 +68,7 @@ function wc_proccess_yotpo_settings() {
           'promoted_products_product' => isset($_POST['yotpo_promoted_products_enabled_product']) ? true : false,
           'promoted_products_category' => isset($_POST['yotpo_promoted_products_enabled_category']) ? true : false,
           'reviews_tab_product' => isset($_POST['yotpo_reviews_tab_enabled_product']) ? true : false,
+          'reviews_tab_category' => isset($_POST['yotpo_reviews_tab_enabled_category']) ? true : false,
       ),
       'v2_widgets_enables' => array(
           'qna_product' => isset($_POST['yotpo_qna_enabled_product']) ? true : false,
