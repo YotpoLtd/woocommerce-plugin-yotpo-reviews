@@ -132,11 +132,19 @@ function v3_enablers($yotpo_settings) {
       ],
       'Enable Promoted Products')
       .
-      v3_enabler(
-        checked(1, $yotpo_settings['v3_widgets_enables']['reviews_tab_product'], false),
-        'yotpo_reviews_tab_enabled_product',
-        'Enable Reviews Tab in product page'
-      )
+      v3_multifield_enabler([
+        [
+          'text' => 'On product page',
+          'name' => 'yotpo_reviews_tab_enabled_product',
+          'checked' => checked(1, $yotpo_settings['v3_widgets_enables']['reviews_tab_product'], false)
+        ],
+        [
+          'text' => 'On category page',
+          'name' => 'yotpo_reviews_tab_enabled_category',
+          'checked' => checked(1, $yotpo_settings['v3_widgets_enables']['reviews_tab_category'], false)
+        ]
+      ],
+      'Enable Reviews Tab')
       . "
     </tbody>
   ";

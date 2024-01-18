@@ -43,7 +43,12 @@ function dialog_error_info(
   ) {
     array_push($widgets_to_customize, 'Promoted Products');
   }
-  if (!$reviews_tab_widget_id && is_option_checked($v3_widgets_enables['reviews_tab_product'])) {
+  if (!$reviews_tab_widget_id
+    && (
+      is_option_checked($v3_widgets_enables['reviews_tab_product'])
+      || is_option_checked($v3_widgets_enables['reviews_tab_category'])
+    )
+  ) {
     array_push($widgets_to_customize, 'Reviews Tab');
   }
   if (

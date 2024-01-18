@@ -62,6 +62,9 @@ function category_page_renders($settings): void {
 	if ($v3_widgets_enables['promoted_products_category']) {
 		add_action('woocommerce_after_shop_loop', 'wc_yotpo_show_promoted_products_widget', 11);
 	}
+	if ($v3_widgets_enables['reviews_tab_category']) {
+		add_action('woocommerce_after_shop_loop', 'wc_yotpo_show_reviews_tab_widget', 11);
+	}
 	if (!use_v3_widgets() && $v2_widgets_enables['bottom_line_category']
 		|| (use_v3_widgets() && $v3_widgets_enables['star_rating_category'])
 	) {

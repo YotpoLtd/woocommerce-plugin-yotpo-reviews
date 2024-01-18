@@ -27,6 +27,7 @@ function wc_yotpo_get_default_settings() {
       'promoted_products_product' => true,
       'promoted_products_category' => true,
       'reviews_tab_product' => true,
+      'reviews_tab_category' => true,
     ),
     'v2_widgets_enables' => array(
       'qna_product' => false,
