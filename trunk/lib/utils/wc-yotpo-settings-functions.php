@@ -32,6 +32,10 @@ function get_widget_instances() {
   return $ids_object;
 }
 
+function get_arr_value(array $object = [], string $key, $default = '') {
+  return isset($object[$key]) ? $object[$key] : $default;
+}
+
 function wc_proccess_yotpo_settings() {
   $current_settings = get_option('yotpo_settings', wc_yotpo_get_default_settings());
   $widgets_instances = $_POST['yotpo_widget_version'] === 'v3' ? get_widget_instances() : array(
@@ -51,12 +55,12 @@ function wc_proccess_yotpo_settings() {
       'qna_widget_tab_name' => $_POST['yotpo_qna_widget_tab_name'],
       'widget_version' => $_POST['yotpo_widget_version'],
       'v3_widgets_ids' => array(
-          'reviews_widget' => $widgets_instances['reviews_widget'],
-          'qna' => $widgets_instances['qna'],
-          'star_rating' => $widgets_instances['star_rating'],
-          'reviews_carousel' => $widgets_instances['reviews_carousel'],
-          'promoted_products' => $widgets_instances['promoted_products'],
-          'reviews_tab' => $widgets_instances['reviews_tab'],
+        'reviews_widget' => get_arr_value($widgets_instances, 'reviews_widget'),
+        'qna' => get_arr_value($widgets_instances, 'qna'),
+        'star_rating' => get_arr_value($widgets_instances, 'star_rating'),
+        'reviews_carousel' => get_arr_value($widgets_instances, 'reviews_carousel'),
+        'promoted_products' => get_arr_value($widgets_instances, 'promoted_productsFFFF'),
+        'reviews_tab' => get_arr_value($widgets_instances, 'reviews_tab'),
       ),
       'v3_widgets_enables' => array(
           'reviews_widget_product' => isset($_POST['yotpo_reviews_widget_enabled_product']) ? true : false,

@@ -3,7 +3,7 @@ Contributors: Yotpo
 Tags: reviews, social reviews, woocommerce, woocommerce reviews, woocommerce product reviews, woocommerce extensions, woocommerce plugins, woocommerce addons, woocommerce add-ons, yotpo, yotpo reviews, yotpo social reviews, photo reviews
 Requires at least: 3.5.1
 Tested up to: 6.1.1
-Stable tag: 1.7.3
+Stable tag: 1.7.4
 License: GPLv2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -213,3 +213,6 @@ Yes. To connect your social accounts to Yotpo, just log into yotpo.com, and clic
 
 = 1.7.3 - 26/01/2024 =
 * removed exception throw which caused complete block of settings page
+
+= 1.7.4 - 29/01/2024 =
+* added checking if the key in $widgets_instances array exists in wc-yotpo-settings-functions.php
