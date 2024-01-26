@@ -334,8 +334,8 @@ class Yotpo {
             return $hash['app_key'];
         } elseif (self::$app_key != null) {
             return self::$app_key; 
-        }else {
-            throw 'app_key is mandatory for this request';
+        } else {
+            return null;
         }
     }
 
