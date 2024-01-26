@@ -23,6 +23,7 @@ require plugin_dir_path( __FILE__ ) . 'lib/widgets/reviews-carousel.php';
 require plugin_dir_path( __FILE__ ) . 'lib/widgets/promoted-products.php';
 require plugin_dir_path( __FILE__ ) . 'lib/widgets/reviews-tab.php';
 require plugin_dir_path( __FILE__ ) . 'lib/widgets/custom-widgets.php';
+require plugin_dir_path( __FILE__ ) . 'lib/utils/general-usage-functions.php';
 require plugin_dir_path( __FILE__ ) . 'lib/utils/wc-yotpo-defaults.php';
 require plugin_dir_path( __FILE__ ) . 'lib/utils/wc-yotpo-functions.php';
 require plugin_dir_path( __FILE__ ) . 'lib/utils/widgets-rendering-logic.php';
