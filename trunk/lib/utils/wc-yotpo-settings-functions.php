@@ -2,18 +2,18 @@
 
 function get_yotpo_widget_field_name($widget_type_name) {
   switch ($widget_type_name) {
-      case 'ReviewsMainWidget':
-          return 'reviews_widget';
-      case 'QuestionsAndAnswers':
-          return 'qna';
-      case 'ReviewsStarRatingsWidget':
-          return 'star_rating';
-      case 'ReviewsCarousel':
-          return 'reviews_carousel';
-      case 'PromotedProducts':
-          return 'promoted_products';
-      case 'ReviewsTab':
-          return 'reviews_tab';
+    case 'ReviewsMainWidget':
+      return 'reviews_widget';
+    case 'QuestionsAndAnswers':
+      return 'qna';
+    case 'ReviewsStarRatingsWidget':
+      return 'star_rating';
+    case 'ReviewsCarousel':
+      return 'reviews_carousel';
+    case 'PromotedProducts':
+      return 'promoted_products';
+    case 'ReviewsTab':
+      return 'reviews_tab';
   }
 }
 
@@ -27,7 +27,7 @@ function get_widget_instances() {
   $response = receive_widget_instances()['widget_instances'];
   $ids_object = array();
   foreach($response as &$val) {
-      $ids_object[get_yotpo_widget_field_name($val['widget_type_name'])] = $val['widget_instance_id'];
+    $ids_object[get_yotpo_widget_field_name($val['widget_type_name'])] = $val['widget_instance_id'];
   }
   return $ids_object;
 }
@@ -39,58 +39,58 @@ function get_arr_value(array $object = [], string $key, $default = '') {
 function wc_proccess_yotpo_settings() {
   $current_settings = get_option('yotpo_settings', wc_yotpo_get_default_settings());
   $widgets_instances = $_POST['yotpo_widget_version'] === 'v3' ? get_widget_instances() : array(
-      'reviews_widget' => $_POST['yotpo_reviews_widget_id'],
-      'qna' => $_POST['yotpo_qna_widget_id'],
-      'star_rating' => $_POST['yotpo_star_ratings_widget_id'],
-      'reviews_carousel' => $_POST['yotpo_reviews_carousel_widget_id'],
-      'promoted_products' => $_POST['yotpo_promoted_products_widget_id'],
-      'reviews_tab' => $_POST['yotpo_tab_widget_id'],
+    'reviews_widget' => $_POST['yotpo_reviews_widget_id'],
+    'qna' => $_POST['yotpo_qna_widget_id'],
+    'star_rating' => $_POST['yotpo_star_ratings_widget_id'],
+    'reviews_carousel' => $_POST['yotpo_reviews_carousel_widget_id'],
+    'promoted_products' => $_POST['yotpo_promoted_products_widget_id'],
+    'reviews_tab' => $_POST['yotpo_tab_widget_id'],
   );
   $new_settings = array('app_key' => $_POST['yotpo_app_key'],
-      'secret' => $_POST['yotpo_oauth_token'],
-      'v2_widget_location' => $_POST['yotpo_v2_widget_location'],
-      'v3_widget_location' => $_POST['yotpo_v3_widget_location'],
-      'language_code' => $_POST['yotpo_widget_language_code'],
-      'main_widget_tab_name' => $_POST['yotpo_main_widget_tab_name'],
-      'qna_widget_tab_name' => $_POST['yotpo_qna_widget_tab_name'],
-      'widget_version' => $_POST['yotpo_widget_version'],
-      'v3_widgets_ids' => array(
-        'reviews_widget' => get_arr_value($widgets_instances, 'reviews_widget'),
-        'qna' => get_arr_value($widgets_instances, 'qna'),
-        'star_rating' => get_arr_value($widgets_instances, 'star_rating'),
-        'reviews_carousel' => get_arr_value($widgets_instances, 'reviews_carousel'),
-        'promoted_products' => get_arr_value($widgets_instances, 'promoted_productsFFFF'),
-        'reviews_tab' => get_arr_value($widgets_instances, 'reviews_tab'),
-      ),
-      'v3_widgets_enables' => array(
-          'reviews_widget_product' => isset($_POST['yotpo_reviews_widget_enabled_product']) ? true : false,
-          'qna_product' => isset($_POST['yotpo_qna_widget_enabled_product']) ? true : false,
-          'star_rating_product' => isset($_POST['yotpo_star_rating_enabled_product']) ? true : false,
-          'star_rating_category' => isset($_POST['yotpo_star_rating_enabled_category']) ? true : false,
-          'reviews_carousel_product' => isset($_POST['yotpo_reviews_carousel_enabled_product']) ? true : false,
-          'reviews_carousel_category' => isset($_POST['yotpo_reviews_carousel_enabled_category']) ? true : false,
-          'promoted_products_product' => isset($_POST['yotpo_promoted_products_enabled_product']) ? true : false,
-          'promoted_products_category' => isset($_POST['yotpo_promoted_products_enabled_category']) ? true : false,
-          'reviews_tab_product' => isset($_POST['yotpo_reviews_tab_enabled_product']) ? true : false,
-          'reviews_tab_category' => isset($_POST['yotpo_reviews_tab_enabled_category']) ? true : false,
-      ),
-      'v2_widgets_enables' => array(
-          'qna_product' => isset($_POST['yotpo_qna_enabled_product']) ? true : false,
-          'bottom_line_product' => isset($_POST['yotpo_bottom_line_enabled_product']) ? true : false,
-          'bottom_line_category' => isset($_POST['yotpo_bottom_line_enabled_category']) ? true : false
-      ),
-      'yotpo_order_status' => $_POST['yotpo_order_status'],
-      'yotpo_language_as_site' => isset($_POST['yotpo_language_as_site']) ? true : false,
-      'disable_native_review_system' => isset($_POST['disable_native_review_system']) ? true : false,
-      'show_submit_past_orders' => $current_settings['show_submit_past_orders'],
-      'debug_mode' => isset($_POST['debug_mode']) ? true : false);
+    'secret' => $_POST['yotpo_oauth_token'],
+    'v2_widget_location' => $_POST['yotpo_v2_widget_location'],
+    'v3_widget_location' => $_POST['yotpo_v3_widget_location'],
+    'language_code' => $_POST['yotpo_widget_language_code'],
+    'main_widget_tab_name' => $_POST['yotpo_main_widget_tab_name'],
+    'qna_widget_tab_name' => $_POST['yotpo_qna_widget_tab_name'],
+    'widget_version' => $_POST['yotpo_widget_version'],
+    'v3_widgets_ids' => array(
+      'reviews_widget' => get_arr_value($widgets_instances, 'reviews_widget'),
+      'qna' => get_arr_value($widgets_instances, 'qna'),
+      'star_rating' => get_arr_value($widgets_instances, 'star_rating'),
+      'reviews_carousel' => get_arr_value($widgets_instances, 'reviews_carousel'),
+      'promoted_products' => get_arr_value($widgets_instances, 'promoted_productsFFFF'),
+      'reviews_tab' => get_arr_value($widgets_instances, 'reviews_tab'),
+    ),
+    'v3_widgets_enables' => array(
+      'reviews_widget_product' => isset($_POST['yotpo_reviews_widget_enabled_product']) ? true : false,
+      'qna_product' => isset($_POST['yotpo_qna_widget_enabled_product']) ? true : false,
+      'star_rating_product' => isset($_POST['yotpo_star_rating_enabled_product']) ? true : false,
+      'star_rating_category' => isset($_POST['yotpo_star_rating_enabled_category']) ? true : false,
+      'reviews_carousel_product' => isset($_POST['yotpo_reviews_carousel_enabled_product']) ? true : false,
+      'reviews_carousel_category' => isset($_POST['yotpo_reviews_carousel_enabled_category']) ? true : false,
+      'promoted_products_product' => isset($_POST['yotpo_promoted_products_enabled_product']) ? true : false,
+      'promoted_products_category' => isset($_POST['yotpo_promoted_products_enabled_category']) ? true : false,
+      'reviews_tab_product' => isset($_POST['yotpo_reviews_tab_enabled_product']) ? true : false,
+      'reviews_tab_category' => isset($_POST['yotpo_reviews_tab_enabled_category']) ? true : false,
+    ),
+    'v2_widgets_enables' => array(
+      'qna_product' => isset($_POST['yotpo_qna_enabled_product']) ? true : false,
+      'bottom_line_product' => isset($_POST['yotpo_bottom_line_enabled_product']) ? true : false,
+      'bottom_line_category' => isset($_POST['yotpo_bottom_line_enabled_category']) ? true : false
+    ),
+    'yotpo_order_status' => $_POST['yotpo_order_status'],
+    'yotpo_language_as_site' => isset($_POST['yotpo_language_as_site']) ? true : false,
+    'disable_native_review_system' => isset($_POST['disable_native_review_system']) ? true : false,
+    'show_submit_past_orders' => $current_settings['show_submit_past_orders'],
+    'debug_mode' => isset($_POST['debug_mode']) ? true : false);
   update_option('yotpo_settings', $new_settings);
   if ($current_settings['disable_native_review_system'] != $new_settings['disable_native_review_system']) {
-      if ($new_settings['disable_native_review_system'] == false) {
-          update_option('woocommerce_enable_review_rating', get_option('native_star_ratings_enabled'));
-      } else {
-          update_option('woocommerce_enable_review_rating', 'no');
-      }
+    if ($new_settings['disable_native_review_system'] == false) {
+      update_option('woocommerce_enable_review_rating', get_option('native_star_ratings_enabled'));
+    } else {
+      update_option('woocommerce_enable_review_rating', 'no');
+    }
   }
 }
 
