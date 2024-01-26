@@ -59,7 +59,7 @@ function wc_proccess_yotpo_settings() {
       'qna' => get_arr_value($widgets_instances, 'qna'),
       'star_rating' => get_arr_value($widgets_instances, 'star_rating'),
       'reviews_carousel' => get_arr_value($widgets_instances, 'reviews_carousel'),
-      'promoted_products' => get_arr_value($widgets_instances, 'promoted_productsFFFF'),
+      'promoted_products' => get_arr_value($widgets_instances, 'promoted_products'),
       'reviews_tab' => get_arr_value($widgets_instances, 'reviews_tab'),
     ),
     'v3_widgets_enables' => array(
