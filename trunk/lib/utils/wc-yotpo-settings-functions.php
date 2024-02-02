@@ -33,13 +33,13 @@ function get_widget_instances() {
 }
 
 function get_widgets_instances() {
-  return get_arr_value($_POST, 'yotpo_widget_version') === 'v3' ? get_widget_instances() : array(
-    'reviews_widget' => get_arr_value($_POST, 'yotpo_reviews_widget_id'),
-    'qna' => get_arr_value($_POST, 'yotpo_qna_widget_id'),
-    'star_rating' => get_arr_value($_POST, 'yotpo_star_ratings_widget_id'),
-    'reviews_carousel' => get_arr_value($_POST, 'yotpo_reviews_carousel_widget_id'),
-    'promoted_products' => get_arr_value($_POST, 'yotpo_promoted_products_widget_id'),
-    'reviews_tab' => get_arr_value($_POST, 'yotpo_tab_widget_id'),
+  return yotpo_get_arr_value($_POST, 'yotpo_widget_version') === 'v3' ? get_widget_instances() : array(
+    'reviews_widget' => yotpo_get_arr_value($_POST, 'yotpo_reviews_widget_id'),
+    'qna' => yotpo_get_arr_value($_POST, 'yotpo_qna_widget_id'),
+    'star_rating' => yotpo_get_arr_value($_POST, 'yotpo_star_ratings_widget_id'),
+    'reviews_carousel' => yotpo_get_arr_value($_POST, 'yotpo_reviews_carousel_widget_id'),
+    'promoted_products' => yotpo_get_arr_value($_POST, 'yotpo_promoted_products_widget_id'),
+    'reviews_tab' => yotpo_get_arr_value($_POST, 'yotpo_tab_widget_id'),
   );
 }
 
@@ -69,21 +69,21 @@ function get_v2_widgets_enables() {
 function wc_proccess_yotpo_settings() {
   $current_settings = get_option('yotpo_settings', wc_yotpo_get_default_settings());
   $new_settings = array(
-    'app_key' => get_arr_value($_POST, 'yotpo_app_key'),
-    'secret' => get_arr_value($_POST, 'yotpo_oauth_token'),
-    'v2_widget_location' => get_arr_value($_POST, 'yotpo_v2_widget_location'),
-    'v3_widget_location' => get_arr_value($_POST, 'yotpo_v3_widget_location'),
-    'language_code' => get_arr_value($_POST, 'yotpo_widget_language_code'),
-    'main_widget_tab_name' => get_arr_value($_POST, 'yotpo_main_widget_tab_name'),
-    'qna_widget_tab_name' => get_arr_value($_POST, 'yotpo_qna_widget_tab_name'),
-    'widget_version' => get_arr_value($_POST, 'yotpo_widget_version'),
+    'app_key' => yotpo_get_arr_value($_POST, 'yotpo_app_key'),
+    'secret' => yotpo_get_arr_value($_POST, 'yotpo_oauth_token'),
+    'v2_widget_location' => yotpo_get_arr_value($_POST, 'yotpo_v2_widget_location'),
+    'v3_widget_location' => yotpo_get_arr_value($_POST, 'yotpo_v3_widget_location'),
+    'language_code' => yotpo_get_arr_value($_POST, 'yotpo_widget_language_code'),
+    'main_widget_tab_name' => yotpo_get_arr_value($_POST, 'yotpo_main_widget_tab_name'),
+    'qna_widget_tab_name' => yotpo_get_arr_value($_POST, 'yotpo_qna_widget_tab_name'),
+    'widget_version' => yotpo_get_arr_value($_POST, 'yotpo_widget_version'),
     'v3_widgets_ids' => get_widgets_instances(),
     'v3_widgets_enables' => get_v3_widgets_enables(),
     'v2_widgets_enables' => get_v2_widgets_enables(),
-    'yotpo_order_status' => get_arr_value($_POST, 'yotpo_order_status'),
+    'yotpo_order_status' => yotpo_get_arr_value($_POST, 'yotpo_order_status'),
     'yotpo_language_as_site' => isset($_POST['yotpo_language_as_site']) ? true : false,
     'disable_native_review_system' => isset($_POST['disable_native_review_system']) ? true : false,
-    'show_submit_past_orders' => get_arr_value($current_settings, 'show_submit_past_orders'),
+    'show_submit_past_orders' => yotpo_get_arr_value($current_settings, 'show_submit_past_orders'),
     'debug_mode' => isset($_POST['debug_mode']) ? true : false);
   update_option('yotpo_settings', $new_settings);
   if ($current_settings['disable_native_review_system'] != $new_settings['disable_native_review_system']) {
