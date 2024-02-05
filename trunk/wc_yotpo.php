@@ -3,7 +3,7 @@
 	Plugin Name: Yotpo Social Reviews for Woocommerce
 	Description: Yotpo Social Reviews helps Woocommerce store owners generate a ton of reviews for their products. Yotpo is the only solution which makes it easy to share your reviews automatically to your social networks to gain a boost in traffic and an increase in sales.
 	Author: Yotpo
-	Version: 1.7.5
+	Version: 1.7.6
 	Author URI: http://www.yotpo.com?utm_source=yotpo_plugin_woocommerce&utm_medium=plugin_page_link&utm_campaign=woocommerce_plugin_page_link	
 	Plugin URI: http://www.yotpo.com?utm_source=yotpo_plugin_woocommerce&utm_medium=plugin_page_link&utm_campaign=woocommerce_plugin_page_link
 	WC requires at least: 3.0
@@ -198,7 +198,7 @@ function wc_yotpo_show_main_widget_in_tab($tabs) {
 		return $tabs;
 	}
 }
-function wc_yotpo_load_js(){
+function wc_yotpo_load_js() {
 	if( class_exists('woocommerce') ) {
     if (use_v3_widgets()) {
       wp_enqueue_script('yquery', plugins_url('assets/js/v3HeaderScript.js', __FILE__), null, null);
@@ -206,11 +206,12 @@ function wc_yotpo_load_js(){
       wp_enqueue_script('yquery', plugins_url('assets/js/v2HeaderScript.js', __FILE__), null, null);
     }
     $settings = get_option('yotpo_settings',wc_yotpo_get_default_settings());
+		$v3_widgets_ids = yotpo_get_arr_value($settings, 'v3_widgets_ids', []);
     wp_localize_script('yquery', 'yotpo_settings', array(
       'app_key' => $settings['app_key'],
-      'reviews_widget_id' => $settings['v3_widgets_ids']['reviews_widget'],
-      'qna_widget_id' => $settings['v3_widgets_ids']['qna'],
-      'star_ratings_widget_id' => $settings['v3_widgets_ids']['star_rating']
+      'reviews_widget_id' => yotpo_get_arr_value($v3_widgets_ids, 'reviews_widget'),
+      'qna_widget_id' => yotpo_get_arr_value($v3_widgets_ids, 'qna'),
+      'star_ratings_widget_id' => yotpo_get_arr_value($v3_widgets_ids, 'star_rating')
     ));
   }
 }
@@ -233,8 +234,9 @@ function generate_star_ratings_widget_code() {
 	global $product;
 	$yotpo_settings = get_option('yotpo_settings',wc_yotpo_get_default_settings());
 	$use_v3_widgets = use_v3_widgets();
-	$reviews_widget_id = $yotpo_settings['v3_widgets_ids']['reviews_widget'];
-	$star_ratings_widget_id = $yotpo_settings['v3_widgets_ids']['star_rating'];
+	$v3_widgets_ids = yotpo_get_arr_value($yotpo_settings, 'v3_widgets_ids', []);
+	$reviews_widget_id = yotpo_get_arr_value($v3_widgets_ids, 'reviews_widget');
+	$star_ratings_widget_id = yotpo_get_arr_value($v3_widgets_ids, 'star_rating');
 	if ($use_v3_widgets && $star_ratings_widget_id && $reviews_widget_id) {
 		return generate_v3_star_ratings_widget_code($product, $star_ratings_widget_id);
 	}
