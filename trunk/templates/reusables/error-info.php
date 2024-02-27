@@ -32,6 +32,7 @@ function dialog_error_info(
     && (
       is_option_checked($v3_widgets_enables['reviews_carousel_product'])
       || is_option_checked($v3_widgets_enables['reviews_carousel_category'])
+      || is_option_checked($v3_widgets_enables['reviews_carousel_home'])
     )) {
     array_push($widgets_to_customize, 'Carousel Widget');
   }
@@ -39,6 +40,7 @@ function dialog_error_info(
     && (
       is_option_checked($v3_widgets_enables['promoted_products_product'])
       || is_option_checked($v3_widgets_enables['promoted_products_category'])
+      || is_option_checked($v3_widgets_enables['promoted_products_home'])
     )
   ) {
     array_push($widgets_to_customize, 'Promoted Products');

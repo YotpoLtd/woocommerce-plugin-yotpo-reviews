@@ -82,26 +82,26 @@ function v3_enablers($yotpo_settings) {
       v3_enabler(
         checked(1, $yotpo_settings['v3_widgets_enables']['reviews_widget_product'], false),
         'yotpo_reviews_widget_enabled_product',
-        'Enable Reviews Widget in product page'
+        'Enable Reviews Widget in Product Page'
       )
       .
       v3_enabler(
         checked(1, $yotpo_settings['v3_widgets_enables']['star_rating_product'], false),
         'yotpo_star_rating_enabled_product',
-        'Enable Star Rating in product page'
+        'Enable Star Rating in Product Page'
       )
       .
       v3_enabler(
         checked(1, $yotpo_settings['v3_widgets_enables']['qna_product'], false),
         'yotpo_qna_widget_enabled_product',
-        'Enable Q&A Widget in product page',
+        'Enable Q&A Widget in Product Page',
         'If you set Q&A on second tab, disable this one to avoid widget duplication'
       )
       .
       v3_enabler(
         checked(1, $yotpo_settings['v3_widgets_enables']['star_rating_category'], false),
         'yotpo_star_rating_enabled_category',
-        'Enable Star Rating in category page'
+        'Enable Star Rating in Category Page'
       )
       .
       v3_multifield_enabler([
@@ -114,32 +114,42 @@ function v3_enablers($yotpo_settings) {
           'text' => 'On Category Page',
           'name' => 'yotpo_reviews_carousel_enabled_category',
           'checked' => checked(1, $yotpo_settings['v3_widgets_enables']['reviews_carousel_category'], false)
+        ],
+        [
+          'text' => 'On Home Page',
+          'name' => 'yotpo_reviews_carousel_enabled_home',
+          'checked' => checked(1, $yotpo_settings['v3_widgets_enables']['reviews_carousel_home'], false)
         ]
       ],
       'Enable Reviews Carousel')
       .
       v3_multifield_enabler([
         [
-          'text' => 'On product page',
+          'text' => 'On Product Page',
           'name' => 'yotpo_promoted_products_enabled_product',
           'checked' => checked(1, $yotpo_settings['v3_widgets_enables']['promoted_products_product'], false)
         ],
         [
-          'text' => 'On category page',
+          'text' => 'On Category Page',
           'name' => 'yotpo_promoted_products_enabled_category',
           'checked' => checked(1, $yotpo_settings['v3_widgets_enables']['promoted_products_category'], false)
+        ],
+        [
+          'text' => 'On Home Page',
+          'name' => 'yotpo_promoted_products_enabled_home',
+          'checked' => checked(1, $yotpo_settings['v3_widgets_enables']['promoted_products_home'], false)
         ]
       ],
       'Enable Promoted Products')
       .
       v3_multifield_enabler([
         [
-          'text' => 'On product page',
+          'text' => 'On Product Page',
           'name' => 'yotpo_reviews_tab_enabled_product',
           'checked' => checked(1, $yotpo_settings['v3_widgets_enables']['reviews_tab_product'], false)
         ],
         [
-          'text' => 'On category page',
+          'text' => 'On all other pages',
           'name' => 'yotpo_reviews_tab_enabled_category',
           'checked' => checked(1, $yotpo_settings['v3_widgets_enables']['reviews_tab_category'], false)
         ]
@@ -154,17 +164,17 @@ function v2_enablers($yotpo_settings) {
   return "
     <tbody id='yotpo-v2-enablers' style='display:none'>
       <tr valign='top'>
-        <th scope='row'><div>Enable bottom line in product page:</div></th>
+        <th scope='row'><div>Enable bottom line in Product Page:</div></th>
         <td>
           <input type='checkbox' name='yotpo_bottom_line_enabled_product' value='1' " . checked(1, $yotpo_settings['v2_widgets_enables']['bottom_line_product'], false) . " />
         </td>
       </tr>					  	 
       <tr valign='top'>
-        <th scope='row'><div>Enable Q&A bottom line in product page:</div></th>
+        <th scope='row'><div>Enable Q&A bottom line in Product Page:</div></th>
         <td><input type='checkbox' name='yotpo_qna_enabled_product' value='1' " . checked(1, $yotpo_settings['v2_widgets_enables']['qna_product'], false) . " /></td>
       </tr>
       <tr valign='top'>
-        <th scope='row'><div>Enable bottom line in category page:</div></th>
+        <th scope='row'><div>Enable bottom line in Category Page:</div></th>
         <td>
           <input type='checkbox' name='yotpo_bottom_line_enabled_category' value='1' " . checked(1, $yotpo_settings['v2_widgets_enables']['bottom_line_category'], false) . " />		   		       
         </td>
