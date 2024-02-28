@@ -51,8 +51,10 @@ function get_v3_widgets_enables() {
     'star_rating_category' => isset($_POST['yotpo_star_rating_enabled_category']) ? true : false,
     'reviews_carousel_product' => isset($_POST['yotpo_reviews_carousel_enabled_product']) ? true : false,
     'reviews_carousel_category' => isset($_POST['yotpo_reviews_carousel_enabled_category']) ? true : false,
+    'reviews_carousel_home' => isset($_POST['yotpo_reviews_carousel_enabled_home']) ? true : false,
     'promoted_products_product' => isset($_POST['yotpo_promoted_products_enabled_product']) ? true : false,
     'promoted_products_category' => isset($_POST['yotpo_promoted_products_enabled_category']) ? true : false,
+    'promoted_products_home' => isset($_POST['yotpo_promoted_products_enabled_home']) ? true : false,
     'reviews_tab_product' => isset($_POST['yotpo_reviews_tab_enabled_product']) ? true : false,
     'reviews_tab_category' => isset($_POST['yotpo_reviews_tab_enabled_category']) ? true : false,
   );
