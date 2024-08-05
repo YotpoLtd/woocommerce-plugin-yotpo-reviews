@@ -2,7 +2,7 @@
 
 Plugin for Wordpress sites which have WooCommerce shop plugin installed in them.
 
-Installation guide - https://support.yotpo.com/en/installing-yotpo/woocommerce
+Installation guide - https://support.yotpo.com/docs/woocommerce-installing-yotpo
 
 # Uploading a new version or changes to https://wordpress.org/plugins/yotpo-social-reviews-for-woocommerce/
 

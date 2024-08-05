@@ -60,7 +60,7 @@ https://www.youtube.com/watch?v=emYQojcaQqQ&feature=youtu.be
 4. Customize the different settings on the Yotpo Settings page and click update when done.
 5. That's it.  You're ready to go!
 
-For full installation guide, [please click here](https://support.yotpo.com/en/installing-yotpo/woocommerce)
+For full installation guide, [please click here](https://support.yotpo.com/docs/woocommerce-installing-yotpo)
 
 == Frequently Asked Questions ==
 
