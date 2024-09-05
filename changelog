@@ -206,3 +206,7 @@ Paul:
 2023-08-22
 ---
 1) Fix broken submit past order flow
+
+2024-09-05
+---
+1) Change default settings of widget version to v3

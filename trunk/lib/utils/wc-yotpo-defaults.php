@@ -8,7 +8,7 @@ function wc_yotpo_get_default_settings() {
     'language_code' => 'en',
     'main_widget_tab_name' => 'Reviews',
     'qna_widget_tab_name' => 'Q&A',
-    'widget_version' => 'v2',
+    'widget_version' => 'v3',
     'v3_widgets_ids' => array(
       'reviews_widget' => '',
       'qna' => '',
