@@ -30,7 +30,7 @@ svn add * --force
 
 7. run 'svn diff' to verify the code changes before you upload the code
 6. Push the changes:
-svn ci -m 'Version `<<new version number>>`' --username Yotpo --password yotpo2010
+`svn ci -m "Version '<<new version number>>'" --username Yotpo --password ` [use password from this page](https://yotpoent.atlassian.net/wiki/spaces/RD/pages/1098844645/How+to+Deploy+a+new+version)
 
 7. Thats it! check changes on our plugin page in Wordprass.
 
