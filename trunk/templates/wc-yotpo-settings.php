@@ -3,10 +3,11 @@ define("LOG_FILE", plugin_dir_path( __FILE__ ).'../yotpo_debug.log');
 require __DIR__.'/../lib/utils/wc-yotpo-settings-functions.php';
 require __DIR__.'/reusables/widgets-settings.php';
 require __DIR__.'/reusables/error-info.php';
+require __DIR__.'/menu/menu-positions.php';
 
 function wc_display_yotpo_admin_page() {
     if (function_exists('current_user_can') && !current_user_can('manage_options')) {
-        die(__(''));
+        die('');
     }
     if (wc_yotpo_compatible()) {
         if (isset($_POST['log_in_button'])) {
@@ -32,7 +33,8 @@ function wc_display_yotpo_admin_page() {
         } elseif (isset($_POST['yotdbg-clear'])) {
             check_admin_referer('yotdbg-clear');
             $filename = LOG_FILE;
-            file_put_contents($filename, "");
+            global $wp_filesystem;
+            $wp_filesystem->put_contents($filename, "");
             wc_display_yotpo_settings();
         } else {
             $yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_default_settings());
@@ -84,10 +86,10 @@ function wc_display_yotpo_settings($success_type = false) {
                 <th scope='row'><p class='description'>To get your api key and secret token <a href='https://www.yotpo.com/?login=true' target='_blank'>log in here</a> and go to your account settings.</p></th>
             </tr>"
         : '';
-    $submit_past_orders_button = $yotpo_settings['show_submit_past_orders'] ? "<input type='submit' name='yotpo_past_orders' value='Submit past orders' class='button-secondary past-orders-btn' " . disabled(true, empty($app_key) || empty($secret), false) . ">" : '';
+    $submit_past_orders_button = $yotpo_settings['show_submit_past_orders'] ? "<input type='submit' name='yotpo_past_orders' value='Submit past orders' class='button-secondary past-orders-btn' " . disabled(true, empty($app_key) || empty($secret), false) . "/>" : '';
     if (isset($yotpo_settings['debug_mode']) && $yotpo_settings['debug_mode']) {
-        $settings_dump = json_encode($yotpo_settings);
-        if (file_exists(LOG_FILE)) { $debug_log = file_get_contents(LOG_FILE); } else { $debug_log = false; };
+        $settings_dump = wp_json_encode($yotpo_settings);
+        if (file_exists(LOG_FILE)) { $debug_log = wp_remote_get(LOG_FILE); } else { $debug_log = false; };
     }
     $settings_html = styles() . "
     <div class='wrap'><h2>Yotpo Settings</h2>
@@ -107,7 +109,7 @@ function wc_display_yotpo_settings($success_type = false) {
                             <div>If you would like to choose a set language, please type the 2-letter language code here. You can find the supported langauge codes <a class='y-href' href='http://support.yotpo.com/entries/21861473-Languages-Customization-' target='_blank'>here.</a></div>
                         </th>
                         <td>
-                            <div><input type='text' class='yotpo_language_code_text' name='yotpo_widget_language_code' maxlength='5' value='$language_code'/></div>
+                            <div><input type='text' class='yotpo_language_code_text' name='yotpo_widget_language_code' maxlength='5' value='$language_code' /></div>
                         </td>
                     </tr>
                     <tr valign='top'>
@@ -125,18 +127,18 @@ function wc_display_yotpo_settings($success_type = false) {
                     $cradentials_location_explanation
                     <tr valign='top'>
                         <th scope='row'><div>App key:</div></th>
-                        <td><div class='y-input'><input id='app_key' type='text' name='yotpo_app_key' value='$app_key' $read_only '/></div></td>
+                        <td><div class='y-input'><input id='app_key' type='text' name='yotpo_app_key' value='$app_key' $read_only /></div></td>
                     </tr>
                     <tr valign='top'>
                         <th scope='row'><div>Secret token:</div></th>
-                        <td><div class='y-input'><input id='secret' type='text'  name='yotpo_oauth_token' value='$secret' $read_only '/></div></td>
+                        <td><div class='y-input'><input id='secret' type='text'  name='yotpo_oauth_token' value='$secret' $read_only /></div></td>
                     </tr>
-                    <input id='reviews_widget' type='hidden' name='yotpo_reviews_widget_id' value='$reviews_widget_id' '/>
-                    <input id='qna_widget' type='hidden' name='yotpo_qna_widget_id' value='$qna_widget_id' '/>
-                    <input id='star_ratings_widget' type='hidden' name='yotpo_star_ratings_widget_id' value='$star_ratings_widget_id' '/>
-                    <input id='reviews_carousel_widget' type='hidden' name='yotpo_reviews_carousel_widget_id' value='$reviews_carousel_widget_id' '/>
-                    <input id='promoted_products_widget' type='hidden' name='yotpo_promoted_products_widget_id' value='$promoted_products_widget_id' '/>
-                    <input id='reviews_carousel_widget' type='hidden' name='yotpo_tab_widget_id' value='$reviews_tab_widget_id' '/>
+                    <input id='reviews_widget' type='hidden' name='yotpo_reviews_widget_id' value='$reviews_widget_id' />
+                    <input id='qna_widget' type='hidden' name='yotpo_qna_widget_id' value='$qna_widget_id' />
+                    <input id='star_ratings_widget' type='hidden' name='yotpo_star_ratings_widget_id' value='$star_ratings_widget_id' />
+                    <input id='reviews_carousel_widget' type='hidden' name='yotpo_reviews_carousel_widget_id' value='$reviews_carousel_widget_id' />
+                    <input id='promoted_products_widget' type='hidden' name='yotpo_promoted_products_widget_id' value='$promoted_products_widget_id' />
+                    <input id='reviews_carousel_widget' type='hidden' name='yotpo_tab_widget_id' value='$reviews_tab_widget_id' />
                     " .
                     version_selector($yotpo_settings) .
                     v2_locations($yotpo_settings, $main_widget_tab_name) .
@@ -144,37 +146,23 @@ function wc_display_yotpo_settings($success_type = false) {
                     . "
                     <tr valign='top' id='yotpo-sync-widget-ids-row' style='display:none'>
                         <th scope='row'><div>Synchronise the widgets' codes:</div></th>
-                        <!-- <td><button type='button' id='yotpo-sync-widget-ids' class='button-secondary'>Sync</button></td> -->
-                        <td><input type='submit' name='yotpo_sync_ids' value='Sync' class='button-primary' id='yotpo_sync_ids'/></td>
+                        <td><input type='submit' name='yotpo_sync_ids' value='Sync' class='button-primary' id='yotpo_sync_ids' /></td>
                     </tr>" .
                     v3_enablers($yotpo_settings) .
-                    v2_enablers($yotpo_settings) ."
-                    <tr valign='top'>
-                        <th scope='row'><div>Order Status:</div></th>
-                        <td>
-                            <select name='yotpo_order_status' class='yotpo-order-status' >
-                                <option value='wc-completed' " . selected('wc-completed', $yotpo_settings['yotpo_order_status'], false) . ">Completed</option>
-                                <option value='wc-pending' " . selected('wc-pending', $yotpo_settings['yotpo_order_status'], false) . ">Pending Payment</option>
-                                <option value='wc-processing' " . selected('wc-processing', $yotpo_settings['yotpo_order_status'], false) . ">Processing</option>
-                                <option value='wc-on-hold' " . selected('wc-on-hold', $yotpo_settings['yotpo_order_status'], false) . ">On Hold</option>
-                                <option value='wc-cancelled' " . selected('wc-cancelled', $yotpo_settings['yotpo_order_status'], false) . ">Cancelled</option>
-                                <option value='wc-refunded' " . selected('wc-refunded', $yotpo_settings['yotpo_order_status'], false) . ">Refunded</option>
-                                <option value='wc-failed' " . selected('wc-failed', $yotpo_settings['yotpo_order_status'], false) . ">Failed</option>
-                            </select>
-                        </td>
-                    </tr>
+                    v2_enablers($yotpo_settings) .
+                    yotpo_order_status_option($yotpo_settings) . "
                 </fieldset>
             </table></br>
             <div class='buttons-container'>
                 <button type='button' id='yotpo-export-reviews' class='button-secondary' " . disabled(true, empty($app_key) || empty($secret), false) . ">Export Reviews</button>
-                <input type='submit' name='yotpo_settings' value='Update' class='button-primary' id='save_yotpo_settings'/>$submit_past_orders_button
-                </br></br><p class='description'>*Learn <a href='http://support.yotpo.com/entries/24454261-Exporting-reviews-for-Woocommerce' target='_blank'>how to export your existing reviews</a> into Yotpo.</p>
+                <input type='submit' name='yotpo_settings' value='Update' class='button-primary' id='save_yotpo_settings' />$submit_past_orders_button
+                </br></br><p class='description'>*Learn <a href='https://support.yotpo.com/docs/woocommerce-installing-yotpo#4-importing-your-reviews-to-yotpo' target='_blank'>how to export your existing reviews</a> into Yotpo.</p>
             </div>
         </form>
         <iframe name='yotpo_export_reviews_frame' style='display: none;'></iframe>
         <form action='' method='get' target='yotpo_export_reviews_frame' style='display: none;'>
             <input type='hidden' name='download_exported_reviews' value='true' />
-            <input type='submit' value='Export Reviews' class='button-primary' id='export_reviews_submit'/>
+            <input type='submit' value='Export Reviews' class='button-primary' id='export_reviews_submit' />
         </form>
     </div>
     <div class='featured-cars'></div>
@@ -190,15 +178,19 @@ function wc_display_yotpo_settings($success_type = false) {
             $reviews_tab_widget_id
         )
     );
-    echo $settings_html;
+    add_filter( 'safe_style_css', function( $styles ) {
+        $styles[] = 'display';
+        return $styles;
+    } );
+    echo wp_kses($settings_html, yotpo_settings_allowed_html());
     if (isset($yotpo_settings['debug_mode']) && $yotpo_settings['debug_mode']) {
-        echo '<h3>Settings</h3><pre>'.$settings_dump.'</pre>';
-        if ($debug_log === FALSE) {
+        echo '<h3>Settings</h3><pre>'.esc_html($settings_dump).'</pre>';
+        if (is_wp_error($debug_log) || $debug_log === false) {
             echo '<h3>Yotpo Debug</h3>
             <textarea cols=170 rows=15>Problem opening yotpo_debug.log and/or file is empty</textarea>';
         } else {
-            echo '<h3>Yotpo Debug</h3><textarea cols=170 rows=15>'.$debug_log.'</textarea>
-            <form method="post" id="yotdbg-clear">' .wp_nonce_field('yotdbg-clear') .'<input type="submit" value="Clear" class="button-primary" name="yotdbg-clear" id="yotdbg-clear-submit"/></form>';
+            echo '<h3>Yotpo Debug</h3><textarea cols=170 rows=15>'.esc_html($debug_log).'</textarea>
+            <form method="post" id="yotdbg-clear">' .wp_kses(wp_nonce_field('yotdbg-clear'), yotpo_nonce_field_allowed_html()) .'<input type="submit" value="Clear" class="button-primary" name="yotdbg-clear" id="yotdbg-clear-submit"/></form>';
         }
     }
 }
@@ -251,7 +243,7 @@ function wc_proccess_yotpo_register() {
                     $secret = $response['response']['secret'];
                     $yotpo_api->set_app_key($app_key);
                     $yotpo_api->set_secret($secret);
-                    $shop_domain = parse_url($shop_url, PHP_URL_HOST);
+                    $shop_domain = wp_parse_url($shop_url, PHP_URL_HOST);
                     $account_platform_response = $yotpo_api->create_account_platform(array('shop_domain' => wc_yotpo_get_shop_domain(),
                         'utoken' => $response['response']['token'],
                         'platform_type_id' => 12));
@@ -296,9 +288,13 @@ function wc_yotpo_display_message($messages = array(), $is_error = false) {
     $class = $is_error ? 'error' : 'updated fade';
     if (is_array($messages)) {
         foreach ($messages as $message) {
-            echo "<div id='message' class='$class'><p><strong>$message</strong></p></div>";
+            echo_message($class, $message);
         }
     } elseif (is_string($messages)) {
-        echo "<div id='message' class='$class'><p><strong>$messages</strong></p></div>";
+        echo_message($class, $messages);
     }
 }
+
+function echo_message($class, $message) {
+    echo wp_kses("<div id='message' class='$class'><p><strong>$message</strong></p></div>", yotpo_message_allowed_html());
+};

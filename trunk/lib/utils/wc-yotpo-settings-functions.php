@@ -134,5 +134,5 @@ function wc_display_yotpo_register() {
   </form></br><p class='description'>*Learn <a href='http://support.yotpo.com/entries/24454261-Exporting-reviews-for-Woocommerce'>how to export your existing reviews</a> into Yotpo.</p></br></br>
   <div class='yotpo-terms'>By registering I accept the <a href='https://www.yotpo.com/terms-of-service' target='_blank'>Terms of Use</a> and recognize that a 'Powered by Yotpo' link will appear on the bottom of my Yotpo widget.</div>
 </div>";
-  echo $register_html;
+  echo wp_kses($register_html, yotpo_allowed_register_html());
 }

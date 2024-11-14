@@ -3,11 +3,13 @@
 	Plugin Name: Yotpo Social Reviews for Woocommerce
 	Description: Yotpo Social Reviews helps Woocommerce store owners generate a ton of reviews for their products. Yotpo is the only solution which makes it easy to share your reviews automatically to your social networks to gain a boost in traffic and an increase in sales.
 	Author: Yotpo
-	Version: 1.7.10
+	Version: 1.8.0
 	Author URI: http://www.yotpo.com?utm_source=yotpo_plugin_woocommerce&utm_medium=plugin_page_link&utm_campaign=woocommerce_plugin_page_link
 	Plugin URI: http://www.yotpo.com?utm_source=yotpo_plugin_woocommerce&utm_medium=plugin_page_link&utm_campaign=woocommerce_plugin_page_link
 	WC requires at least: 3.0
-	WC tested up to: 7.3.0
+	WC tested up to: 9.4.2
+	License: GPLv2
+	License URI: http://www.gnu.org/licenses/gpl-2.0.html
  */
 register_activation_hook(   __FILE__, 'wc_yotpo_activation' );
 register_uninstall_hook( __FILE__, 'wc_yotpo_uninstall' );
@@ -27,6 +29,7 @@ require plugin_dir_path( __FILE__ ) . 'lib/utils/general-usage-functions.php';
 require plugin_dir_path( __FILE__ ) . 'lib/utils/wc-yotpo-defaults.php';
 require plugin_dir_path( __FILE__ ) . 'lib/utils/wc-yotpo-functions.php';
 require plugin_dir_path( __FILE__ ) . 'lib/utils/widgets-rendering-logic.php';
+require plugin_dir_path( __FILE__ ) . 'lib/utils/allowed-html-functions.php';
 
 function wc_yotpo_init() {
 	$is_admin = is_admin();
@@ -90,8 +93,8 @@ function wc_yotpo_front_end_init() {
 function wc_yotpo_activation() {
 	if(current_user_can( 'activate_plugins' )) {
 		update_option('wc_yotpo_just_installed', true);
-			$plugin = isset( $_REQUEST['plugin'] ) ? $_REQUEST['plugin'] : '';
-			check_admin_referer( "activate-plugin_{$plugin}" );
+		$plugin = isset( $_REQUEST['plugin'] ) ? $_REQUEST['plugin'] : '';
+		check_admin_referer( "activate-plugin_{$plugin}" );
 		$default_settings = get_option('yotpo_settings', false);
 		if(!is_array($default_settings)) {
 			add_option('yotpo_settings', wc_yotpo_get_default_settings());
@@ -110,7 +113,7 @@ function wc_yotpo_uninstall() {
 function wc_yotpo_show_reviews_widget() {
 	global $product;
 	if($product->get_reviews_allowed() == true) {
-		echo generate_reviews_widget_code($product);
+		echo wp_kses(generate_reviews_widget_code($product), yotpo_reviews_widget_allowed_html());
 	}
 }
 function generate_reviews_widget_code($product) {
@@ -131,7 +134,7 @@ function wc_yotpo_show_qna_widget() {
 	$yotpo_settings = get_option('yotpo_settings',wc_yotpo_get_default_settings());
 	$qna_widget_id = $yotpo_settings['v3_widgets_ids']['qna'];
 	if($product->get_reviews_allowed() == true && $qna_widget_id) {
-		echo generate_v3_qna_widget_code($product, $qna_widget_id);
+		echo wp_kses(generate_v3_qna_widget_code($product, $qna_widget_id), yotpo_qna_widget_allowed_html());
 	}
 }
 // PROMOTED PRODUCTS WIDGET
@@ -144,9 +147,9 @@ function wc_yotpo_show_promoted_products_widget() {
 	}
 	if(is_product() && $product->get_reviews_allowed() == true) {
 		$product_data = wc_yotpo_get_product_data($product);
-		echo generate_v3_promoted_products_widget_code($promoted_products_widget_id, $product_data['id']);
+		echo wp_kses(generate_v3_promoted_products_widget_code($promoted_products_widget_id, $product_data['id']), yotpo_common_widgets_allowed_html());
 	} else {
-		echo generate_v3_promoted_products_widget_code($promoted_products_widget_id);
+		echo wp_kses(generate_v3_promoted_products_widget_code($promoted_products_widget_id), yotpo_common_widgets_allowed_html());
 	}
 }
 // REVIEWS CAROUSEL WIDGET
@@ -159,9 +162,9 @@ function wc_yotpo_show_reviews_carousel_widget(): void {
 	}
 	if(is_product() && $product->get_reviews_allowed() == true) {
 		$product_data = wc_yotpo_get_product_data($product);
-		echo generate_v3_reviews_carousel_widget_code($reviews_carousel_widget_id, $product_data['id']);
+		echo wp_kses(generate_v3_reviews_carousel_widget_code($reviews_carousel_widget_id, $product_data['id']), yotpo_common_widgets_allowed_html());
 	} else {
-		echo generate_v3_reviews_carousel_widget_code($reviews_carousel_widget_id);
+		echo wp_kses(generate_v3_reviews_carousel_widget_code($reviews_carousel_widget_id), yotpo_common_widgets_allowed_html());
 	}
 }
 // REVIEWS TAB WIDGET
@@ -174,9 +177,9 @@ function wc_yotpo_show_reviews_tab_widget() {
 	}
 	if(is_product() && $product->get_reviews_allowed() == true) {
 		$product_data = wc_yotpo_get_product_data($product);
-		echo generate_v3_reviews_tab_widget_code($reviews_tab_widget_id, $product_data['id']);
+		echo wp_kses(generate_v3_reviews_tab_widget_code($reviews_tab_widget_id, $product_data['id']), yotpo_common_widgets_allowed_html());
 	} else {
-		echo generate_v3_reviews_tab_widget_code($reviews_tab_widget_id);
+		echo wp_kses(generate_v3_reviews_tab_widget_code($reviews_tab_widget_id), yotpo_common_widgets_allowed_html());
 	}
 }
 // CUSTOM WIDGETS
@@ -184,7 +187,7 @@ function wc_yotpo_show_custom_widgets() {
 	global $product;
 	if($product->get_reviews_allowed() == true) {
 		foreach (generate_v3_custom_widgets_code($product) as $widget_code);
-		echo $widget_code;
+		echo wp_kses($widget_code, yotpo_common_widgets_allowed_html());
 	}
 }
 function wc_yotpo_show_main_widget_in_tab($tabs) {
@@ -218,17 +221,17 @@ function wc_yotpo_load_js() {
 }
 function wc_yotpo_show_qa_bottomline() {
 	do_action( 'woocommerce_init' );
-		$product_data = wc_yotpo_get_product_data(wc_get_product());
-		echo "<div class='yotpo QABottomLine'
-				 data-appkey='".$product_data['app_key']."'
-				 data-product-id='".$product_data['id']."'></div>";
+	$product_data = wc_yotpo_get_product_data(wc_get_product());
+	echo "<div class='yotpo QABottomLine'
+				 data-appkey='".esc_attr($product_data['app_key'])."'
+				 data-product-id='".esc_attr($product_data['id'])."'></div>";
 }
 // STAR RATINGS WIDGET
 function wc_yotpo_show_buttomline() {
 	global $product;
 	$show_bottom_line = is_product() ? $product->get_reviews_allowed() == true : true;
 	if($show_bottom_line) {
-		echo generate_star_ratings_widget_code();
+		echo wp_kses(generate_star_ratings_widget_code(), yotpo_star_ratings_widgets_allowed_html());
 	}
 }
 function generate_star_ratings_widget_code() {
@@ -278,7 +281,7 @@ function get_specs_data($product) {
 	return $specs_data;
 }
 function wc_yotpo_get_shop_domain() {
-	return parse_url(get_bloginfo('url'),PHP_URL_HOST);
+	return wp_parse_url(get_bloginfo('url'),PHP_URL_HOST);
 }
 function wc_yotpo_remove_native_review_system($open, $post_id) {
 	if(get_post_type($post_id) == 'product') {
@@ -288,33 +291,33 @@ function wc_yotpo_remove_native_review_system($open, $post_id) {
 }
 function wc_yotpo_map($order_id) {
 	do_action( 'woocommerce_init' );
-		$order = wc_get_order($order_id);
-		$orderStatus = 'wc-' . $order->get_status();
-		$yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_default_settings());
-		ytdbg(($orderStatus.' should be '.$yotpo_settings['yotpo_order_status']), "Order #".$order_id." status changed to");
-		if ($orderStatus === $yotpo_settings['yotpo_order_status']) {
-			ytdbg('', "Order #".$order_id." submission starting...");
-				$secret = $yotpo_settings['secret'];
-				$app_key = $yotpo_settings['app_key'];
-				if (!empty($app_key) && !empty($secret) && wc_yotpo_compatible()) {
-						try {
-								$purchase_data = wc_yotpo_get_single_map_data($order_id);
-								if (!is_null($purchase_data) && is_array($purchase_data)) {
-										require_once(plugin_dir_path(__FILE__) . 'lib/yotpo-api/Yotpo.php');
-										$yotpo_api = new Yotpo($app_key, $secret);
-										$get_oauth_token_response = $yotpo_api->get_oauth_token();
-										if (!empty($get_oauth_token_response) && !empty($get_oauth_token_response['access_token'])) {
-												$purchase_data['utoken'] = $get_oauth_token_response['access_token'];
-												$purchase_data['platform'] = 'woocommerce';
-												$response = $yotpo_api->create_purchase($purchase_data);
-												ytdbg($response['code'].' '.$response['message'], "Order #".$order_id." Submitted with response");
-										}
-								}
-						} catch (Exception $e) {
-								error_log($e->getMessage());
-						}
+	$order = wc_get_order($order_id);
+	$orderStatus = 'wc-' . $order->get_status();
+	$yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_default_settings());
+	ytdbg(($orderStatus.' should be '.$yotpo_settings['yotpo_order_status']), "Order #".$order_id." status changed to");
+	if ($orderStatus === $yotpo_settings['yotpo_order_status']) {
+		ytdbg('', "Order #".$order_id." submission starting...");
+		$secret = $yotpo_settings['secret'];
+		$app_key = $yotpo_settings['app_key'];
+		if (!empty($app_key) && !empty($secret) && wc_yotpo_compatible()) {
+			try {
+				$purchase_data = wc_yotpo_get_single_map_data($order_id);
+				if (!is_null($purchase_data) && is_array($purchase_data)) {
+					require_once(plugin_dir_path(__FILE__) . 'lib/yotpo-api/Yotpo.php');
+					$yotpo_api = new Yotpo($app_key, $secret);
+					$get_oauth_token_response = $yotpo_api->get_oauth_token();
+					if (!empty($get_oauth_token_response) && !empty($get_oauth_token_response['access_token'])) {
+						$purchase_data['utoken'] = $get_oauth_token_response['access_token'];
+						$purchase_data['platform'] = 'woocommerce';
+						$response = $yotpo_api->create_purchase($purchase_data);
+						ytdbg($response['code'].' '.$response['message'], "Order #".$order_id." Submitted with response");
+					}
 				}
+			} catch (Exception $e) {
+				error_log($e->getMessage());
+			}
 		}
+	}
 }
 function wc_yotpo_get_single_map_data($order_id) {
 	do_action( 'woocommerce_init' );
@@ -322,7 +325,7 @@ function wc_yotpo_get_single_map_data($order_id) {
 	$data = null;
 	if(!is_null($order->get_id())) {
 		$data = array();
-		$data['order_date'] = date('Y-m-d H:i:s', strtotime($order->get_date_created()));
+		$data['order_date'] = gmdate('Y-m-d H:i:s', strtotime($order->get_date_created()));
 		if (!empty($order->get_billing_email()) && !preg_match('/\d$/', $order->get_billing_email())) { $data['email'] = $order->get_billing_email(); } else { return; }
 		if (!empty($order->get_billing_first_name())) { $data['customer_name'] = $order->get_billing_first_name().' '.$order->get_billing_last_name(); } else { return; }
 		$data['order_id'] = $order_id;
@@ -332,23 +335,23 @@ function wc_yotpo_get_single_map_data($order_id) {
 		if(empty($order->get_items())) { ytdbg('','No Products'); return; }
 		foreach ($order->get_items() as $product) {
 			if ($product['product_id'] == "0") { ytdbg('','Invalid product - ID 0'); return; }
-						$_product = wc_get_product($product['product_id']);
-						if(is_object($_product)){
-								$product_data = array();
-								$product_data['url'] = get_permalink($product['product_id']);
-								$product_data['name'] = $product['name'];
-								$product_data['image'] = wc_yotpo_get_product_image_url($product['product_id']);
-								$product_data['description'] = wp_strip_all_tags($_product->get_description());
-								$product_data['price'] = $_product->get_price();
-								$specs_data = array();
-								if($_product->get_sku()){ $specs_data['external_sku'] =$_product->get_sku();}
-								if($_product->get_attribute('upc')){ $specs_data['upc'] =$_product->get_attribute('upc');}
-								if($_product->get_attribute('isbn')){ $specs_data['isbn'] = $_product->get_attribute('isbn');}
-								if($_product->get_attribute('brand')){ $specs_data['brand'] = $_product->get_attribute('brand');}
-								if($_product->get_attribute('mpn')){ $specs_data['mpn'] =$_product->get_attribute('mpn');}
-								if(!empty($specs_data)){ $product_data['specs'] = $specs_data;  }
-								ytdbg($product_data['name'].", Descr. length: ".strlen($product_data['description']).", ID: ".$product['product_id'] .", Specs: ".implode(' / ', $specs_data), "\tProduct:", false);
-						} else { ytdbg('','Invalid product - Not an Object'); return; }
+			$_product = wc_get_product($product['product_id']);
+			if(is_object($_product)){
+				$product_data = array();
+				$product_data['url'] = get_permalink($product['product_id']);
+				$product_data['name'] = $product['name'];
+				$product_data['image'] = wc_yotpo_get_product_image_url($product['product_id']);
+				$product_data['description'] = wp_strip_all_tags($_product->get_description());
+				$product_data['price'] = $_product->get_price();
+				$specs_data = array();
+				if($_product->get_sku()){ $specs_data['external_sku'] =$_product->get_sku();}
+				if($_product->get_attribute('upc')){ $specs_data['upc'] =$_product->get_attribute('upc');}
+				if($_product->get_attribute('isbn')){ $specs_data['isbn'] = $_product->get_attribute('isbn');}
+				if($_product->get_attribute('brand')){ $specs_data['brand'] = $_product->get_attribute('brand');}
+				if($_product->get_attribute('mpn')){ $specs_data['mpn'] =$_product->get_attribute('mpn');}
+				if(!empty($specs_data)){ $product_data['specs'] = $specs_data;  }
+				ytdbg($product_data['name'].", Descr. length: ".strlen($product_data['description']).", ID: ".$product['product_id'] .", Specs: ".implode(' / ', $specs_data), "\tProduct:", false);
+			} else { ytdbg('','Invalid product - Not an Object'); return; }
 			$products_arr[$product['product_id']] = $product_data;
 		}
 		$data['products'] = $products_arr;
@@ -389,7 +392,7 @@ function wc_yotpo_get_past_orders_crud() {
 		'paginate' => false
 	);
 	$args['status'] = $yotpo_settings['yotpo_order_status'];
-	$args['date_created'] = '>' . date('Y-m-d', strtotime('-90 days'));
+	$args['date_created'] = '>' . gmdate('Y-m-d', strtotime('-90 days'));
 
 	$orders_from_db = wc_get_orders( $args );
 
@@ -447,17 +450,17 @@ function wc_yotpo_get_past_orders_legacy() {
 	return $orders;
 }
 function wc_yotpo_past_order_time_query( $where = '' ) {
-	$where .= " AND post_date > '" . date('Y-m-d', strtotime('-90 days')) . "'";
+	$where .= " AND post_date > '" . gmdate('Y-m-d', strtotime('-90 days')) . "'";
 	return $where;
 }
 function wc_yotpo_send_past_orders() {
 	ytdbg('', 'Submit Past Orders Start -------------------------------------------------------------------');
-		$yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_default_settings());
+	$yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_default_settings());
 	if (!empty($yotpo_settings['app_key']) && !empty($yotpo_settings['secret'])) {
 		$past_orders = wc_yotpo_get_past_orders();
-		ytdbg("", "\tGot ".count($past_orders)." batches, sending...");
-		$is_success = true;
 		if(!is_null($past_orders) && is_array($past_orders)) {
+			ytdbg("", "\tGot ".count($past_orders)." batches, sending...");
+			$is_success = true;
 			$yotpo_api = new Yotpo($yotpo_settings['app_key'], $yotpo_settings['secret']);
 			$get_oauth_token_response = $yotpo_api->get_oauth_token();
 			if(!empty($get_oauth_token_response) && !empty($get_oauth_token_response['access_token'])) {
@@ -472,15 +475,15 @@ function wc_yotpo_send_past_orders() {
 							wc_yotpo_display_message($message, true);
 						} else { ytdbg($response['code']." ".$response['message'], "\tBatch ".$index." sent successfully with response"); }
 					}
-					if ($is_success) {
-						wc_yotpo_display_message('Past orders sent successfully' , false);
-						ytdbg('', 'Submit Past Orders End -------------------------------------------------------------------');
-						$yotpo_settings['show_submit_past_orders'] = false;
-						update_option('yotpo_settings', $yotpo_settings);
-					}
+				if ($is_success) {
+					wc_yotpo_display_message('Past orders sent successfully' , false);
+					ytdbg('', 'Submit Past Orders End -------------------------------------------------------------------');
+					$yotpo_settings['show_submit_past_orders'] = false;
+					update_option('yotpo_settings', $yotpo_settings);
+				}
 			}
 			else {
-					ytdbg("", "failed creating utoken");
+				ytdbg("", "failed creating utoken");
 			}
 		}
 		else {
@@ -496,20 +499,19 @@ function wc_yotpo_conversion_track($order_id) {
 	$order = new WC_Order($order_id);
 	$currency = wc_yotpo_get_order_currency($order);
 
-	$conversion_params = "app_key="      .$yotpo_settings['app_key'].
-									"&order_id="    .$order_id.
-									"&order_amount=".$order->get_total().
-									"&order_currency="  .$currency;
-	$APP_KEY = $yotpo_settings['app_key'];
-	$DATA = "yotpoTrackConversionData = {orderId: ".$order_id.", orderAmount: ".$order->get_total().", orderCurrency: '".$currency."'}";
-	$DATA_SCRIPT = "<script>".$DATA."</script>";
-	$IMG = "<img
-		src='https://api.yotpo.com/conversion_tracking.gif?$conversion_params'
-	width='1'
-	height='1'></img>";
-	$NO_SCRIPT = "<noscript>".$IMG."</noscript>";
-	echo $DATA_SCRIPT;
-	echo $NO_SCRIPT;
+	$conversion_params = "app_key=" . esc_attr($yotpo_settings['app_key']) .
+		"&order_id=" . esc_attr($order_id) .
+		"&order_amount=" . esc_attr($order->get_total()) .
+		"&order_currency=" . esc_attr($currency);
+
+	$APP_KEY = esc_js($yotpo_settings['app_key']);
+	$DATA = "yotpoTrackConversionData = {orderId: " . esc_js($order_id) . ", orderAmount: " . esc_js($order->get_total()) . ", orderCurrency: '" . esc_js($currency) . "'}";
+	$DATA_SCRIPT = "<script>" . $DATA . "</script>";
+	$IMG = "<img src='https://api.yotpo.com/conversion_tracking.gif?" . esc_url($conversion_params) . "' width='1' height='1' />";
+	$NO_SCRIPT = "<noscript>" . wp_kses_post($IMG) . "</noscript>";
+
+	echo wp_kses_post($DATA_SCRIPT);
+	echo wp_kses_post($NO_SCRIPT);
 }
 function wc_yotpo_admin_styles($hook) {
 	if($hook == 'toplevel_page_woocommerce-yotpo-settings-page') {
@@ -550,20 +552,35 @@ function wc_declare_hops_support() {
 		\Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility( 'custom_order_tables', __FILE__, true );
 	}
 }
-function ytdbg( $msg, $name = '', $date = true) {
-	$yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_default_settings());
-	if (!$yotpo_settings['debug_mode']) { return; }
-		$trace = debug_backtrace();
-		$name = ( '' == $name ) ? $trace[1]['function'] : $name;
-		$error_dir = plugin_dir_path( __FILE__ )."yotpo_debug.log";
-		$msg = print_r( $msg, true );
-		if ($date) {
-			$log = "[". date("m/d/Y @ g:i:sA", time()) . "] " . $name .' '. $msg . "\n";
-		} else {
-			$log = $name .' '. $msg . "\n";
-		}
-		$fh = fopen($error_dir, 'a+');
-		fwrite($fh, $log);
-		fclose($fh);
+function ytdbg( $msg, $name = '', $date = true ) {
+	$yotpo_settings = get_option( 'yotpo_settings', wc_yotpo_get_default_settings() );
+	if ( ! $yotpo_settings['debug_mode'] ) {
+		return;
+	}
+
+	$trace = debug_backtrace();
+	$name = ( '' === $name ) ? $trace[1]['function'] : $name;
+	$error_dir = plugin_dir_path( __FILE__ ) . "yotpo_debug.log";
+	$msg = print_r( $msg, true );
+
+	if ( $date ) {
+		$log = "[" . gmdate( "m/d/Y @ g:i:sA", time() ) . "] " . $name . ' ' . $msg . "\n";
+	} else {
+		$log = $name . ' ' . $msg . "\n";
+	}
+
+	// Use WP_Filesystem
+	global $wp_filesystem;
+	if ( ! function_exists( 'WP_Filesystem' ) ) {
+		require_once ABSPATH . 'wp-admin/includes/file.php';
+	}
+
+	WP_Filesystem();
+
+	// Write to file
+	if ( $wp_filesystem->exists( $error_dir ) || $wp_filesystem->put_contents( $error_dir, '', FS_CHMOD_FILE ) ) {
+		$existing_log = $wp_filesystem->get_contents( $error_dir );
+		$wp_filesystem->put_contents( $error_dir, $existing_log . $log, FS_CHMOD_FILE );
+	}
 }
 ob_start('fatal_error_handler');
