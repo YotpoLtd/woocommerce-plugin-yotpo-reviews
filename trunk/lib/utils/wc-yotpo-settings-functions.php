@@ -98,8 +98,8 @@ function wc_proccess_yotpo_settings() {
 }
 
 function wc_display_yotpo_register() {
-  $email = isset($_POST['yotpo_user_email']) ? $_POST['yotpo_user_email'] : '';
-  $user_name = isset($_POST['yotpo_user_name']) ? $_POST['yotpo_user_name'] : '';
+  $email = isset($_POST['yotpo_user_email']) ? sanitize_email($_POST['yotpo_user_email']) : '';
+  $user_name = isset($_POST['yotpo_user_name']) ? sanitize_user($_POST['yotpo_user_name']) : '';
   $register_html = "<div class='wrap'><h2>Yotpo Registration</h2>
   <form method='post'>
   <table class='form-table'>"
