@@ -23,59 +23,43 @@ class Yotpo {
         }
     }
 
-	protected function set_request_method($method, $vars) {
-        switch (strtoupper($method)) {
-            case 'HEAD':
-                curl_setopt($this->request, CURLOPT_NOBODY, true);
-                break;
-            case 'GET':
-                curl_setopt($this->request, CURLOPT_HTTPGET, true);
-                break;
-            case 'POST':
-            	curl_setopt($this->request, CURLOPT_POSTFIELDS, $vars);
-            	curl_setopt($this->request, CURLOPT_HTTPHEADER, array('Content-Type: application/json', 'Content-length: '.strlen($vars)));            	
-                curl_setopt($this->request, CURLOPT_POST, true);
-                break;
-            default:
-                curl_setopt($this->request, CURLOPT_CUSTOMREQUEST, $method);
+    protected function request($method, $url, $vars = array()) {
+        if (!empty($vars)) {
+            $vars = self::clean_array($vars);
         }
-    }
-    
-	protected function set_request_options($url, $vars) {
-        curl_setopt($this->request, CURLOPT_URL, $url);        
-        
-        # Set some default CURL options
-        curl_setopt($this->request, CURLOPT_HEADER, false);
-        curl_setopt($this->request, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($this->request, CURLOPT_USERAGENT, 'Yotpo-Php');
-        curl_setopt($this->request, CURLOPT_FOLLOWLOCATION, true);
-        curl_setopt($this->request, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($this->request, CURLOPT_SSL_VERIFYHOST, false);
-        curl_setopt($this->request, CURLOPT_CONNECTTIMEOUT ,self::TIMEOUT);
-    }
-	
-    function request($method, $url, $vars = array()) {
-    	if (!empty($vars)) $vars = self::clean_array($vars);
-    	$url = self::$base_uri . $url;
+
+        $url = self::$base_uri . $url;
         $this->error = '';
-        $this->request = curl_init();
+
+        $args = [
+          'method'    => strtoupper($method),
+          'timeout'   => self::TIMEOUT,
+          'headers'   => [
+            'User-Agent' => 'Yotpo-Php',
+          ],
+          'sslverify' => false, // Equivalent to CURLOPT_SSL_VERIFYPEER & VERIFYHOST = false
+        ];
+
         if (is_array($vars)) {
-        	if($method == 'POST') {
-        		$vars = json_encode($vars);
-        	}
-        	else {
-        		$vars = http_build_query($vars, '', '&');	
-        	}        	
+            if ($method === 'POST') {
+                $args['body'] = wp_json_encode($vars);
+                $args['headers']['Content-Type'] = 'application/json';
+                $args['headers']['Content-Length'] = strlen($args['body']);
+            } else {
+                $url = add_query_arg($vars, $url);
+            }
         }
-        
-        $this->set_request_method($method, $vars);
-        $this->set_request_options($url, $vars);
-        
-        $response = curl_exec($this->request);
-        
-        curl_close($this->request);
-        
-        return self::process_response($response);
+
+        $response = wp_remote_request($url, $args);
+
+        if (is_wp_error($response)) {
+            $this->error = $response->get_error_message();
+            return false;
+        }
+
+        $response_body = wp_remote_retrieve_body($response);
+
+        return self::process_response($response_body);
     }
 
     function get_widget_instances() {
