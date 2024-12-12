@@ -104,101 +104,112 @@ function yotpo_settings_allowed_html() {
 function yotpo_allowed_register_html() {
   return array(
     'div' => array(
-        'class' => array(),
-        'id' => array(),
+      'class' => array(),
+      'id' => array(),
     ),
     'h2' => array(),
     'form' => array(
-        'method' => array(),
+      'method' => array(),
     ),
     'table' => array(
-        'class' => array(),
+      'class' => array(),
     ),
     'fieldset' => array(),
     'h2' => array(
-        'class' => array(),
+      'class' => array(),
     ),
     'tr' => array(
-        'valign' => array(),
+      'valign' => array(),
     ),
     'th' => array(
-        'scope' => array(),
+      'scope' => array(),
     ),
     'td' => array(),
     'input' => array(
-        'type' => array(),
-        'name' => array(),
-        'value' => array(),
-        'class' => array(),
+      'type' => array(),
+      'name' => array(),
+      'value' => array(),
+      'class' => array(),
     ),
     'a' => array(
-        'href' => array(),
-        'target' => array(),
+      'href' => array(),
+      'target' => array(),
     ),
     'p' => array(
-        'class' => array(),
+      'class' => array(),
     ),
   );
 }
 
 function yotpo_reviews_widget_allowed_html() {
-    return array(
-        'div' => array(
-            'class' => array(),
-            'data-product-id' => array(),
-            'data-name' => array(),
-            'data-url' => array(),
-            'data-image-url' => array(),
-            'data-description' => array(),
-            'data-lang' => array(),
-            'data-price' => array(),
-            'data-currency' => array(),
-            'data-yotpo-instance-id' => array(),
-            'data-yotpo-product-id' => array(),
-            'data-yotpo-name' => array(),
-            'data-yotpo-url' => array(),
-            'data-yotpo-image-url' => array(),
-            'data-yotpo-price' => array(),
-            'data-yotpo-currency' => array(),
-            'data-yotpo-description' => array(),
-        ),
-    );
+  return array(
+    'div' => array(
+      'class' => array(),
+      'data-product-id' => array(),
+      'data-name' => array(),
+      'data-url' => array(),
+      'data-image-url' => array(),
+      'data-description' => array(),
+      'data-lang' => array(),
+      'data-price' => array(),
+      'data-currency' => array(),
+      'data-yotpo-instance-id' => array(),
+      'data-yotpo-product-id' => array(),
+      'data-yotpo-name' => array(),
+      'data-yotpo-url' => array(),
+      'data-yotpo-image-url' => array(),
+      'data-yotpo-price' => array(),
+      'data-yotpo-currency' => array(),
+      'data-yotpo-description' => array(),
+    ),
+  );
 }
 
 function yotpo_qna_widget_allowed_html() {
-    return array(
-        'div' => array(
-            'class' => array(),
-            'data-yotpo-instance-id' => array(),
-            'data-yotpo-product-id' => array(),
-            'data-yotpo-name' => array(),
-            'data-yotpo-url' => array(),
-            'data-yotpo-image-url' => array(),
-            'data-yotpo-description' => array(),
-        ),
-    );
+  return array(
+    'div' => array(
+      'class' => array(),
+      'data-yotpo-instance-id' => array(),
+      'data-yotpo-product-id' => array(),
+      'data-yotpo-name' => array(),
+      'data-yotpo-url' => array(),
+      'data-yotpo-image-url' => array(),
+      'data-yotpo-description' => array(),
+    ),
+  );
 }
 
 function yotpo_common_widgets_allowed_html() {
-    return array(
-        'div' => array(
-            'class' => array(),
-            'data-yotpo-instance-id' => array(),
-            'data-yotpo-product-id' => array(),
-        ),
-    );
+  return array(
+    'div' => array(
+      'class' => array(),
+      'data-yotpo-instance-id' => array(),
+      'data-yotpo-product-id' => array(),
+    ),
+  );
 }
 
 function yotpo_star_ratings_widgets_allowed_html() {
-    return array(
-        'script' => array(),
-        'div' => array(
-            'class' => array(),
-            'data-product-id' => array(),
-            'data-url' => array(),
-            'data-lang' => array(),
-            'data-yotpo-instance-id' => array(),
-            'data-yotpo-product-id' => array(),
-        ),
-    );
+  return array(
+    'script' => array(),
+    'div' => array(
+      'class' => array(),
+      'data-product-id' => array(),
+      'data-url' => array(),
+      'data-lang' => array(),
+      'data-yotpo-instance-id' => array(),
+      'data-yotpo-product-id' => array(),
+    ),
+  );
 }
+
+function yotpo_noscript_pixel_allowed_html() {
+  return array(
+    'noscript' => array(),
+    'img' => array(
+      'src' => array(),
+      'width' => array(),
+      'height' => array(),
+      )
+    );
+  }
