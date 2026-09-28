@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "matching": "If a path matches more than one tier's globs, the most restrictive tier applies: human-required > review-required > auto-safe.",
+  "tiers": {
+    "human-required": {
+      "description": "Agent CANNOT modify without a human. Credentials, merchant data, release metadata or published. Document for CODEOWNERS and agent instructions.",
+      "paths": [
+        "trunk/lib/yotpo-api/Yotpo.php",
+        "trunk/templates/wc-yotpo-settings.php",
+        "trunk/lib/utils/wc-yotpo-settings-functions.php",
+        "trunk/lib/utils/allowed-html-functions.php",
+        "trunk/uninstall.php",
+        "trunk/readme.txt",
+        "changelog",
+        ".github/workflows/**",
+        ".agents/adlc/**",
+        ".claude/**",
+        "CODEOWNERS"
+      ]
+    },
+    "review-required": {
+      "description": "Agent can modify but the PR requires human approval, including agent instructions.",
+      "paths": [
+        "trunk/**",
+        "assets/**",
+        "CLAUDE.md",
+        "AGENTS.md",
+        ".github/pull_request_template.md"
+      ]
+    },
+    "auto-safe": {
+      "description": "Agent can freely modify. Auto-merge eligible.",
+      "paths": [
+        "docs/**",
+        "**/*.md",
+        ".gitignore"
+      ]
+    }
+  }
+}
