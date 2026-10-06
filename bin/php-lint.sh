@@ -16,7 +16,7 @@ status=0
 for php in ${PHP_BINARIES:-php}; do
 	version=$("$php" -r 'echo PHP_VERSION;')
 	issues=$(find trunk -name '*.php' -print0 \
-		| xargs -0 -n1 "$php" -d error_reporting=E_ALL -d display_errors=stderr -l 2>&1 >/dev/null \
+		| xargs -0 -n1 -I{} sh -c '"$0" -d error_reporting=E_ALL -d display_errors=stderr -l "$1" || true' "$php" {} 2>&1 >/dev/null \
 		| grep -v '^$' | sort -u)
 	if [ -n "$issues" ]; then
 		echo "PHP $version: issues found"
