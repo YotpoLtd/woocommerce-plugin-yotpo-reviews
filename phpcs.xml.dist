@@ -12,6 +12,14 @@
 	<arg name="parallel" value="8"/>
 	<arg value="s"/>
 
+	<!--
+		These two values are the tooling/dev-process floor targeted for the upcoming 1.8.3
+		work, not the plugin's currently-published minimums. They intentionally differ, for
+		now, from trunk/readme.txt's "Minimum Requirements" section (PHP 5.2.0+ / WordPress
+		3.5.1+), which still reflects what's actually shipped on WordPress.org. Expect the two
+		to be reconciled when the plugin's real minimums are bumped as part of 1.8.3 — until
+		then, neither value should be read as a stale or wrong duplicate of the other.
+	-->
 	<!-- Lowest WordPress version we actually support (drives deprecated-function checks). -->
 	<config name="minimum_wp_version" value="6.0"/>
 	<!-- Lowest PHP version we actually support. -->
