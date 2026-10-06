@@ -40,6 +40,25 @@ svn add * --force
 (info) More details on how to use svn you can find here
 
 
+# Development
+
+Only `trunk/` is shipped to WordPress.org. Everything at the repo root (`composer.json`, `phpcs.xml.dist`, `bin/`, `test-data/`) is development tooling.
+
+Install the tools once (requires PHP 7.4+ and Composer):
+
+    composer install
+
+Run these before opening a PR:
+
+| Check | Command | What it catches |
+|---|---|---|
+| PHP lint | `composer lint` | Syntax errors and deprecations. Set `PHP_BINARIES` to test several PHP versions, e.g. `PHP_BINARIES="php7.4 php8.4" composer lint` |
+| PHPCS | `composer phpcs` | Security (escaping, nonces, sanitization), PHP 7.4+ compatibility, unprefixed globals. Rules are in `phpcs.xml.dist` |
+| Plugin Check | `wp plugin check yotpo-social-reviews-for-woocommerce` | WordPress.org directory requirements (readme headers, direct file access, etc.). Run inside a WordPress install with the [Plugin Check](https://wordpress.org/plugins/plugin-check/) plugin active |
+
+`test-data/yotpo-test-products.csv` is a WooCommerce product import (Products → Import) with edge cases for testing the widgets: names with `&` and quotes, a product with reviews disabled, a variable product, a product without an image, and SKU/UPC/MPN/ISBN attributes.
+
+
 ---
 https://www.yotpo.com/
 

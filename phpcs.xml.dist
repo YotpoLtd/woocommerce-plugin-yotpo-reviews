@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<ruleset name="Yotpo WooCommerce">
+	<description>
+		Security, correctness and PHP-compatibility checks for the shipped plugin (trunk/).
+		Formatting sniffs (WordPress-Core whitespace, braces, comments) are intentionally not
+		enabled yet, so the report stays focused on real defects.
+	</description>
+
+	<file>trunk</file>
+	<arg name="extensions" value="php"/>
+	<arg name="basepath" value="."/>
+	<arg name="parallel" value="8"/>
+	<arg value="s"/>
+
+	<!-- Lowest WordPress version we actually support (drives deprecated-function checks). -->
+	<config name="minimum_wp_version" value="6.0"/>
+	<!-- Lowest PHP version we actually support. -->
+	<config name="testVersion" value="7.4-"/>
+
+	<rule ref="PHPCompatibilityWP"/>
+
+	<rule ref="WordPress.Security"/>
+	<rule ref="WordPress.DB"/>
+	<rule ref="WordPress.CodeAnalysis"/>
+	<rule ref="WordPress.WP">
+		<!-- The plugin has no translations yet; enable once a text domain is added. -->
+		<exclude name="WordPress.WP.I18n"/>
+	</rule>
+	<rule ref="WordPress.PHP">
+		<exclude name="WordPress.PHP.YodaConditions"/>
+		<!-- Deprecated in WPCS 3.3; PHPCompatibility covers it. -->
+		<exclude name="WordPress.PHP.POSIXFunctions"/>
+	</rule>
+
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+		<properties>
+			<property name="prefixes" type="array">
+				<element value="wc_yotpo"/>
+				<element value="yotpo"/>
+			</property>
+		</properties>
+	</rule>
+</ruleset>
