@@ -95,7 +95,7 @@ function wc_display_yotpo_settings($success_type = false) {
                         <th scope='row'>Enable debug mode</th>
                         <td><input type='checkbox' name='debug_mode' value='1' " . checked(1, $yotpo_settings['debug_mode'], false) . " /></td>
                         <td>
-                            <p class='description'>Enabling debug mode will output all plugin actions into a private log file under <i>wp-content/uploads/yotpo/</i>, output the log here and show all the settings.</p>
+                            <p class='description'>Enabling debug mode will output all plugin actions into a private log file under <i>wp-content/uploads/yotpo-social-reviews-for-woocommerce/</i>, output the log here and show all the settings.</p>
                         </td>
                     </tr>
                     <tr valign='top'>
