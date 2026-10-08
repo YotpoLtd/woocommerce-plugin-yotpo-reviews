@@ -15,6 +15,12 @@ function wc_yotpo_admin_settings() {
 function wc_yotpo_redirect() {
 	if ( get_option('wc_yotpo_just_installed', false)) {
 		delete_option('wc_yotpo_just_installed');
+		// wc_yotpo_init() never registers the settings page (admin_menu -> wc_yotpo_admin_settings)
+		// when WooCommerce is inactive, so redirecting there would land on an unregistered
+		// menu slug and produce an access-denied error instead of a no-op.
+		if ( ! class_exists( 'WooCommerce' ) ) {
+			return;
+		}
 		wp_redirect( ( ( is_ssl() || force_ssl_admin() ) ? str_replace( 'http:', 'https:', admin_url( 'admin.php?page=woocommerce-yotpo-settings-page' ) ) : str_replace( 'https:', 'http:', admin_url( 'admin.php?page=woocommerce-yotpo-settings-page' ) ) ) );
 		exit;
 	}	
