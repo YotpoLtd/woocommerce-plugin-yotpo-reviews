@@ -6,7 +6,7 @@ Installation guide - https://support.yotpo.com/docs/woocommerce-installing-yotpo
 
 # Releasing a new version to WordPress.org
 
-GitHub `master` is the source of truth. Only `trunk/` is shipped.
+GitHub `master` is the source of truth. The plugin code that ships is `trunk/`; the WordPress.org listing images are synced separately (step 4).
 
 1. **Release PR on GitHub.** In one PR, update:
    - `trunk/wc_yotpo.php`: `Version` in the plugin header
@@ -23,7 +23,15 @@ GitHub `master` is the source of truth. Only `trunk/` is shipped.
 
         rsync -av --delete --exclude=.svn <path-to-this-repo>/trunk/ yotpo-svn/trunk/
 
-4. **Register new and deleted files with SVN:**
+4. **Sync the listing images into SVN `assets/`.** WordPress.org reads the icon, banner and screenshots from SVN `assets/`, not from `trunk/`. In this repo the icons and screenshots are in `assets/` and the banner is `trunk/banner-772x250.jpg`:
+
+        mkdir -p yotpo-svn/assets
+        cp <path-to-this-repo>/assets/icon-*.png <path-to-this-repo>/assets/screenshot-*.jpg yotpo-svn/assets/
+        cp <path-to-this-repo>/trunk/banner-772x250.jpg yotpo-svn/assets/
+
+   Listing images update the plugin page immediately for every version.
+
+5. **Register new and deleted files with SVN:**
 
         cd yotpo-svn
         svn add --force .
@@ -31,24 +39,22 @@ GitHub `master` is the source of truth. Only `trunk/` is shipped.
 
    `svn add --force .` adds every new file; the loop removes every file that step 3 deleted (`!` entries) and is safe for empty input, paths with spaces and `@` in names. Run `svn status` afterwards: there must be no `?` or `!` entries left before you continue.
 
-5. **Create the version tag.** `Stable tag` in the readme must point to an existing `tags/<version>` folder, otherwise WordPress.org serves `trunk` (which is what happened for every version up to 1.8.2):
+6. **Create the version tag.** `Stable tag` in the readme must point to an existing `tags/<version>` folder, otherwise WordPress.org serves `trunk` (which is what happened for every version up to 1.8.2):
 
         svn cp trunk tags/<version>
 
-6. **Review, then commit** (`svn status` and `svn diff` first):
+7. **Review, then commit** (`svn status` and `svn diff` first):
 
         svn ci -m "Version <version>" --username Yotpo
 
    Credentials: [How to Deploy a new version](https://yotpoent.atlassian.net/wiki/spaces/RD/pages/1098844645/How+to+Deploy+a+new+version)
 
-7. **Verify** the plugin page on WordPress.org shows the new version, and that https://plugins.svn.wordpress.org/yotpo-social-reviews-for-woocommerce/tags/ lists it.
-
-Listing images (icon, banner, screenshots) live in `assets/` at the repo root and go to the SVN `assets/` folder, not `trunk/`. They update the listing immediately for every version.
+8. **Verify** the plugin page on WordPress.org shows the new version, and that https://plugins.svn.wordpress.org/yotpo-social-reviews-for-woocommerce/tags/ lists it.
 
 
 # Development
 
-Only `trunk/` is shipped to WordPress.org. Everything at the repo root (`composer.json`, `phpcs.xml.dist`, `bin/`, `test-data/`) is development tooling.
+Only `trunk/` (plugin code) and the listing images (`assets/`, plus `trunk/banner-772x250.jpg`) reach WordPress.org. Everything else at the repo root (`composer.json`, `phpcs.xml.dist`, `bin/`, `test-data/`) is development tooling.
 
 Install the tools once (requires PHP 7.4+ and Composer):
 
