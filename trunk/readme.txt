@@ -254,3 +254,13 @@ Yes. To connect your social accounts to Yotpo, just log into yotpo.com, and clic
 
 = 1.8.2 - 12/12/2024 =
 * fixed function securing script and noscript content in wc_yotpo.php
+
+= 1.8.3 =
+* Security: TLS certificates are now verified on all Yotpo API calls
+* Security: the Yotpo Dashboard link in the settings no longer auto-logs in; it opens the Yotpo login page, so the app secret is never placed in a URL
+* Security: added nonce checks to Sync widget IDs, Submit past orders and Export reviews
+* Security: the debug log moved to a private folder under wp-content/uploads/yotpo/ and is removed on uninstall
+* Security: review export is streamed to the browser instead of being written to the plugin folder, and guards against spreadsheet formula injection
+* Fixed the debug log viewer and Clear button
+* Syncing or saving v3 widget IDs no longer clears the saved IDs when the Yotpo API cannot be reached
+* Removed the global fatal error output handler; WordPress recovery mode handles fatal errors
