@@ -121,6 +121,7 @@ function wc_yotpo_uninstall() {
 	if(current_user_can( 'activate_plugins' ) && __FILE__ == WP_UNINSTALL_PLUGIN ) {
 		check_admin_referer( 'bulk-plugins' );
 		delete_option('yotpo_settings');
+		wc_yotpo_delete_private_dir();
 	}
 }
 // REVIEWS WIDGET
@@ -623,6 +624,14 @@ function wc_yotpo_prepare_private_dir( $dir ) {
 		}
 	}
 	return true;
+}
+// Removes uploads/yotpo/ (debug log and its guard files); keep in sync with uninstall.php.
+function wc_yotpo_delete_private_dir() {
+	$filesystem = wc_yotpo_filesystem();
+	$dir = dirname( wc_yotpo_debug_log_path() );
+	if ( $filesystem && $filesystem->is_dir( $dir ) ) {
+		$filesystem->delete( $dir, true );
+	}
 }
 function wc_yotpo_read_debug_log() {
 	$filesystem = wc_yotpo_filesystem();
