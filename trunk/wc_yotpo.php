@@ -38,7 +38,7 @@ require plugin_dir_path( __FILE__ ) . 'lib/utils/allowed-html-functions.php';
 
 function wc_yotpo_init() {
 	// Everything below relies on WooCommerce; without it the storefront hooks fatal on is_product().
-	if (!class_exists('WooCommerce')) {
+	if (!wc_yotpo_is_woocommerce_active()) {
 		add_action('admin_notices', 'wc_yotpo_woocommerce_missing_notice');
 		return;
 	}
@@ -218,7 +218,7 @@ function wc_yotpo_show_main_widget_in_tab($tabs) {
 	}
 }
 function wc_yotpo_load_js() {
-	if( class_exists('woocommerce') ) {
+	if( wc_yotpo_is_woocommerce_active() ) {
 		if (use_v3_widgets()) {
 			wp_enqueue_script('yquery', plugins_url('assets/js/v3HeaderScript.js', __FILE__), null, null);
 		} else {
