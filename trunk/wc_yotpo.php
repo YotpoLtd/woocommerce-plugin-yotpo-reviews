@@ -639,13 +639,25 @@ function wc_yotpo_delete_private_dir() {
 		$filesystem->delete( $dir, true );
 	}
 }
+// Returns the log contents (an empty string when the file exists but has no entries), or a WP_Error
+// explaining why the log cannot be read, so the viewer can tell "empty" from "logging is broken".
 function wc_yotpo_read_debug_log() {
 	$filesystem = wc_yotpo_filesystem();
-	$log_file = wc_yotpo_debug_log_path();
-	if ( ! $filesystem || ! $filesystem->exists( $log_file ) ) {
-		return false;
+	if ( ! $filesystem ) {
+		return new WP_Error( 'yotpo_debug_log_filesystem', 'Could not access the filesystem (WP_Filesystem failed to initialise), so the debug log cannot be written or read. Check the file ownership/permissions of wp-content/uploads.' );
 	}
-	return $filesystem->get_contents( $log_file );
+	$log_file = wc_yotpo_debug_log_path();
+	if ( ! $filesystem->exists( $log_file ) ) {
+		if ( ! $filesystem->is_dir( dirname( $log_file ) ) ) {
+			return new WP_Error( 'yotpo_debug_log_directory', 'The log directory wp-content/uploads/yotpo/ does not exist and could not be created. Check that wp-content/uploads is writable.' );
+		}
+		return new WP_Error( 'yotpo_debug_log_missing', 'No log file has been created yet.' );
+	}
+	$contents = $filesystem->get_contents( $log_file );
+	if ( false === $contents ) {
+		return new WP_Error( 'yotpo_debug_log_unreadable', 'The debug log file exists but could not be read. Check its file permissions.' );
+	}
+	return $contents;
 }
 function wc_yotpo_clear_debug_log() {
 	$filesystem = wc_yotpo_filesystem();

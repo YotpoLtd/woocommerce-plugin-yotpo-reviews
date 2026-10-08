@@ -180,7 +180,10 @@ function wc_display_yotpo_settings($success_type = false) {
     echo wp_kses($settings_html, yotpo_settings_allowed_html());
     if (isset($yotpo_settings['debug_mode']) && $yotpo_settings['debug_mode']) {
         echo '<h3>Settings</h3><pre>'.esc_html($settings_dump).'</pre>';
-        if ($debug_log === false || $debug_log === '') {
+        if (is_wp_error($debug_log)) {
+            echo '<h3>Yotpo Debug</h3>
+            <textarea cols=170 rows=15>'.esc_html($debug_log->get_error_message()).'</textarea>';
+        } elseif ($debug_log === '') {
             echo '<h3>Yotpo Debug</h3>
             <textarea cols=170 rows=15>The debug log is empty.</textarea>';
         } else {
