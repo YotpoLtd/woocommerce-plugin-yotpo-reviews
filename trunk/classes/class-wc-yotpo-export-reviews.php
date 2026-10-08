@@ -59,9 +59,21 @@ class Yotpo_Review_Export
 	{
 		$row = array();
 		foreach ($this->getHeadRowValues() as $column) {
-			$row[] = isset($review[$column]) ? $review[$column] : '';
+			$row[] = $this->neutralizeFormula(isset($review[$column]) ? $review[$column] : '');
 		}
 		return $row;
+	}
+
+	/**
+	 * Prefixes cells a spreadsheet would run as a formula (= + - @ tab CR) with a single quote,
+	 * so reviewer-controlled text cannot execute when an admin opens the export in Excel or Sheets.
+	 */
+	protected function neutralizeFormula($value)
+	{
+		if (is_string($value) && $value !== '' && strpbrk($value[0], "=+-@\t\r") !== false) {
+			return "'" . $value;
+		}
+		return $value;
 	}
 
 	protected function getAllReviews()
