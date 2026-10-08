@@ -172,18 +172,6 @@ class Yotpo {
         return $this->post("/apps/$app_key/account_platform", $request);
     }
 
-    public function get_login_url(?array $credentials_hash = null) {
-        $request = array();
-        $request['app_key'] = $app_key = $this->get_app_key($credentials_hash);
-        if (!is_null($credentials_hash) && array_key_exists('secret', $credentials_hash)) {
-            $request['secret'] = $credentials_hash['secret'];
-        } else {
-            $request['secret'] = self::$secret;
-        }
-
-        return $this->get('/users/b2blogin.json', $request);
-    }
-
     public function check_subdomain(array $subdomain_hash) {
         $app_key = $this->get_app_key($subdomain_hash);
         $subdomain = $subdomain_hash['subdomain'];
