@@ -50,15 +50,10 @@ function wc_yotpo_init() {
 	if($is_admin) {
 		if (isset($_GET['download_exported_reviews'])) {
 			if(current_user_can('manage_options')) {
+				check_admin_referer('yotpo_export_reviews');
 				require('classes/class-wc-yotpo-export-reviews.php');
 				$export = new Yotpo_Review_Export();
-				list($file, $errors) = $export->exportReviews();
-				if(is_null($errors)) {
-					ytdbg($file,'Reviews Export Success:');
-					$export->downloadReviewToBrowser($file);
-				} else {
-					ytdbg($errors,'Reviews Export Fail:');
-				}
+				$export->streamReviewsCsv();
 			}
 			exit;
 		}
@@ -580,7 +575,6 @@ function ytdbg( $msg, $name = '', $date = true ) {
 
 	$trace = debug_backtrace();
 	$name = ( '' === $name ) ? $trace[1]['function'] : $name;
-	$error_dir = plugin_dir_path( __FILE__ ) . "yotpo_debug.log";
 	$msg = print_r( $msg, true );
 
 	if ( $date ) {
@@ -589,18 +583,59 @@ function ytdbg( $msg, $name = '', $date = true ) {
 		$log = $name . ' ' . $msg . "\n";
 	}
 
-	// Use WP_Filesystem
+	$filesystem = wc_yotpo_filesystem();
+	$log_file = wc_yotpo_debug_log_path();
+	if ( ! $filesystem || ! wc_yotpo_prepare_private_dir( dirname( $log_file ) ) ) {
+		return;
+	}
+	$existing_log = $filesystem->exists( $log_file ) ? $filesystem->get_contents( $log_file ) : '';
+	$filesystem->put_contents( $log_file, $existing_log . $log, FS_CHMOD_FILE );
+}
+function wc_yotpo_filesystem() {
 	global $wp_filesystem;
 	if ( ! function_exists( 'WP_Filesystem' ) ) {
 		require_once ABSPATH . 'wp-admin/includes/file.php';
 	}
-
-	WP_Filesystem();
-
-	// Write to file
-	if ( $wp_filesystem->exists( $error_dir ) || $wp_filesystem->put_contents( $error_dir, '', FS_CHMOD_FILE ) ) {
-		$existing_log = $wp_filesystem->get_contents( $error_dir );
-		$wp_filesystem->put_contents( $error_dir, $existing_log . $log, FS_CHMOD_FILE );
+	if ( empty( $wp_filesystem ) && ! WP_Filesystem() ) {
+		return null;
+	}
+	return $wp_filesystem;
+}
+// The debug log contains customer names and emails, so it lives outside the plugin folder
+// under an unguessable, per-site file name (the .htaccess below does not apply on nginx).
+function wc_yotpo_debug_log_path() {
+	$upload_dir = wp_upload_dir( null, false );
+	return trailingslashit( $upload_dir['basedir'] ) . 'yotpo/yotpo-debug-' . wp_hash( 'yotpo-debug-log' ) . '.log';
+}
+function wc_yotpo_prepare_private_dir( $dir ) {
+	$filesystem = wc_yotpo_filesystem();
+	if ( ! $filesystem || ! wp_mkdir_p( $dir ) ) {
+		return false;
+	}
+	$guards = array(
+		'index.php' => "<?php\n// Silence is golden.\n",
+		'.htaccess' => "<IfModule mod_authz_core.c>\nRequire all denied\n</IfModule>\n<IfModule !mod_authz_core.c>\nDeny from all\n</IfModule>\n",
+	);
+	foreach ( $guards as $file => $contents ) {
+		$path = trailingslashit( $dir ) . $file;
+		if ( ! $filesystem->exists( $path ) ) {
+			$filesystem->put_contents( $path, $contents, FS_CHMOD_FILE );
+		}
+	}
+	return true;
+}
+function wc_yotpo_read_debug_log() {
+	$filesystem = wc_yotpo_filesystem();
+	$log_file = wc_yotpo_debug_log_path();
+	if ( ! $filesystem || ! $filesystem->exists( $log_file ) ) {
+		return false;
+	}
+	return $filesystem->get_contents( $log_file );
+}
+function wc_yotpo_clear_debug_log() {
+	$filesystem = wc_yotpo_filesystem();
+	$log_file = wc_yotpo_debug_log_path();
+	if ( $filesystem && $filesystem->exists( $log_file ) ) {
+		$filesystem->put_contents( $log_file, '', FS_CHMOD_FILE );
 	}
 }
-ob_start('fatal_error_handler');

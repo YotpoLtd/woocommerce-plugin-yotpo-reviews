@@ -14,6 +14,7 @@ class Yotpo {
     protected static $app_key, $secret, $base_uri = 'https://api.yotpo.com';
     protected static $widgets_url = '/api/v2/widgets';
     protected $request;
+    public $error = '';
 
     public function __construct($app_key = null, $secret = null, $base_uri = null) {
         $this->set_app_key($app_key);
@@ -39,7 +40,9 @@ class Yotpo {
           'headers'   => [
             'User-Agent' => 'Yotpo-Php',
           ],
-          'sslverify' => false, // Equivalent to CURLOPT_SSL_VERIFYPEER & VERIFYHOST = false
+          // Verify TLS certificates (WordPress ships its own CA bundle). These requests carry the
+          // app secret, OAuth tokens and customer names/emails, so they must not be interceptable.
+          'sslverify' => true,
         ];
 
         if (is_array($vars)) {

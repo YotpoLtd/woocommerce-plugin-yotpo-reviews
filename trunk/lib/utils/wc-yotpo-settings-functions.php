@@ -105,7 +105,7 @@ function wc_display_yotpo_register() {
   $register_html = "<div class='wrap'><h2>Yotpo Registration</h2>
   <form method='post'>
   <table class='form-table'>"
-          . wp_nonce_field('yotpo_registration_form') .
+          . wp_nonce_field('yotpo_registration_form', '_wpnonce', true, false) .
           "<fieldset>
       <h2 class='y-register-title'>Fill out the form below and click register to get started with Yotpo.</h2></br></br>    
       <tr valign='top'>
