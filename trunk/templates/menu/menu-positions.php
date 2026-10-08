@@ -1,5 +1,7 @@
 <?php
 
+defined( 'ABSPATH' ) || exit;
+
 function yotpo_order_status_option($yotpo_settings) {
   return "<tr valign='top'>
       <th scope='row'><div>Order Status:</div></th>

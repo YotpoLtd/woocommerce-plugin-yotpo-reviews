@@ -1,4 +1,7 @@
 <?php
+
+defined( 'ABSPATH' ) || exit;
+
 require __DIR__.'/v3_enablers.php';
 
 function version_selector($yotpo_settings) {

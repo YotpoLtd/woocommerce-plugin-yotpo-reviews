@@ -1,5 +1,7 @@
 <?php
 
+defined( 'ABSPATH' ) || exit;
+
 function generate_v3_qna_widget_code($product, $qna_widget_id) {
 	$product_data = wc_yotpo_get_product_data($product);
 	return "<div class='qna yotpo-widget-instance'

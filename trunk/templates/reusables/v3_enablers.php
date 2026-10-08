@@ -1,6 +1,8 @@
 <?php
 
-function v3_enabler($isChecked, string $name, string $text, string $subtext = null): string {
+defined( 'ABSPATH' ) || exit;
+
+function v3_enabler($isChecked, string $name, string $text, ?string $subtext = null): string {
   $additional_info = $subtext
     ? "<p style='margin: unset;font-weight: normal;'>
       " . $subtext . "

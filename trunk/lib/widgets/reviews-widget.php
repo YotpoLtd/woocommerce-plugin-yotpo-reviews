@@ -1,5 +1,7 @@
 <?php
 
+defined( 'ABSPATH' ) || exit;
+
 function generate_v2_reviews_widget_code($product, $currency) {
   $product_data = wc_yotpo_get_product_data($product);
   return "<div class='yotpo yotpo-main-widget'

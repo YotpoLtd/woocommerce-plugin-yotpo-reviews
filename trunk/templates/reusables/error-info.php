@@ -1,5 +1,7 @@
 <?php
 
+defined( 'ABSPATH' ) || exit;
+
 function info_dialog($use_v3_widgets, $widgets_to_customize) {
   return !strlen($widgets_to_customize) || !$use_v3_widgets
     ? ''
