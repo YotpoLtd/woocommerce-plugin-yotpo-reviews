@@ -1,6 +1,6 @@
 {
     "name": "yotpo/woocommerce-plugin",
-    "description": "Development tooling for the Yotpo Social Reviews for WooCommerce plugin. Only trunk/ is shipped to WordPress.org.",
+    "description": "Development tooling for the Yotpo Product Reviews plugin. Only trunk/ is shipped to WordPress.org.",
     "type": "project",
     "license": "GPL-2.0-or-later",
     "require-dev": {
