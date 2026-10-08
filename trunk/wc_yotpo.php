@@ -76,7 +76,7 @@ function wc_yotpo_init() {
 }
 function wc_yotpo_woocommerce_missing_notice() {
 	if (current_user_can('activate_plugins')) {
-		echo '<div class="notice notice-error"><p>' . esc_html('Yotpo Social Reviews requires WooCommerce. Install and activate WooCommerce to use the Yotpo plugin.') . '</p></div>';
+		echo '<div class="notice notice-error"><p>' . esc_html__('Yotpo Social Reviews requires WooCommerce. Install and activate WooCommerce to use the Yotpo plugin.', 'yotpo-social-reviews-for-woocommerce') . '</p></div>';
 	}
 }
 function wc_yotpo_front_end_init() {
