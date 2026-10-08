@@ -204,7 +204,7 @@ For full installation guide, [please click here](https://support.yotpo.com/docs/
 * Fixed a fatal error on every storefront page when WooCommerce is inactive; an admin notice is shown instead
 * Plugin files can no longer be loaded directly from a browser
 * Removed the unneeded cURL requirement
-* Fixed PHP 8.4 deprecation warnings
+* Fixed PHP 8.2 and 8.4 deprecation warnings
 * Security: TLS certificates are now verified on all Yotpo API calls
 * Security: the Yotpo Dashboard link in the settings no longer auto-logs in; it opens the Yotpo login page, so the app secret is never placed in a URL
 * Security: added nonce checks to Sync widget IDs, Submit past orders and Export reviews
