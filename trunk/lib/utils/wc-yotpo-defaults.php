@@ -1,5 +1,7 @@
 <?php
 
+defined( 'ABSPATH' ) || exit;
+
 function wc_yotpo_get_default_settings() {
   return array('app_key' => '',
     'secret' => '',

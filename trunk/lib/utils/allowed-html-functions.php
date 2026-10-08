@@ -1,5 +1,7 @@
 <?php
 
+defined( 'ABSPATH' ) || exit;
+
 function yotpo_nonce_field_allowed_html() {
   return array('input' => array(
     'id' => array(),

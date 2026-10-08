@@ -1,5 +1,7 @@
 <?php
 
+defined( 'ABSPATH' ) || exit;
+
 function use_v3_widgets() {
 	$settings = get_option('yotpo_settings',wc_yotpo_get_default_settings());
 	return $settings['widget_version'] === 'v3';

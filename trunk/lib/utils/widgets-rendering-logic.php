@@ -1,5 +1,7 @@
 <?php
 
+defined( 'ABSPATH' ) || exit;
+
 // FOOTER RENDER
 function v2_product_widgets_render_in_footer() {
 	add_action('woocommerce_after_single_product', 'wc_yotpo_show_reviews_widget', 10);

@@ -1,5 +1,7 @@
 <?php
 
+defined( 'ABSPATH' ) || exit;
+
 function get_yotpo_widget_field_name($widget_type_name) {
   switch ($widget_type_name) {
     case 'ReviewsMainWidget':

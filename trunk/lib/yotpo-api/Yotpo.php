@@ -1,5 +1,7 @@
 <?php
 
+defined( 'ABSPATH' ) || exit;
+
 /**
  * Yotpo PHP inetrface for api.yotpo.com
  *
@@ -167,7 +169,7 @@ class Yotpo {
         return $this->post("/apps/$app_key/account_platform", $request);
     }
 
-    public function get_login_url(array $credentials_hash = null) {
+    public function get_login_url(?array $credentials_hash = null) {
         $request = array();
         $request['app_key'] = $app_key = $this->get_app_key($credentials_hash);
         if (!is_null($credentials_hash) && array_key_exists('secret', $credentials_hash)) {

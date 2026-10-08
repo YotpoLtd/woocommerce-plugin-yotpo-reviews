@@ -1,8 +1,9 @@
 === Yotpo: Product & Photo Reviews for WooCommerce ===
 Contributors: Yotpo
-Tags: reviews, social reviews, woocommerce, woocommerce reviews, woocommerce product reviews, woocommerce extensions, woocommerce plugins, woocommerce addons, woocommerce add-ons, yotpo, yotpo reviews, yotpo social reviews, photo reviews
-Requires at least: 3.5.1
-Tested up to: 6.7
+Tags: reviews, social reviews, woocommerce, woocommerce reviews, woocommerce product reviews
+Requires at least: 6.0
+Tested up to: 7.1
+Requires PHP: 7.4
 Stable tag: 1.8.2
 License: GPLv2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -50,8 +51,8 @@ https://www.youtube.com/watch?v=emYQojcaQqQ&feature=youtu.be
 
 = Minimum Requirements =
 
-* WordPress 3.5.1 or greater
-* PHP version 5.2.0 or greater
+* WordPress 6.0 or greater
+* PHP version 7.4 or greater
 * WooCommerce 3.0 or greater
 
 1. Install Yotpo Social Reviews either via the WordPress.org plugin directory, or by uploading the files to your server

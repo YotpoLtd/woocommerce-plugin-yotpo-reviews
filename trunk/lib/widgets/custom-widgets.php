@@ -1,5 +1,7 @@
 <?php
 
+defined( 'ABSPATH' ) || exit;
+
 // All widgets that are not supported directly should be pasted inside this function
 // as following elements of the returned array.
 function generate_v3_custom_widgets_code($product): array {

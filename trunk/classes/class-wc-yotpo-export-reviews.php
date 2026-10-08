@@ -1,5 +1,7 @@
 <?php
 
+defined( 'ABSPATH' ) || exit;
+
 class Yotpo_Review_Export
 {
 	const ENCLOSURE = '"';

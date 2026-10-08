@@ -6,11 +6,16 @@
 	Version: 1.8.2
 	Author URI: http://www.yotpo.com?utm_source=yotpo_plugin_woocommerce&utm_medium=plugin_page_link&utm_campaign=woocommerce_plugin_page_link
 	Plugin URI: http://www.yotpo.com?utm_source=yotpo_plugin_woocommerce&utm_medium=plugin_page_link&utm_campaign=woocommerce_plugin_page_link
+	Requires at least: 6.0
+	Requires PHP: 7.4
+	Requires Plugins: woocommerce
 	WC requires at least: 3.0
-	WC tested up to: 9.4.2
+	WC tested up to: 11.1
 	License: GPLv2
 	License URI: http://www.gnu.org/licenses/gpl-2.0.html
  */
+defined( 'ABSPATH' ) || exit;
+
 register_activation_hook(   __FILE__, 'wc_yotpo_activation' );
 register_uninstall_hook( __FILE__, 'wc_yotpo_uninstall' );
 register_deactivation_hook( __FILE__, 'wc_yotpo_deactivate' );
@@ -32,6 +37,11 @@ require plugin_dir_path( __FILE__ ) . 'lib/utils/widgets-rendering-logic.php';
 require plugin_dir_path( __FILE__ ) . 'lib/utils/allowed-html-functions.php';
 
 function wc_yotpo_init() {
+	// Everything below relies on WooCommerce; without it the storefront hooks fatal on is_product().
+	if (!class_exists('WooCommerce')) {
+		add_action('admin_notices', 'wc_yotpo_woocommerce_missing_notice');
+		return;
+	}
 	$is_admin = is_admin();
 	if($is_admin) {
 		if (isset($_GET['download_exported_reviews'])) {
@@ -58,6 +68,11 @@ function wc_yotpo_init() {
 			add_action( 'wp_enqueue_scripts', 'wc_yotpo_load_js' );
 			add_action( 'template_redirect', 'wc_yotpo_front_end_init' );
 		}
+	}
+}
+function wc_yotpo_woocommerce_missing_notice() {
+	if (current_user_can('activate_plugins')) {
+		echo '<div class="notice notice-error"><p>' . esc_html('Yotpo Social Reviews requires WooCommerce. Install and activate WooCommerce to use the Yotpo plugin.') . '</p></div>';
 	}
 }
 function wc_yotpo_front_end_init() {
@@ -521,7 +536,8 @@ function wc_yotpo_admin_styles($hook) {
 	wp_enqueue_style('yotpoSideLogoStylesheet', plugins_url('assets/css/side-menu-logo.css', __FILE__));
 }
 function wc_yotpo_compatible() {
-	return version_compare(phpversion(), '5.2.0') >= 0 && function_exists('curl_init');
+	// HTTP calls go through wp_remote_* (since 1.8.0), so cURL is no longer required.
+	return version_compare(phpversion(), '7.4', '>=');
 }
 function wc_yotpo_deactivate() {
 	update_option('woocommerce_enable_review_rating', get_option('native_star_ratings_enabled'));

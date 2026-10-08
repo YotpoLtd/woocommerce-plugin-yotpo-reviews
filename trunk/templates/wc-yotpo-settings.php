@@ -1,4 +1,7 @@
 <?php
+
+defined( 'ABSPATH' ) || exit;
+
 define("LOG_FILE", plugin_dir_path( __FILE__ ).'../yotpo_debug.log');
 require __DIR__.'/../lib/utils/wc-yotpo-settings-functions.php';
 require __DIR__.'/reusables/widgets-settings.php';
@@ -45,12 +48,7 @@ function wc_display_yotpo_admin_page() {
             }
         }
     } else {
-        if (version_compare(phpversion(), '5.2.0') < 0) {
-            echo '<h1>Yotpo plugin requires PHP 5.2.0 above.</h1><br>';
-        }
-        if (!function_exists('curl_init')) {
-            echo '<h1>Yotpo plugin requires cURL library.</h1><br>';
-        }
+        echo '<h1>Yotpo plugin requires PHP 7.4 or above.</h1><br>';
     }
 }
 function wc_display_yotpo_settings($success_type = false) {
