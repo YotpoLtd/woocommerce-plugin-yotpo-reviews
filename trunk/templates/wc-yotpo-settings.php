@@ -191,6 +191,10 @@ function wc_display_yotpo_settings($success_type = false) {
 }
 function wc_proccess_yotpo_widgets_ids_synchronisation() {
     $widgets_instances = get_widget_instances();
+    if (is_wp_error($widgets_instances)) {
+        wc_yotpo_display_message(wc_yotpo_widget_instances_error_message($widgets_instances), true);
+        return;
+    }
     $new_settings = array_replace_recursive(get_option('yotpo_settings', wc_yotpo_get_default_settings()));
     $new_settings['widget_version'] = $_POST['yotpo_widget_version'];
     $new_settings['v3_widgets_ids']['reviews_widget'] = $widgets_instances['reviews_widget'];
