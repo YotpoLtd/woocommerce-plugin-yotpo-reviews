@@ -210,3 +210,11 @@ Paul:
 2024-09-05
 ---
 1) Change default settings of widget version to v3
+
+2026-10-08
+---
+Version 1.8.3
+1) Renamed to Yotpo Product Reviews and refreshed the plugin description.
+2) WordPress.org compliance: tested up to WordPress 7.1, requires WordPress 6.0 / PHP 7.4, requires WooCommerce, direct file access guards.
+3) Security: TLS verification on API calls, no app secret in URLs, nonce checks, debug log and review export moved out of the public plugin folder, removed the global fatal error handler.
+4) Fixes: bulk and WP-CLI activation, product tabs on review-disabled products, Tab Manager filter, no-JS tracking pixel, export permalinks, widget IDs kept when the API fails, PHP 8.2/8.4 deprecations.
