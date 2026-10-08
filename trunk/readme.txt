@@ -259,8 +259,15 @@ Yes. To connect your social accounts to Yotpo, just log into yotpo.com, and clic
 * Security: TLS certificates are now verified on all Yotpo API calls
 * Security: the Yotpo Dashboard link in the settings no longer auto-logs in; it opens the Yotpo login page, so the app secret is never placed in a URL
 * Security: added nonce checks to Sync widget IDs, Submit past orders and Export reviews
-* Security: the debug log moved to a private folder under wp-content/uploads/yotpo/ and is removed on uninstall
+* Security: the debug log moved to a private folder under wp-content/uploads/yotpo-social-reviews-for-woocommerce/ and is removed on uninstall
 * Security: review export is streamed to the browser instead of being written to the plugin folder, and guards against spreadsheet formula injection
 * Fixed the debug log viewer and Clear button
 * Syncing or saving v3 widget IDs no longer clears the saved IDs when the Yotpo API cannot be reached
 * Removed the global fatal error output handler; WordPress recovery mode handles fatal errors
+* Fixed plugin activation failing ("The link you followed has expired") when activated in bulk or with WP-CLI
+* Fixed all product tabs disappearing on products with reviews disabled when the v2 widget is shown in a tab
+* Fixed the WooCommerce Tab Manager integration hiding non-Yotpo tabs
+* Fixed the no-JavaScript conversion tracking pixel URL
+* Exported reviews now include product permalinks instead of ?p=ID links
+* Fixed wc_yotpo_show_custom_widgets() rendering only the last widget
+* Stopped re-firing the woocommerce_init action for every order during order sync

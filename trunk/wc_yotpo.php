@@ -49,13 +49,9 @@ function wc_yotpo_init() {
 	$is_admin = is_admin();
 	if($is_admin) {
 		if (isset($_GET['download_exported_reviews'])) {
-			if(current_user_can('manage_options')) {
-				check_admin_referer('yotpo_export_reviews');
-				require('classes/class-wc-yotpo-export-reviews.php');
-				$export = new Yotpo_Review_Export();
-				$export->streamReviewsCsv();
-			}
-			exit;
+			// admin_init rather than now: permalinks are not set up yet during plugins_loaded,
+			// so exported product URLs came out as ?p=ID.
+			add_action('admin_init', 'wc_yotpo_export_reviews');
 		}
 		include( plugin_dir_path( __FILE__ ) . 'templates/wc-yotpo-settings.php');
 		include(plugin_dir_path( __FILE__ ) . 'lib/yotpo-api/Yotpo.php');
@@ -68,6 +64,15 @@ function wc_yotpo_init() {
 			add_action( 'template_redirect', 'wc_yotpo_front_end_init' );
 		}
 	}
+}
+function wc_yotpo_export_reviews() {
+	if(current_user_can('manage_options')) {
+		check_admin_referer('yotpo_export_reviews');
+		require_once plugin_dir_path( __FILE__ ) . 'classes/class-wc-yotpo-export-reviews.php';
+		$export = new Yotpo_Review_Export();
+		$export->streamReviewsCsv();
+	}
+	exit;
 }
 function wc_yotpo_woocommerce_missing_notice() {
 	if (current_user_can('activate_plugins')) {
@@ -106,9 +111,9 @@ function wc_yotpo_front_end_init() {
 }
 function wc_yotpo_activation() {
 	if(current_user_can( 'activate_plugins' )) {
+		// No nonce check here: WordPress verifies it before running activation hooks, and the
+		// single-plugin nonce this used to check made bulk and WP-CLI activation die.
 		update_option('wc_yotpo_just_installed', true);
-		$plugin = isset( $_REQUEST['plugin'] ) ? $_REQUEST['plugin'] : '';
-		check_admin_referer( "activate-plugin_{$plugin}" );
 		$default_settings = get_option('yotpo_settings', false);
 		if(!is_array($default_settings)) {
 			add_option('yotpo_settings', wc_yotpo_get_default_settings());
@@ -201,8 +206,9 @@ function wc_yotpo_show_reviews_tab_widget() {
 function wc_yotpo_show_custom_widgets() {
 	global $product;
 	if($product->get_reviews_allowed() == true) {
-		foreach (generate_v3_custom_widgets_code($product) as $widget_code);
-		echo wp_kses($widget_code, yotpo_common_widgets_allowed_html());
+		foreach (generate_v3_custom_widgets_code($product) as $widget_code) {
+			echo wp_kses($widget_code, yotpo_common_widgets_allowed_html());
+		}
 	}
 }
 function wc_yotpo_show_main_widget_in_tab($tabs) {
@@ -214,8 +220,10 @@ function wc_yotpo_show_main_widget_in_tab($tabs) {
 			'priority' => 50,
 			'callback' => 'wc_yotpo_show_reviews_widget'
 		);
-		return $tabs;
 	}
+	// Always return the tabs: returning nothing removed every tab (Description etc.) on
+	// products with reviews disabled.
+	return $tabs;
 }
 function wc_yotpo_load_js() {
 	if( wc_yotpo_is_woocommerce_active() ) {
@@ -235,7 +243,6 @@ function wc_yotpo_load_js() {
 	}
 }
 function wc_yotpo_show_qa_bottomline() {
-	do_action( 'woocommerce_init' );
 	$product_data = wc_yotpo_get_product_data(wc_get_product());
 	echo "<div class='yotpo QABottomLine'
 				 data-appkey='".esc_attr($product_data['app_key'])."'
@@ -305,7 +312,6 @@ function wc_yotpo_remove_native_review_system($open, $post_id) {
 	return $open;
 }
 function wc_yotpo_map($order_id) {
-	do_action( 'woocommerce_init' );
 	$order = wc_get_order($order_id);
 	$orderStatus = 'wc-' . $order->get_status();
 	$yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_default_settings());
@@ -335,7 +341,6 @@ function wc_yotpo_map($order_id) {
 	}
 }
 function wc_yotpo_get_single_map_data($order_id) {
-	do_action( 'woocommerce_init' );
 	$order = new WC_Order($order_id);
 	$data = null;
 	if(!is_null($order->get_id())) {
@@ -417,7 +422,7 @@ function wc_yotpo_get_past_orders_crud() {
 
 	$orders = array();
 	foreach ( $orders_from_db as $order ) {
-		$single_order_data = wc_yotpo_get_single_map_data($order->id);
+		$single_order_data = wc_yotpo_get_single_map_data($order->get_id());
 		if(!is_null($single_order_data)) {
 			$orders[] = $single_order_data;
 		}
@@ -514,15 +519,19 @@ function wc_yotpo_conversion_track($order_id) {
 	$order = new WC_Order($order_id);
 	$currency = wc_yotpo_get_order_currency($order);
 
-	$conversion_params = "app_key=" . esc_attr($yotpo_settings['app_key']) .
-		"&order_id=" . esc_attr($order_id) .
-		"&order_amount=" . esc_attr($order->get_total()) .
-		"&order_currency=" . esc_attr($currency);
+	// Build the full URL before escaping: esc_url() on a bare query string prefixed it with
+	// "http://", so the pixel arrived as ?http://app_key=... without a usable app_key.
+	$pixel_url = add_query_arg(array(
+		'app_key' => rawurlencode($yotpo_settings['app_key']),
+		'order_id' => rawurlencode($order_id),
+		'order_amount' => rawurlencode($order->get_total()),
+		'order_currency' => rawurlencode($currency),
+	), 'https://api.yotpo.com/conversion_tracking.gif');
 
 	$APP_KEY = esc_js($yotpo_settings['app_key']);
 	$DATA = "yotpoTrackConversionData = {orderId: " . esc_js($order_id) . ", orderAmount: " . esc_js($order->get_total()) . ", orderCurrency: '" . esc_js($currency) . "'}";
 	$DATA_SCRIPT = "<script>" . $DATA . "</script>";
-	$IMG = "<img src='https://api.yotpo.com/conversion_tracking.gif?" . esc_url($conversion_params) . "' width='1' height='1' />";
+	$IMG = "<img src='" . esc_url($pixel_url) . "' width='1' height='1' />";
 	$NO_SCRIPT = "<noscript>" . $IMG . "</noscript>";
 
 	echo wp_kses($DATA_SCRIPT, array('script' => array()));
@@ -542,12 +551,14 @@ function wc_yotpo_compatible() {
 function wc_yotpo_deactivate() {
 	update_option('woocommerce_enable_review_rating', get_option('native_star_ratings_enabled'));
 }
-add_filter('woocommerce_tab_manager_integration_tab_allowed', 'wc_yotpo_disable_tab_manager_managment');
+// Accept both arguments; with one, $tab was always null. Every other tab must get $allowed back,
+// returning nothing disabled Tab Manager for all tabs.
+add_filter('woocommerce_tab_manager_integration_tab_allowed', 'wc_yotpo_disable_tab_manager_managment', 10, 2);
 function wc_yotpo_disable_tab_manager_managment($allowed, $tab = null) {
 	if($tab == 'yotpo_main_widget') {
-		$allowed = false;
 		return false;
 	}
+	return $allowed;
 }
 function wc_yotpo_get_order_currency($order) {
 	if(is_null($order) || !is_object($order)) {
@@ -612,7 +623,7 @@ function wc_yotpo_filesystem() {
 // under an unguessable, per-site file name (the .htaccess below does not apply on nginx).
 function wc_yotpo_debug_log_path() {
 	$upload_dir = wp_upload_dir( null, false );
-	return trailingslashit( $upload_dir['basedir'] ) . 'yotpo/yotpo-debug-' . wp_hash( 'yotpo-debug-log' ) . '.log';
+	return trailingslashit( $upload_dir['basedir'] ) . 'yotpo-social-reviews-for-woocommerce/yotpo-debug-' . wp_hash( 'yotpo-debug-log' ) . '.log';
 }
 function wc_yotpo_prepare_private_dir( $dir ) {
 	$filesystem = wc_yotpo_filesystem();
@@ -631,7 +642,7 @@ function wc_yotpo_prepare_private_dir( $dir ) {
 	}
 	return true;
 }
-// Removes uploads/yotpo/ (debug log and its guard files); keep in sync with uninstall.php.
+// Removes uploads/yotpo-social-reviews-for-woocommerce/ (debug log and its guard files); keep in sync with uninstall.php.
 function wc_yotpo_delete_private_dir() {
 	$filesystem = wc_yotpo_filesystem();
 	$dir = dirname( wc_yotpo_debug_log_path() );
@@ -649,7 +660,7 @@ function wc_yotpo_read_debug_log() {
 	$log_file = wc_yotpo_debug_log_path();
 	if ( ! $filesystem->exists( $log_file ) ) {
 		if ( ! $filesystem->is_dir( dirname( $log_file ) ) ) {
-			return new WP_Error( 'yotpo_debug_log_directory', 'The log directory wp-content/uploads/yotpo/ does not exist and could not be created. Check that wp-content/uploads is writable.' );
+			return new WP_Error( 'yotpo_debug_log_directory', 'The log directory wp-content/uploads/yotpo-social-reviews-for-woocommerce/ does not exist and could not be created. Check that wp-content/uploads is writable.' );
 		}
 		return new WP_Error( 'yotpo_debug_log_missing', 'No log file has been created yet.' );
 	}
