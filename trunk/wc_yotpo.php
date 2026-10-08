@@ -586,7 +586,13 @@ function ytdbg( $msg, $name = '', $date = true ) {
 
 	$filesystem = wc_yotpo_filesystem();
 	$log_file = wc_yotpo_debug_log_path();
-	if ( ! $filesystem || ! wc_yotpo_prepare_private_dir( dirname( $log_file ) ) ) {
+	if ( ! $filesystem ) {
+		// Debug mode is on but nothing can be logged; leave a trace in the PHP error log instead of failing silently.
+		error_log( 'Yotpo debug log: WP_Filesystem could not be initialised, the entry was not written.' ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+		return;
+	}
+	if ( ! wc_yotpo_prepare_private_dir( dirname( $log_file ) ) ) {
+		error_log( 'Yotpo debug log: could not create ' . dirname( $log_file ) . ', the entry was not written.' ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
 		return;
 	}
 	$existing_log = $filesystem->exists( $log_file ) ? $filesystem->get_contents( $log_file ) : '';
