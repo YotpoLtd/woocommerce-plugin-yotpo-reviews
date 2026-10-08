@@ -48,7 +48,7 @@ function wc_display_yotpo_admin_page() {
             }
         }
     } else {
-        echo '<h1>Yotpo plugin requires PHP 7.4 or above.</h1><br>';
+        echo '<h1>Yotpo plugin requires PHP ' . esc_html(WC_YOTPO_MIN_PHP_VERSION) . ' or above.</h1><br>';
     }
 }
 function wc_display_yotpo_settings($success_type = false) {

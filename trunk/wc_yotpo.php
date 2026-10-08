@@ -16,6 +16,10 @@
  */
 defined( 'ABSPATH' ) || exit;
 
+// Single source of truth for the minimum supported PHP version, used by wc_yotpo_compatible().
+// The "Requires PHP" header above and readme.txt only document this same value; keep them in sync.
+define( 'WC_YOTPO_MIN_PHP_VERSION', '7.4' );
+
 register_activation_hook(   __FILE__, 'wc_yotpo_activation' );
 register_uninstall_hook( __FILE__, 'wc_yotpo_uninstall' );
 register_deactivation_hook( __FILE__, 'wc_yotpo_deactivate' );
@@ -537,7 +541,7 @@ function wc_yotpo_admin_styles($hook) {
 }
 function wc_yotpo_compatible() {
 	// HTTP calls go through wp_remote_* (since 1.8.0), so cURL is no longer required.
-	return version_compare(phpversion(), '7.4', '>=');
+	return version_compare(phpversion(), WC_YOTPO_MIN_PHP_VERSION, '>=');
 }
 function wc_yotpo_deactivate() {
 	update_option('woocommerce_enable_review_rating', get_option('native_star_ratings_enabled'));
