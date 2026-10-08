@@ -50,15 +50,10 @@ function wc_yotpo_init() {
 	if($is_admin) {
 		if (isset($_GET['download_exported_reviews'])) {
 			if(current_user_can('manage_options')) {
+				check_admin_referer('yotpo_export_reviews');
 				require('classes/class-wc-yotpo-export-reviews.php');
 				$export = new Yotpo_Review_Export();
-				list($file, $errors) = $export->exportReviews();
-				if(is_null($errors)) {
-					ytdbg($file,'Reviews Export Success:');
-					$export->downloadReviewToBrowser($file);
-				} else {
-					ytdbg($errors,'Reviews Export Fail:');
-				}
+				$export->streamReviewsCsv();
 			}
 			exit;
 		}
@@ -126,6 +121,7 @@ function wc_yotpo_uninstall() {
 	if(current_user_can( 'activate_plugins' ) && __FILE__ == WP_UNINSTALL_PLUGIN ) {
 		check_admin_referer( 'bulk-plugins' );
 		delete_option('yotpo_settings');
+		wc_yotpo_delete_private_dir();
 	}
 }
 // REVIEWS WIDGET
@@ -580,7 +576,6 @@ function ytdbg( $msg, $name = '', $date = true ) {
 
 	$trace = debug_backtrace();
 	$name = ( '' === $name ) ? $trace[1]['function'] : $name;
-	$error_dir = plugin_dir_path( __FILE__ ) . "yotpo_debug.log";
 	$msg = print_r( $msg, true );
 
 	if ( $date ) {
@@ -589,18 +584,85 @@ function ytdbg( $msg, $name = '', $date = true ) {
 		$log = $name . ' ' . $msg . "\n";
 	}
 
-	// Use WP_Filesystem
+	$filesystem = wc_yotpo_filesystem();
+	$log_file = wc_yotpo_debug_log_path();
+	if ( ! $filesystem ) {
+		// Debug mode is on but nothing can be logged; leave a trace in the PHP error log instead of failing silently.
+		error_log( 'Yotpo debug log: WP_Filesystem could not be initialised, the entry was not written.' ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+		return;
+	}
+	if ( ! wc_yotpo_prepare_private_dir( dirname( $log_file ) ) ) {
+		error_log( 'Yotpo debug log: could not create ' . dirname( $log_file ) . ', the entry was not written.' ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+		return;
+	}
+	$existing_log = $filesystem->exists( $log_file ) ? $filesystem->get_contents( $log_file ) : '';
+	$filesystem->put_contents( $log_file, $existing_log . $log, FS_CHMOD_FILE );
+}
+function wc_yotpo_filesystem() {
 	global $wp_filesystem;
 	if ( ! function_exists( 'WP_Filesystem' ) ) {
 		require_once ABSPATH . 'wp-admin/includes/file.php';
 	}
-
-	WP_Filesystem();
-
-	// Write to file
-	if ( $wp_filesystem->exists( $error_dir ) || $wp_filesystem->put_contents( $error_dir, '', FS_CHMOD_FILE ) ) {
-		$existing_log = $wp_filesystem->get_contents( $error_dir );
-		$wp_filesystem->put_contents( $error_dir, $existing_log . $log, FS_CHMOD_FILE );
+	if ( empty( $wp_filesystem ) && ! WP_Filesystem() ) {
+		return null;
+	}
+	return $wp_filesystem;
+}
+// The debug log contains customer names and emails, so it lives outside the plugin folder
+// under an unguessable, per-site file name (the .htaccess below does not apply on nginx).
+function wc_yotpo_debug_log_path() {
+	$upload_dir = wp_upload_dir( null, false );
+	return trailingslashit( $upload_dir['basedir'] ) . 'yotpo/yotpo-debug-' . wp_hash( 'yotpo-debug-log' ) . '.log';
+}
+function wc_yotpo_prepare_private_dir( $dir ) {
+	$filesystem = wc_yotpo_filesystem();
+	if ( ! $filesystem || ! wp_mkdir_p( $dir ) ) {
+		return false;
+	}
+	$guards = array(
+		'index.php' => "<?php\n// Silence is golden.\n",
+		'.htaccess' => "<IfModule mod_authz_core.c>\nRequire all denied\n</IfModule>\n<IfModule !mod_authz_core.c>\nDeny from all\n</IfModule>\n",
+	);
+	foreach ( $guards as $file => $contents ) {
+		$path = trailingslashit( $dir ) . $file;
+		if ( ! $filesystem->exists( $path ) ) {
+			$filesystem->put_contents( $path, $contents, FS_CHMOD_FILE );
+		}
+	}
+	return true;
+}
+// Removes uploads/yotpo/ (debug log and its guard files); keep in sync with uninstall.php.
+function wc_yotpo_delete_private_dir() {
+	$filesystem = wc_yotpo_filesystem();
+	$dir = dirname( wc_yotpo_debug_log_path() );
+	if ( $filesystem && $filesystem->is_dir( $dir ) ) {
+		$filesystem->delete( $dir, true );
 	}
 }
-ob_start('fatal_error_handler');
+// Returns the log contents (an empty string when the file exists but has no entries), or a WP_Error
+// explaining why the log cannot be read, so the viewer can tell "empty" from "logging is broken".
+function wc_yotpo_read_debug_log() {
+	$filesystem = wc_yotpo_filesystem();
+	if ( ! $filesystem ) {
+		return new WP_Error( 'yotpo_debug_log_filesystem', 'Could not access the filesystem (WP_Filesystem failed to initialise), so the debug log cannot be written or read. Check the file ownership/permissions of wp-content/uploads.' );
+	}
+	$log_file = wc_yotpo_debug_log_path();
+	if ( ! $filesystem->exists( $log_file ) ) {
+		if ( ! $filesystem->is_dir( dirname( $log_file ) ) ) {
+			return new WP_Error( 'yotpo_debug_log_directory', 'The log directory wp-content/uploads/yotpo/ does not exist and could not be created. Check that wp-content/uploads is writable.' );
+		}
+		return new WP_Error( 'yotpo_debug_log_missing', 'No log file has been created yet.' );
+	}
+	$contents = $filesystem->get_contents( $log_file );
+	if ( false === $contents ) {
+		return new WP_Error( 'yotpo_debug_log_unreadable', 'The debug log file exists but could not be read. Check its file permissions.' );
+	}
+	return $contents;
+}
+function wc_yotpo_clear_debug_log() {
+	$filesystem = wc_yotpo_filesystem();
+	$log_file = wc_yotpo_debug_log_path();
+	if ( $filesystem && $filesystem->exists( $log_file ) ) {
+		$filesystem->put_contents( $log_file, '', FS_CHMOD_FILE );
+	}
+}

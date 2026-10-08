@@ -22,16 +22,31 @@ function get_yotpo_widget_field_name($widget_type_name) {
 function receive_widget_instances() {
   $yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_default_settings());
   $yotpo_api = new Yotpo($yotpo_settings['app_key'], $yotpo_settings['secret']);
-  return $yotpo_api->get_widget_instances();
+  $response = $yotpo_api->get_widget_instances();
+  if (!is_array($response) || !isset($response['widget_instances']) || !is_array($response['widget_instances'])) {
+    $reason = !empty($yotpo_api->error) ? $yotpo_api->error : 'unexpected response from the Yotpo API';
+    ytdbg($reason, 'Fetching widget instances failed:');
+    return new WP_Error('yotpo_widget_instances', $reason);
+  }
+  return $response;
 }
 
+// Returns the widget IDs keyed by field name, or a WP_Error when the Yotpo API could not be reached
+// or answered unexpectedly (e.g. a TLS certificate problem). Callers must keep the stored IDs on error.
 function get_widget_instances() {
-  $response = receive_widget_instances()['widget_instances'];
+  $response = receive_widget_instances();
+  if (is_wp_error($response)) {
+    return $response;
+  }
   $ids_object = array();
-  foreach($response as &$val) {
+  foreach($response['widget_instances'] as $val) {
     $ids_object[get_yotpo_widget_field_name($val['widget_type_name'])] = $val['widget_instance_id'];
   }
   return $ids_object;
+}
+
+function wc_yotpo_widget_instances_error_message($error) {
+  return 'Could not fetch the widgets\' IDs from Yotpo, the saved IDs were kept: ' . esc_html($error->get_error_message());
 }
 
 function get_widgets_instances() {
@@ -72,6 +87,11 @@ function get_v2_widgets_enables() {
 
 function wc_proccess_yotpo_settings() {
   $current_settings = get_option('yotpo_settings', wc_yotpo_get_default_settings());
+  $widgets_ids = get_widgets_instances();
+  if (is_wp_error($widgets_ids)) {
+    wc_yotpo_display_message(wc_yotpo_widget_instances_error_message($widgets_ids), true);
+    $widgets_ids = yotpo_get_arr_value($current_settings, 'v3_widgets_ids', []);
+  }
   $new_settings = array(
     'app_key' => yotpo_get_arr_value($_POST, 'yotpo_app_key'),
     'secret' => yotpo_get_arr_value($_POST, 'yotpo_oauth_token'),
@@ -81,7 +101,7 @@ function wc_proccess_yotpo_settings() {
     'main_widget_tab_name' => yotpo_get_arr_value($_POST, 'yotpo_main_widget_tab_name'),
     'qna_widget_tab_name' => yotpo_get_arr_value($_POST, 'yotpo_qna_widget_tab_name'),
     'widget_version' => yotpo_get_arr_value($_POST, 'yotpo_widget_version'),
-    'v3_widgets_ids' => get_widgets_instances(),
+    'v3_widgets_ids' => $widgets_ids,
     'v3_widgets_enables' => get_v3_widgets_enables(),
     'v2_widgets_enables' => get_v2_widgets_enables(),
     'yotpo_order_status' => yotpo_get_arr_value($_POST, 'yotpo_order_status'),
@@ -105,7 +125,7 @@ function wc_display_yotpo_register() {
   $register_html = "<div class='wrap'><h2>Yotpo Registration</h2>
   <form method='post'>
   <table class='form-table'>"
-          . wp_nonce_field('yotpo_registration_form') .
+          . wp_nonce_field('yotpo_registration_form', '_wpnonce', true, false) .
           "<fieldset>
       <h2 class='y-register-title'>Fill out the form below and click register to get started with Yotpo.</h2></br></br>    
       <tr valign='top'>

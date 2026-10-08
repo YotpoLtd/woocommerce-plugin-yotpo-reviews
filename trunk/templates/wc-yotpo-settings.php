@@ -2,7 +2,6 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define("LOG_FILE", plugin_dir_path( __FILE__ ).'../yotpo_debug.log');
 require __DIR__.'/../lib/utils/wc-yotpo-settings-functions.php';
 require __DIR__.'/reusables/widgets-settings.php';
 require __DIR__.'/reusables/error-info.php';
@@ -20,6 +19,7 @@ function wc_display_yotpo_admin_page() {
             wc_proccess_yotpo_settings();
             wc_display_yotpo_settings();
         } elseif (isset($_POST['yotpo_sync_ids'])) {
+            check_admin_referer('yotpo_settings_form');
             wc_proccess_yotpo_widgets_ids_synchronisation();
             wc_display_yotpo_settings();
         } elseif (isset($_POST['yotpo_register'])) {
@@ -31,13 +31,12 @@ function wc_display_yotpo_admin_page() {
                 wc_display_yotpo_register();
             }
         } elseif (isset($_POST['yotpo_past_orders'])) {
+            check_admin_referer('yotpo_settings_form');
             wc_yotpo_send_past_orders();
             wc_display_yotpo_settings();
         } elseif (isset($_POST['yotdbg-clear'])) {
             check_admin_referer('yotdbg-clear');
-            $filename = LOG_FILE;
-            global $wp_filesystem;
-            $wp_filesystem->put_contents($filename, "");
+            wc_yotpo_clear_debug_log();
             wc_display_yotpo_settings();
         } else {
             $yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_default_settings());
@@ -72,34 +71,31 @@ function wc_display_yotpo_settings($success_type = false) {
             wc_yotpo_display_message('Set your API key in order the Yotpo plugin to work correctly', false);
         }
     }
-    $google_tracking_params = '&utm_source=yotpo_plugin_woocommerce&utm_medium=header_link&utm_campaign=woocommerce_customize_link';
-    if (!empty($yotpo_settings['app_key']) && !empty($yotpo_settings['secret'])) {
-        $dashboard_link = '<a href="https://api.yotpo.com/users/b2blogin?app_key=' . $yotpo_settings['app_key'] . '&secret=' . $yotpo_settings['secret'] . $google_tracking_params . '" target="_blank">Yotpo Dashboard.</a></div>';
-    } else {
-        $dashboard_link = "<a href='https://www.yotpo.com/?login=true$google_tracking_params' target='_blank'>Yotpo Dashboard.</a></div>";
-    }
+    // reviews.yotpo.com sends logged-out users to the Yotpo login screen. The old auto-login link put the
+    // app secret in the URL (browser history, logs), and www.yotpo.com/?login=true now only opens the marketing site.
+    $dashboard_link = "<a href='https://reviews.yotpo.com/' target='_blank'>Yotpo Dashboard.</a></div>";
     $read_only = isset($_POST['log_in_button']) || $success_type == 'b2c' ? '' : 'readonly';
     $cradentials_location_explanation = isset($_POST['log_in_button'])
         ? "<tr valign='top'>
-                <th scope='row'><p class='description'>To get your api key and secret token <a href='https://www.yotpo.com/?login=true' target='_blank'>log in here</a> and go to your account settings.</p></th>
+                <th scope='row'><p class='description'>To get your api key and secret token <a href='https://reviews.yotpo.com/' target='_blank'>log in here</a> and go to your account settings.</p></th>
             </tr>"
         : '';
     $submit_past_orders_button = $yotpo_settings['show_submit_past_orders'] ? "<input type='submit' name='yotpo_past_orders' value='Submit past orders' class='button-secondary past-orders-btn' " . disabled(true, empty($app_key) || empty($secret), false) . "/>" : '';
     if (isset($yotpo_settings['debug_mode']) && $yotpo_settings['debug_mode']) {
         $settings_dump = wp_json_encode($yotpo_settings);
-        if (file_exists(LOG_FILE)) { $debug_log = wp_remote_get(LOG_FILE); } else { $debug_log = false; };
+        $debug_log = wc_yotpo_read_debug_log();
     }
     $settings_html = styles() . "
     <div class='wrap'><h2>Yotpo Settings</h2>
         <h4>To customize the look and feel of the widget, and to edit your Mail After Purchase settings, just head to the " . $dashboard_link . "</h4>
         <form  method='post' id='yotpo_settings_form'>
-            <table class='form-table'>" . wp_nonce_field('yotpo_settings_form') . "
+            <table class='form-table'>" . wp_nonce_field('yotpo_settings_form', '_wpnonce', true, false) . "
                 <fieldset>
                     <tr id='yotpodbg' valign='top' style='display: none;'>
                         <th scope='row'>Enable debug mode</th>
                         <td><input type='checkbox' name='debug_mode' value='1' " . checked(1, $yotpo_settings['debug_mode'], false) . " /></td>
                         <td>
-                            <p class='description'>Enabling debug mode will output all plugin actions into <i>yotpo_debug.log</i>, output the log here and show all the settings.</p>
+                            <p class='description'>Enabling debug mode will output all plugin actions into a private log file under <i>wp-content/uploads/yotpo/</i>, output the log here and show all the settings.</p>
                         </td>
                     </tr>
                     <tr valign='top'>
@@ -160,6 +156,7 @@ function wc_display_yotpo_settings($success_type = false) {
         <iframe name='yotpo_export_reviews_frame' style='display: none;'></iframe>
         <form action='' method='get' target='yotpo_export_reviews_frame' style='display: none;'>
             <input type='hidden' name='download_exported_reviews' value='true' />
+            " . wp_nonce_field('yotpo_export_reviews', '_wpnonce', true, false) . "
             <input type='submit' value='Export Reviews' class='button-primary' id='export_reviews_submit' />
         </form>
     </div>
@@ -183,17 +180,24 @@ function wc_display_yotpo_settings($success_type = false) {
     echo wp_kses($settings_html, yotpo_settings_allowed_html());
     if (isset($yotpo_settings['debug_mode']) && $yotpo_settings['debug_mode']) {
         echo '<h3>Settings</h3><pre>'.esc_html($settings_dump).'</pre>';
-        if (is_wp_error($debug_log) || $debug_log === false) {
+        if (is_wp_error($debug_log)) {
             echo '<h3>Yotpo Debug</h3>
-            <textarea cols=170 rows=15>Problem opening yotpo_debug.log and/or file is empty</textarea>';
+            <textarea cols=170 rows=15>'.esc_html($debug_log->get_error_message()).'</textarea>';
+        } elseif ($debug_log === '') {
+            echo '<h3>Yotpo Debug</h3>
+            <textarea cols=170 rows=15>The debug log is empty.</textarea>';
         } else {
             echo '<h3>Yotpo Debug</h3><textarea cols=170 rows=15>'.esc_html($debug_log).'</textarea>
-            <form method="post" id="yotdbg-clear">' .wp_kses(wp_nonce_field('yotdbg-clear'), yotpo_nonce_field_allowed_html()) .'<input type="submit" value="Clear" class="button-primary" name="yotdbg-clear" id="yotdbg-clear-submit"/></form>';
+            <form method="post" id="yotdbg-clear">' .wp_kses(wp_nonce_field('yotdbg-clear', '_wpnonce', true, false), yotpo_nonce_field_allowed_html()) .'<input type="submit" value="Clear" class="button-primary" name="yotdbg-clear" id="yotdbg-clear-submit"/></form>';
         }
     }
 }
 function wc_proccess_yotpo_widgets_ids_synchronisation() {
     $widgets_instances = get_widget_instances();
+    if (is_wp_error($widgets_instances)) {
+        wc_yotpo_display_message(wc_yotpo_widget_instances_error_message($widgets_instances), true);
+        return;
+    }
     $new_settings = array_replace_recursive(get_option('yotpo_settings', wc_yotpo_get_default_settings()));
     $new_settings['widget_version'] = $_POST['yotpo_widget_version'];
     $new_settings['v3_widgets_ids']['reviews_widget'] = $widgets_instances['reviews_widget'];

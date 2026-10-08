@@ -14,6 +14,7 @@ class Yotpo {
     protected static $app_key, $secret, $base_uri = 'https://api.yotpo.com';
     protected static $widgets_url = '/api/v2/widgets';
     protected $request;
+    public $error = '';
 
     public function __construct($app_key = null, $secret = null, $base_uri = null) {
         $this->set_app_key($app_key);
@@ -39,7 +40,9 @@ class Yotpo {
           'headers'   => [
             'User-Agent' => 'Yotpo-Php',
           ],
-          'sslverify' => false, // Equivalent to CURLOPT_SSL_VERIFYPEER & VERIFYHOST = false
+          // Verify TLS certificates (WordPress ships its own CA bundle). These requests carry the
+          // app secret, OAuth tokens and customer names/emails, so they must not be interceptable.
+          'sslverify' => true,
         ];
 
         if (is_array($vars)) {
@@ -167,18 +170,6 @@ class Yotpo {
         $request = array('utoken' => $account_platform_hash['utoken'], 'account_platform' => $account_platform);
         $app_key = $this->get_app_key($account_platform_hash);
         return $this->post("/apps/$app_key/account_platform", $request);
-    }
-
-    public function get_login_url(?array $credentials_hash = null) {
-        $request = array();
-        $request['app_key'] = $app_key = $this->get_app_key($credentials_hash);
-        if (!is_null($credentials_hash) && array_key_exists('secret', $credentials_hash)) {
-            $request['secret'] = $credentials_hash['secret'];
-        } else {
-            $request['secret'] = self::$secret;
-        }
-
-        return $this->get('/users/b2blogin.json', $request);
     }
 
     public function check_subdomain(array $subdomain_hash) {
