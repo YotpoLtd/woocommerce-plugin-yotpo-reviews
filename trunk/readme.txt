@@ -1,50 +1,24 @@
-=== Yotpo: Product & Photo Reviews for WooCommerce ===
+=== Yotpo Product Reviews ===
 Contributors: Yotpo
 Tags: reviews, social reviews, woocommerce, woocommerce reviews, woocommerce product reviews
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.8.2
+Stable tag: 1.8.3
 License: GPLv2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
-Collect product reviews, photo reviews, site reviews & ratings
+Collect and display product reviews and ratings to showcase social proof and build trust.
 
 == Description ==
 
-= What Is Yotpo? =
+Yotpo product reviews and ratings drive sales and help you better understand your customers. Collect more trustworthy reviews, photos, and videos, with in-mail review requests and AI-powered prompts. Reach more shoppers by displaying your reviews and ratings on social media and search engines, like Google. Own all of your reviews and easily moderate them. Access detailed analytics to boost conversions. Plus, connect Yotpo Reviews with Loyalty.
 
-[Yotpo](https://www.yotpo.com/) is a commerce marketing cloud that helps brands of all sizes collect and showcase reviews, photos, and Q&A throughout the buyer journey and across social platforms to build buyer trust, drive traffic, and increase conversion.
-
-= What can you do with Yotpo? =
-
-* Collect reviews, ratings, photos, and Q&A from your customers.
-* Increase conversion by showcasing customer content on site to help buyers with purchase decisions.
-* Drive high-intent traffic by displaying ratings in organic search results and Google Ads.
-* Share your best customer content on social networks with a click of a button.
-* Build a brand community of your biggest fans with customer content.
-* Make better business decisions using analytics and feedback from your customers.
-* It's free!
-
-= Yotpo’s Integrations =
-
-Yotpo has official partnerships with Google, Facebook, and Instagram, and your favorite apps.
-
-= What’s Included In The Free Plan? =
-
-Yotpo’s Free (forever!) plan is designed to meet the needs of small businesses and stores that are just starting out. It includes:
-
-* [On-Site Display] Reviews Widget, Reviews Tab & Star Ratings - Increase conversion by showcasing product reviews and ratings across your homepage, product & category pages, and at checkout.
-* [Traffic & Social] Social Push & SEO Page - Drive traffic from Facebook and Twitter and rank higher in search results.
-* [Content Generation] Review Request Emails - Collect reviews with a single, frictionless request.
-* [Moderation & Commenting] Advanced Moderation & Commenting - Choose what to publish and where, and comment on reviews publicly or privately. And way more!
-
-= What About the Growth Plan? =
-
-Our Growth Plan (starting at $29 / month) scales with your business. It includes everything in the Free plan plus: Photos in Reviews, Reviews Carousel, Rich Snippets, Coupons, Email Upsells, and tons of other features for growing businesses.
-
-
-https://www.youtube.com/watch?v=emYQojcaQqQ&feature=youtu.be
+* Collect product & site reviews on auto-pilot with email templates
+* Display eye-catching reviews and use Smart Filters to build trust
+* Stand out in search with Google Seller Ratings and Google Shoppable Ads
+* Add beautiful, customizable review widgets (carousels, AI summaries, & more)
+* Easily sync reviews to and from other platforms (TikTok, Walmart, & more)
 
 
 == Installation ==
@@ -55,45 +29,13 @@ https://www.youtube.com/watch?v=emYQojcaQqQ&feature=youtu.be
 * PHP version 7.4 or greater
 * WooCommerce 3.0 or greater
 
-1. Install Yotpo Social Reviews either via the WordPress.org plugin directory, or by uploading the files to your server
-2. After activating Yotpo Social Reviews, click on the Yotpo link in the left hand side bar of your Wordpress admin.
+1. Install Yotpo Product Reviews either via the WordPress.org plugin directory, or by uploading the files to your server
+2. After activating Yotpo Product Reviews, click on the Yotpo link in the left hand side bar of your Wordpress admin.
 3. You will now need to register an account with Yotpo or log in with your existing account.
 4. Customize the different settings on the Yotpo Settings page and click update when done.
 5. That's it.  You're ready to go!
 
 For full installation guide, [please click here](https://support.yotpo.com/docs/woocommerce-installing-yotpo)
-
-== Frequently Asked Questions ==
-
-= How much does Yotpo cost? =
-
-Yotpo is completely free and always will be.
-
-= Can I import my existing product reviews into Yotpo? =
-
-Yes, you can import your existing reviews to Yotpo. We have made this process very easy for you by allowing you to export your existing reviews straight from within the Yotpo plugin. For more information on how to import your existing reviews within Yotpo visit the following link: [Exporting reviews for Woocommerce](http://support.yotpo.com/entries/24454261-Exporting-reviews-for-Woocommerce)
-
-= Can I translate the Yotpo widget and the Mail After Purchase emails? = 
-
-We offer translation of our reviews widget and Mail After Purchase emails into many languages.
-
-To add more languages to the supported ones, please contact us at support@yotpo.com, and note the language you would like to have Yotpo translated to. This is a very easy process and we are happy to accomodate all languages.
-
-= How do I stop my reviews from automatically posting to my shop? I want to decide which reviews to publish and which to hide. = 
-
-To turn off auto publishing, just log into yotpo.com, and click on the "Moderate". On the "Moderate" page just uncheck the "Website" box, and reviews will no longer be automatically published. You'll be emailed each time you receive a new review, and be able to publish only the ones you'd like published.
-
-= New reviews don't automatically show up on my shop. How can I set my reviews to auto publish? = 
-
-To turn on auto publishing, just log into yotpo.com, and click on "Moderate". Here, on the left hand panel towards the bottom, just check the "Website" box, and reviews will now be automatically published.
-
-= How can I hide or delete a review? = 
-
-To hide unwanted reviews, just log into your dashboard at yotpo.com, and click on "Moderate" from the options up top. Here you will be able to see all of your reviews. To hide a review, just click on the globe button with the down-pointing arrow. In addition, if you would like to delete reviews from your admin page, just click on the "archive" button. This acts as a full delete button.
-
-= Can I automatically post reviews to my business' social pages? = 
-
-Yes. To connect your social accounts to Yotpo, just log into yotpo.com, and click on "Campaigns" in the top menu bar. Click the "release feature" button and then on Social Sharing in the menu on the left hand side. Connect your social accounts and select Smart Auto Sharing from the drop down.
 
 == Screenshots ==
 
@@ -255,7 +197,14 @@ Yes. To connect your social accounts to Yotpo, just log into yotpo.com, and clic
 = 1.8.2 - 12/12/2024 =
 * fixed function securing script and noscript content in wc_yotpo.php
 
-= 1.8.3 =
+= 1.8.3 - 08/10/2026 =
+* Renamed to Yotpo Product Reviews and refreshed the plugin description
+* Tested up to WordPress 7.1; the plugin is listed in WordPress.org search again
+* Requires WordPress 6.0 and PHP 7.4, and declares WooCommerce as a required plugin
+* Fixed a fatal error on every storefront page when WooCommerce is inactive; an admin notice is shown instead
+* Plugin files can no longer be loaded directly from a browser
+* Removed the unneeded cURL requirement
+* Fixed PHP 8.4 deprecation warnings
 * Security: TLS certificates are now verified on all Yotpo API calls
 * Security: the Yotpo Dashboard link in the settings no longer auto-logs in; it opens the Yotpo login page, so the app secret is never placed in a URL
 * Security: added nonce checks to Sync widget IDs, Submit past orders and Export reviews
@@ -271,3 +220,8 @@ Yes. To connect your social accounts to Yotpo, just log into yotpo.com, and clic
 * Exported reviews now include product permalinks instead of ?p=ID links
 * Fixed wc_yotpo_show_custom_widgets() rendering only the last widget
 * Stopped re-firing the woocommerce_init action for every order during order sync
+
+== Upgrade Notice ==
+
+= 1.8.3 =
+Security and compatibility release: verifies TLS on Yotpo API calls, keeps customer data out of public files, supports WordPress 7.1 and PHP 8.4, and fixes a crash when WooCommerce is inactive. Recommended for all stores.

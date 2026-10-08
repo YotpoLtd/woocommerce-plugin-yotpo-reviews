@@ -1,43 +1,47 @@
-# Yotpo: Product & Photo Reviews for WooCommerce
+# Yotpo Product Reviews for WooCommerce
 
-Plugin for Wordpress sites which have WooCommerce shop plugin installed in them.
+Plugin for WordPress sites with WooCommerce installed. Published on WordPress.org as https://wordpress.org/plugins/yotpo-social-reviews-for-woocommerce/ (the slug is permanent).
 
 Installation guide - https://support.yotpo.com/docs/woocommerce-installing-yotpo
 
-# Uploading a new version or changes to https://wordpress.org/plugins/yotpo-social-reviews-for-woocommerce/
+# Releasing a new version to WordPress.org
 
-1. Download the SVN directory from Wordpress:
-svn checkout https://plugins.svn.wordpress.org/yotpo-social-reviews-for-woocommerce/
+GitHub `master` is the source of truth. Only `trunk/` is shipped.
 
- Now this is your working copy of the plugin.
+1. **Release PR on GitHub.** In one PR, update:
+   - `trunk/wc_yotpo.php`: `Version` in the plugin header
+   - `trunk/readme.txt`: `Stable tag`, `Tested up to`, the `== Changelog ==` entry and the `== Upgrade Notice ==` entry
+   - `changelog` (repo root)
 
-2. Pull the latest changes from github repository: woocommerce-plugin
+   Get it reviewed and merged, then pull `master`.
 
-3. Create a new branch, change the relevant files (changelog, wc_yotpo.php,readme.txt) 
+2. **Check out SVN** (once; afterwards `svn update`):
 
-4. Copy the code from  'woocommerce-yotpo' folder to to the working copy under 'trunk' folder. 
+        svn checkout https://plugins.svn.wordpress.org/yotpo-social-reviews-for-woocommerce/ yotpo-svn
 
-5. Verify that the following files are updated: 
+3. **Mirror `trunk/` into SVN trunk.** `--delete` removes files that were deleted on GitHub; skipping this is how deleted files (e.g. `assets/js/headerScript.js`) stayed on WordPress.org:
 
-        Changelog
-        wc_yotpo.php: update the version in the header
-        readme.txt:  the relevant fields: Stable tag, Tested up to, Requires
-        readme.txt: the changelog section.
+        rsync -av --delete --exclude=.svn <path-to-this-repo>/trunk/ yotpo-svn/trunk/
 
-6. Add all changes and new files
-svn add * --force
+4. **Register new and deleted files with SVN:**
 
+        cd yotpo-svn
+        svn status | awk '/^\?/ {print $2}' | xargs svn add
+        svn status | awk '/^!/ {print $2}' | xargs svn rm
 
-7. run 'svn diff' to verify the code changes before you upload the code
-6. Push the changes:
-`svn ci -m "Version '<<new version number>>'" --username Yotpo --password ` [use password from this page](https://yotpoent.atlassian.net/wiki/spaces/RD/pages/1098844645/How+to+Deploy+a+new+version)
+5. **Create the version tag.** `Stable tag` in the readme must point to an existing `tags/<version>` folder, otherwise WordPress.org serves `trunk` (which is what happened for every version up to 1.8.2):
 
-7. Thats it! check changes on our plugin page in Wordprass.
+        svn cp trunk tags/<version>
 
-8. Push your branch to master in github.
+6. **Review, then commit** (`svn status` and `svn diff` first):
 
+        svn ci -m "Version <version>" --username Yotpo
 
-(info) More details on how to use svn you can find here
+   Credentials: [How to Deploy a new version](https://yotpoent.atlassian.net/wiki/spaces/RD/pages/1098844645/How+to+Deploy+a+new+version)
+
+7. **Verify** the plugin page on WordPress.org shows the new version, and that https://plugins.svn.wordpress.org/yotpo-social-reviews-for-woocommerce/tags/ lists it.
+
+Listing images (icon, banner, screenshots) live in `assets/` at the repo root and go to the SVN `assets/` folder, not `trunk/`. They update the listing immediately for every version.
 
 
 # Development

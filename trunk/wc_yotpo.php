@@ -1,9 +1,9 @@
 <?php
 /*
-	Plugin Name: Yotpo Social Reviews for Woocommerce
-	Description: Yotpo Social Reviews helps Woocommerce store owners generate a ton of reviews for their products. Yotpo is the only solution which makes it easy to share your reviews automatically to your social networks to gain a boost in traffic and an increase in sales.
+	Plugin Name: Yotpo Product Reviews
+	Description: Collect and display product reviews and ratings to showcase social proof and build trust.
 	Author: Yotpo
-	Version: 1.8.2
+	Version: 1.8.3
 	Author URI: http://www.yotpo.com?utm_source=yotpo_plugin_woocommerce&utm_medium=plugin_page_link&utm_campaign=woocommerce_plugin_page_link
 	Plugin URI: http://www.yotpo.com?utm_source=yotpo_plugin_woocommerce&utm_medium=plugin_page_link&utm_campaign=woocommerce_plugin_page_link
 	Requires at least: 6.0
@@ -76,7 +76,7 @@ function wc_yotpo_export_reviews() {
 }
 function wc_yotpo_woocommerce_missing_notice() {
 	if (current_user_can('activate_plugins')) {
-		echo '<div class="notice notice-error"><p>' . esc_html__('Yotpo Social Reviews requires WooCommerce. Install and activate WooCommerce to use the Yotpo plugin.', 'yotpo-social-reviews-for-woocommerce') . '</p></div>';
+		echo '<div class="notice notice-error"><p>' . esc_html__('Yotpo Product Reviews requires WooCommerce. Install and activate WooCommerce to use the Yotpo plugin.', 'yotpo-social-reviews-for-woocommerce') . '</p></div>';
 	}
 }
 function wc_yotpo_front_end_init() {
