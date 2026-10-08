@@ -26,8 +26,10 @@ GitHub `master` is the source of truth. Only `trunk/` is shipped.
 4. **Register new and deleted files with SVN:**
 
         cd yotpo-svn
-        svn status | awk '/^\?/ {print $2}' | xargs svn add
-        svn status | awk '/^!/ {print $2}' | xargs svn rm
+        svn add --force .
+        svn status | sed -n 's/^!.\{7\}//p' | while IFS= read -r f; do svn rm --force "$f@"; done
+
+   `svn add --force .` adds every new file; the loop removes every file that step 3 deleted (`!` entries) and is safe for empty input, paths with spaces and `@` in names. Run `svn status` afterwards: there must be no `?` or `!` entries left before you continue.
 
 5. **Create the version tag.** `Stable tag` in the readme must point to an existing `tags/<version>` folder, otherwise WordPress.org serves `trunk` (which is what happened for every version up to 1.8.2):
 
