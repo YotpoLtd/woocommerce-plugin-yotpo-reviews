@@ -223,6 +223,7 @@ For full installation guide, [please click here](https://support.yotpo.com/docs/
 
 = 1.8.4 =
 * Review export: only cells starting with "=" get the spreadsheet-safety apostrophe. In 1.8.3, reviews starting with "-", "+" or "@" also got one, and Yotpo's importer kept it, so it showed on the storefront
+* New Yotpo icon on the WordPress.org listing and in the wp-admin menu
 
 == Upgrade Notice ==
 
