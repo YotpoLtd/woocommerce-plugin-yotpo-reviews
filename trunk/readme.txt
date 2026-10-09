@@ -4,7 +4,7 @@ Tags: reviews, social reviews, woocommerce, woocommerce reviews, woocommerce pro
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.8.3
+Stable tag: 1.8.4
 License: GPLv2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -221,11 +221,14 @@ For full installation guide, [please click here](https://support.yotpo.com/docs/
 * Fixed wc_yotpo_show_custom_widgets() rendering only the last widget
 * Stopped re-firing the woocommerce_init action for every order during order sync
 
-= 1.8.4 =
+= 1.8.4 - 09/10/2026 =
 * Review export: only cells starting with "=" get the spreadsheet-safety apostrophe. In 1.8.3, reviews starting with "-", "+" or "@" also got one, and Yotpo's importer kept it, so it showed on the storefront
 * New Yotpo icon on the WordPress.org listing and in the wp-admin menu
 
 == Upgrade Notice ==
+
+= 1.8.4 =
+Fixes review exports adding an apostrophe to reviews that start with -, + or @, and updates the Yotpo icon. Recommended if you export reviews to import into Yotpo.
 
 = 1.8.3 =
 Security and compatibility release: verifies TLS on Yotpo API calls, keeps customer data out of public files, supports WordPress 7.1 and PHP 8.4, and fixes a crash when WooCommerce is inactive. Recommended for all stores.
