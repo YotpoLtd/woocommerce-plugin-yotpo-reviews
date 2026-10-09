@@ -65,12 +65,16 @@ class Yotpo_Review_Export
 	}
 
 	/**
-	 * Prefixes cells a spreadsheet would run as a formula (= + - @ tab CR) with a single quote,
-	 * so reviewer-controlled text cannot execute when an admin opens the export in Excel or Sheets.
+	 * Prefixes cells starting with "=" with a single quote, so a reviewer-written formula does not
+	 * run when an admin opens the export in Excel or Sheets.
+	 *
+	 * Deliberately limited to "=": the file is meant for import into Yotpo, which keeps a leading
+	 * quote, so guarding "+", "-" and "@" turned reviews like "- Great quality" into
+	 * "'- Great quality" on the storefront.
 	 */
 	protected function neutralizeFormula($value)
 	{
-		if (is_string($value) && $value !== '' && strpbrk($value[0], "=+-@\t\r") !== false) {
+		if (is_string($value) && $value !== '' && $value[0] === '=') {
 			return "'" . $value;
 		}
 		return $value;

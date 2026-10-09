@@ -221,6 +221,9 @@ For full installation guide, [please click here](https://support.yotpo.com/docs/
 * Fixed wc_yotpo_show_custom_widgets() rendering only the last widget
 * Stopped re-firing the woocommerce_init action for every order during order sync
 
+= 1.8.4 =
+* Review export: only cells starting with "=" get the spreadsheet-safety apostrophe. In 1.8.3, reviews starting with "-", "+" or "@" also got one, and Yotpo's importer kept it, so it showed on the storefront
+
 == Upgrade Notice ==
 
 = 1.8.3 =
