@@ -102,10 +102,16 @@ function wc_yotpo_front_end_init() {
 		if($settings['disable_native_review_system']) {
 			add_filter( 'comments_open', 'wc_yotpo_remove_native_review_system', null, 2);
 		}
-	} else if (is_category() || is_shop()) {
+	// Product listing pages. is_category() only matches *blog* categories, so WooCommerce product
+	// categories, tags and attribute archives (is_product_taxonomy()) never got the category widgets.
+	// is_category() stays so blog category pages keep what they showed before.
+	} else if (is_shop() || is_product_taxonomy() || is_category()) {
 		category_page_renders($settings);
 		wp_enqueue_style('yotpoSideBootomLineStylesheet', plugins_url('assets/css/bottom-line.css', __FILE__));
-	} else if (is_home()) {
+	// Home page. is_home() is the blog posts page, which is only the home page when the site shows
+	// latest posts; stores with a static front page need is_front_page(). is_home() stays so the
+	// blog page keeps what it showed before.
+	} else if (is_front_page() || is_home()) {
 		rest_of_pages_renders($settings);
 	}
 }
