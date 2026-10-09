@@ -218,3 +218,9 @@ Version 1.8.3
 2) WordPress.org compliance: tested up to WordPress 7.1, requires WordPress 6.0 / PHP 7.4, requires WooCommerce, direct file access guards.
 3) Security: TLS verification on API calls, no app secret in URLs, nonce checks, debug log and review export moved out of the public plugin folder, removed the global fatal error handler.
 4) Fixes: bulk and WP-CLI activation, product tabs on review-disabled products, Tab Manager filter, no-JS tracking pixel, export permalinks, widget IDs kept when the API fails, PHP 8.2/8.4 deprecations.
+
+2026-10-09
+---
+Version 1.8.4
+1) Review export: only cells starting with "=" get the spreadsheet-safety apostrophe (1.8.3 also prefixed -, + and @, which Yotpo's importer kept).
+2) New Yotpo icon on the WordPress.org listing and in the wp-admin menu; removed the old banner from the plugin.
