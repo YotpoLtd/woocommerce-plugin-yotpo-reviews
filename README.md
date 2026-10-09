@@ -6,7 +6,7 @@ Installation guide - https://support.yotpo.com/docs/woocommerce-installing-yotpo
 
 # Releasing a new version to WordPress.org
 
-GitHub `master` is the source of truth. The plugin code that ships is `trunk/`; the WordPress.org listing images are synced separately (step 4).
+GitHub `master` is the source of truth. The plugin code that ships is `trunk/`; the WordPress.org listing images in `assets/` are synced separately (step 4).
 
 1. **Release PR on GitHub.** In one PR, update:
    - `trunk/wc_yotpo.php`: `Version` in the plugin header
@@ -23,13 +23,11 @@ GitHub `master` is the source of truth. The plugin code that ships is `trunk/`; 
 
         rsync -av --delete --exclude=.svn <path-to-this-repo>/trunk/ yotpo-svn/trunk/
 
-4. **Sync the listing images into SVN `assets/`.** WordPress.org reads the icon, banner and screenshots from SVN `assets/`, not from `trunk/`. In this repo the icons and screenshots are in `assets/` and the banner is `trunk/banner-772x250.jpg`:
+4. **Mirror the listing images into SVN `assets/`.** WordPress.org reads the icon (`icon.svg`, `icon-256x256.png`, `icon-128x128.png`), banners (`banner-772x250`, `banner-1544x500`) and screenshots from SVN `assets/`, not from `trunk/`. Keep them in `assets/` in this repo; `--delete` removes images deleted here:
 
-        mkdir -p yotpo-svn/assets
-        cp <path-to-this-repo>/assets/icon-*.png <path-to-this-repo>/assets/screenshot-*.jpg yotpo-svn/assets/
-        cp <path-to-this-repo>/trunk/banner-772x250.jpg yotpo-svn/assets/
+        rsync -av --delete --exclude=.svn <path-to-this-repo>/assets/ yotpo-svn/assets/
 
-   Listing images update the plugin page immediately for every version.
+   Listing images update the plugin page immediately for every version, not only for the new one.
 
 5. **Register new and deleted files with SVN:**
 
@@ -54,7 +52,7 @@ GitHub `master` is the source of truth. The plugin code that ships is `trunk/`; 
 
 # Development
 
-Only `trunk/` (plugin code) and the listing images (`assets/`, plus `trunk/banner-772x250.jpg`) reach WordPress.org. Everything else at the repo root (`composer.json`, `phpcs.xml.dist`, `bin/`, `test-data/`) is development tooling.
+Only `trunk/` (plugin code) and the listing images (`assets/`) reach WordPress.org. Everything else at the repo root (`composer.json`, `phpcs.xml.dist`, `bin/`, `test-data/`) is development tooling.
 
 Install the tools once (requires PHP 7.4+ and Composer):
 

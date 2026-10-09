@@ -542,7 +542,6 @@ function wc_yotpo_admin_styles($hook) {
 		wp_enqueue_script( 'yotpoSettingsJs', plugins_url('assets/js/settings.js', __FILE__), array('jquery-effects-core'));
 		wp_enqueue_style( 'yotpoSettingsStylesheet', plugins_url('assets/css/yotpo.css', __FILE__));
 	}
-	wp_enqueue_style('yotpoSideLogoStylesheet', plugins_url('assets/css/side-menu-logo.css', __FILE__));
 }
 function wc_yotpo_compatible() {
 	// HTTP calls go through wp_remote_* (since 1.8.0), so cURL is no longer required.
