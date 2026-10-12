@@ -23,6 +23,8 @@ class Yotpo_Product_Sync {
 	const RATE_LIMIT_MIN_DELAY = 5; // Seconds to wait at least after a 429, even if Retry-After is lower or missing.
 	const META_PRODUCT_ID = '_yotpo_v3_product_id';
 	const META_VARIANT_ID = '_yotpo_v3_variant_id';
+	const META_PRODUCT_HASH = '_yotpo_v3_product_hash'; // Fingerprint of the product data Yotpo last accepted.
+	const META_VARIANT_HASH = '_yotpo_v3_variant_hash';
 	const META_BLOCKLISTED = '_yotpo_v3_blocklisted'; // 'blocked' or 'absent': what Yotpo was last told, until the product is published again.
 	const STATE_OPTION    = 'wc_yotpo_product_sync';
 
@@ -289,7 +291,7 @@ class Yotpo_Product_Sync {
 			return self::blocklist_product( $client, $product_id, $force );
 		}
 
-		$yotpo_id = self::upsert_product( $client, $product );
+		$yotpo_id = self::upsert_product( $client, $product, $force );
 		if ( is_wp_error( $yotpo_id ) ) {
 			ytdbg( $yotpo_id->get_error_message(), 'Product sync: product #' . $product_id . ' failed:' );
 			return $yotpo_id;
@@ -303,7 +305,7 @@ class Yotpo_Product_Sync {
 				if ( ! $variation ) {
 					continue;
 				}
-				$variant = self::upsert_variant( $client, $yotpo_id, $variation, $product );
+				$variant = self::upsert_variant( $client, $yotpo_id, $variation, $product, $force );
 				if ( is_wp_error( $variant ) ) {
 					ytdbg( $variant->get_error_message(), 'Product sync: variation #' . $variation_id . ' failed:' );
 					if ( self::is_retryable( $variant ) ) {
@@ -324,12 +326,12 @@ class Yotpo_Product_Sync {
 		return $yotpo_id;
 	}
 
-	private static function upsert_product( $client, $product ) {
-		return self::upsert( $client, self::product_spec(), $product->get_id(), self::product_payload( $product ) );
+	private static function upsert_product( $client, $product, $force = false ) {
+		return self::upsert( $client, self::product_spec(), $product->get_id(), self::product_payload( $product ), $force );
 	}
 
-	private static function upsert_variant( $client, $yotpo_product_id, $variation, $parent ) {
-		return self::upsert( $client, self::variant_spec( $yotpo_product_id ), $variation->get_id(), self::variant_payload( $variation, $parent ) );
+	private static function upsert_variant( $client, $yotpo_product_id, $variation, $parent, $force = false ) {
+		return self::upsert( $client, self::variant_spec( $yotpo_product_id ), $variation->get_id(), self::variant_payload( $variation, $parent ), $force );
 	}
 
 	/**
@@ -343,6 +345,8 @@ class Yotpo_Product_Sync {
 			'key'      => 'product',
 			'list_key' => 'products',
 			'meta'     => self::META_PRODUCT_ID,
+			'hash'     => self::META_PRODUCT_HASH,
+			'salt'     => '',
 		);
 	}
 
@@ -352,15 +356,34 @@ class Yotpo_Product_Sync {
 			'key'      => 'variant',
 			'list_key' => 'variants',
 			'meta'     => self::META_VARIANT_ID,
+			'hash'     => self::META_VARIANT_HASH,
+			'salt'     => (string) $yotpo_product_id, // A variant is only up to date under the Yotpo product it was sent to.
 		);
 	}
 
 	/**
 	 * Creates or updates one product or variant in Yotpo (see product_spec() and variant_spec()).
+	 * A product or variant whose data is the same as the last accepted is not sent again, unless $force.
 	 *
 	 * @return int|WP_Error The Yotpo ID.
 	 */
-	private static function upsert( $client, $spec, $post_id, $payload ) {
+	private static function upsert( $client, $spec, $post_id, $payload, $force = false ) {
+		$hash     = md5( $spec['salt'] . wp_json_encode( $payload ) );
+		$yotpo_id = (int) get_post_meta( $post_id, $spec['meta'], true );
+		if ( $yotpo_id && ! $force && get_post_meta( $post_id, $spec['hash'], true ) === $hash ) {
+			return $yotpo_id;
+		}
+
+		$result = self::send_upsert( $client, $spec, $post_id, $payload );
+		if ( is_wp_error( $result ) ) {
+			delete_post_meta( $post_id, $spec['hash'] );
+		} else {
+			update_post_meta( $post_id, $spec['hash'], $hash );
+		}
+		return $result;
+	}
+
+	private static function send_upsert( $client, $spec, $post_id, $payload ) {
 		$yotpo_id = (int) get_post_meta( $post_id, $spec['meta'], true );
 
 		if ( $yotpo_id ) {
@@ -469,6 +492,8 @@ class Yotpo_Product_Sync {
 	private static function remember_blocklist( $product_id, $outcome ) {
 		if ( get_post_status( $product_id ) ) { // A deleted product has no meta to keep.
 			update_post_meta( $product_id, self::META_BLOCKLISTED, $outcome );
+			// Yotpo no longer has the data last sent; publishing again must send it.
+			delete_post_meta( $product_id, self::META_PRODUCT_HASH );
 		}
 	}
 
