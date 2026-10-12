@@ -46,7 +46,8 @@ class Yotpo_Sync_CLI {
 	}
 
 	/**
-	 * Syncs one product now, in the foreground.
+	 * Syncs one product now, in the foreground. Runs even when the sync is turned off with the
+	 * wc_yotpo_product_sync_enabled filter, so support can test a single product.
 	 *
 	 * ## OPTIONS
 	 *

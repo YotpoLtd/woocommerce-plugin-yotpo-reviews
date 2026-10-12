@@ -42,9 +42,8 @@ class Yotpo_Product_Sync {
 		add_action( self::HOOK_BATCH, array( __CLASS__, 'run_batch_job' ), 10, 1 );
 		add_action( self::HOOK_VARIANT_GONE, array( __CLASS__, 'run_variant_gone_job' ), 10, 3 );
 
-		if ( ! self::enabled() ) {
-			return;
-		}
+		// The kill switch is checked where jobs are queued and run, not here: a filter added after
+		// plugins_loaded (theme, mu-plugin) must still take effect.
 		add_action( 'woocommerce_new_product', array( __CLASS__, 'queue_product' ) );
 		add_action( 'woocommerce_update_product', array( __CLASS__, 'queue_product' ) );
 		add_action( 'woocommerce_new_product_variation', array( __CLASS__, 'queue_variation_parent' ) );
@@ -56,7 +55,9 @@ class Yotpo_Product_Sync {
 	}
 
 	/**
-	 * Sync runs when credentials are saved. Filterable as a kill switch.
+	 * Sync runs when credentials are saved. Filterable as a kill switch (wc_yotpo_product_sync_enabled).
+	 * Checked wherever a job is queued or run, and by start_full_sync(). The only way around it is
+	 * calling sync_product() directly, as `wp yotpo product-sync product` does on purpose.
 	 */
 	public static function enabled() {
 		// The client is the only reader of the saved credentials: no client means they are missing.
@@ -73,7 +74,7 @@ class Yotpo_Product_Sync {
 	 * the merchant connects a different Yotpo account.
 	 */
 	public static function maybe_start_initial_sync() {
-		if ( ! self::scheduler_ready() ) {
+		if ( ! self::scheduler_ready() || ! self::enabled() ) {
 			return;
 		}
 		$client = Yotpo_V3_Client::from_settings();
@@ -131,7 +132,7 @@ class Yotpo_Product_Sync {
 	 * @return int The queued action ID (0 when nothing was queued, for example a duplicate).
 	 */
 	public static function queue_product( $product_id, $attempt = 1, $delay = 0, $full_sync = false ) {
-		if ( ! self::scheduler_ready() ) {
+		if ( ! self::scheduler_ready() || ! self::enabled() ) {
 			return 0;
 		}
 		$args = array( (int) $product_id, (int) $attempt );
@@ -150,7 +151,7 @@ class Yotpo_Product_Sync {
 	 * @return int The queued action ID (0 when nothing was queued, for example a duplicate).
 	 */
 	public static function queue_variant_gone( $variation_id, $parent_id, $attempt = 1, $delay = 0 ) {
-		if ( ! self::scheduler_ready() ) {
+		if ( ! self::scheduler_ready() || ! self::enabled() ) {
 			return 0;
 		}
 		$args = array( (int) $variation_id, (int) $parent_id, (int) $attempt );
