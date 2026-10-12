@@ -29,6 +29,7 @@ class Yotpo_Product_Sync {
 	const META_VARIANT_HASH = '_yotpo_v3_variant_hash';
 	const META_BLOCKLISTED = '_yotpo_v3_blocklisted'; // 'blocked' or 'absent': what Yotpo was last told, until the product is published again.
 	const STATE_OPTION    = 'wc_yotpo_product_sync';
+	const PAUSE_TRANSIENT = 'wc_yotpo_product_sync_paused_until'; // Set after a 429: until then no job calls Yotpo.
 	const LOCK_OPTION     = 'wc_yotpo_product_sync_lock'; // Short-lived lock around changes to the sync state.
 	const LOCK_TTL        = 30; // Seconds after which a lock left behind by a killed job is taken over.
 
@@ -236,7 +237,14 @@ class Yotpo_Product_Sync {
 			}
 			return;
 		}
+		// Yotpo asked every caller to slow down: wait without spending an attempt.
+		$paused_for = self::paused_for();
+		if ( $paused_for > 0 ) {
+			self::queue_product( $product_id, $attempt, $paused_for, (bool) $full_sync );
+			return;
+		}
 		$result = self::sync_product( $product_id, (bool) $full_sync );
+		self::pause_if_rate_limited( $result, $attempt );
 		if ( is_wp_error( $result ) && self::is_retryable( $result ) && $attempt < self::MAX_ATTEMPTS ) {
 			self::queue_product( $product_id, $attempt + 1, self::retry_delay( $result, $attempt ), (bool) $full_sync );
 			return;
@@ -254,7 +262,13 @@ class Yotpo_Product_Sync {
 		if ( ! $client ) {
 			return;
 		}
+		$paused_for = self::paused_for();
+		if ( $paused_for > 0 ) {
+			as_schedule_single_action( time() + $paused_for, self::HOOK_VARIANT_GONE, array( (int) $variation_id, (int) $parent_id, (int) $attempt ), self::GROUP, true );
+			return;
+		}
 		$error = self::discontinue_variant( $client, $variation_id, $parent_id );
+		self::pause_if_rate_limited( $error, $attempt );
 		if ( ! $error ) {
 			return;
 		}
@@ -710,6 +724,25 @@ class Yotpo_Product_Sync {
 			return max( self::RATE_LIMIT_MIN_DELAY, (int) $error->get_error_data() );
 		}
 		return self::RETRY_BASE_DELAY * ( 2 ** $attempt );
+	}
+
+	/**
+	 * Seconds left of the pause that a 429 set for all sync jobs (0 when there is none).
+	 */
+	private static function paused_for() {
+		return max( 0, (int) get_transient( self::PAUSE_TRANSIENT ) - time() );
+	}
+
+	/**
+	 * A 429 answers for the whole app key, so it pauses every queued job, not only the one that got it.
+	 *
+	 * @param mixed $result A job result; anything but a rate-limit error is ignored.
+	 */
+	private static function pause_if_rate_limited( $result, $attempt ) {
+		if ( is_wp_error( $result ) && 'yotpo_rate_limited' === $result->get_error_code() ) {
+			$seconds = self::retry_delay( $result, $attempt );
+			set_transient( self::PAUSE_TRANSIENT, time() + $seconds, $seconds );
+		}
 	}
 
 	private static function count_result( $result ) {
