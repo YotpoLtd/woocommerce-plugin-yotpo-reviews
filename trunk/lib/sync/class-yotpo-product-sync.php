@@ -23,6 +23,7 @@ class Yotpo_Product_Sync {
 	const RATE_LIMIT_MIN_DELAY = 5; // Seconds to wait at least after a 429, even if Retry-After is lower or missing.
 	const META_PRODUCT_ID = '_yotpo_v3_product_id';
 	const META_VARIANT_ID = '_yotpo_v3_variant_id';
+	const META_BLOCKLISTED = '_yotpo_v3_blocklisted'; // 'blocked' or 'absent': what Yotpo was last told, until the product is published again.
 	const STATE_OPTION    = 'wc_yotpo_product_sync';
 
 	const HOOK_PRODUCT    = 'wc_yotpo_sync_product';
@@ -205,7 +206,7 @@ class Yotpo_Product_Sync {
 			}
 			return;
 		}
-		$result = self::sync_product( $product_id );
+		$result = self::sync_product( $product_id, (bool) $full_sync );
 		if ( is_wp_error( $result ) && self::is_retryable( $result ) && $attempt < self::MAX_ATTEMPTS ) {
 			self::queue_product( $product_id, $attempt + 1, self::retry_delay( $result, $attempt ), (bool) $full_sync );
 			return;
@@ -265,10 +266,11 @@ class Yotpo_Product_Sync {
 	/**
 	 * Creates or updates one product and its variants in Yotpo, or blocklists it.
 	 *
-	 * @param int $product_id WooCommerce product ID. A variation ID is accepted and syncs its parent product.
+	 * @param int  $product_id WooCommerce product ID. A variation ID is accepted and syncs its parent product.
+	 * @param bool $force      Also redo a product that is already known to be blocklisted or missing in Yotpo.
 	 * @return int|WP_Error The Yotpo product ID (0 when there was nothing to do).
 	 */
-	public static function sync_product( $product_id ) {
+	public static function sync_product( $product_id, $force = false ) {
 		$client = Yotpo_V3_Client::from_settings();
 		if ( ! $client ) {
 			return new WP_Error( 'yotpo_no_credentials', 'App key or secret missing' );
@@ -284,7 +286,7 @@ class Yotpo_Product_Sync {
 			}
 		}
 		if ( ! $product || 'publish' !== $product->get_status() ) {
-			return self::blocklist_product( $client, $product_id );
+			return self::blocklist_product( $client, $product_id, $force );
 		}
 
 		$yotpo_id = self::upsert_product( $client, $product );
@@ -292,6 +294,7 @@ class Yotpo_Product_Sync {
 			ytdbg( $yotpo_id->get_error_message(), 'Product sync: product #' . $product_id . ' failed:' );
 			return $yotpo_id;
 		}
+		delete_post_meta( $product_id, self::META_BLOCKLISTED );
 
 		if ( $product->is_type( 'variable' ) ) {
 			$first_error = null;
@@ -421,13 +424,21 @@ class Yotpo_Product_Sync {
 
 	/**
 	 * Blocklists a product that is gone or not published. Nothing to do if Yotpo never had it.
+	 * The outcome is remembered in post meta, so saving a draft again costs no API call.
 	 */
-	private static function blocklist_product( $client, $product_id ) {
+	private static function blocklist_product( $client, $product_id, $force = false ) {
+		if ( ! $force && get_post_meta( $product_id, self::META_BLOCKLISTED, true ) ) {
+			return 0;
+		}
 		$spec     = self::product_spec();
 		$cached   = (int) get_post_meta( $product_id, self::META_PRODUCT_ID, true );
 		$yotpo_id = self::find_yotpo_id( $client, $spec, $product_id );
-		if ( is_wp_error( $yotpo_id ) || ! $yotpo_id ) {
+		if ( is_wp_error( $yotpo_id ) ) {
 			return $yotpo_id;
+		}
+		if ( ! $yotpo_id ) {
+			self::remember_blocklist( $product_id, 'absent' );
+			return 0;
 		}
 		$payload = array( 'custom_properties' => array( 'is_blocklisted' => true ) );
 		$error   = self::patch( $client, $spec, $yotpo_id, $payload );
@@ -439,6 +450,7 @@ class Yotpo_Product_Sync {
 				return $found;
 			}
 			if ( ! $found ) {
+				self::remember_blocklist( $product_id, 'absent' );
 				return 0; // Yotpo no longer has it: nothing to blocklist.
 			}
 			if ( $found !== $yotpo_id ) {
@@ -449,8 +461,15 @@ class Yotpo_Product_Sync {
 		if ( $error ) {
 			return $error;
 		}
+		self::remember_blocklist( $product_id, 'blocked' );
 		ytdbg( 'Yotpo ID ' . $yotpo_id, 'Product sync: product #' . $product_id . ' blocklisted,' );
 		return $yotpo_id;
+	}
+
+	private static function remember_blocklist( $product_id, $outcome ) {
+		if ( get_post_status( $product_id ) ) { // A deleted product has no meta to keep.
+			update_post_meta( $product_id, self::META_BLOCKLISTED, $outcome );
+		}
 	}
 
 	/**

@@ -7,6 +7,7 @@ delete_option( 'wc_yotpo_v3_token' );
 delete_option( 'wc_yotpo_product_sync' );
 delete_post_meta_by_key( '_yotpo_v3_product_id' );
 delete_post_meta_by_key( '_yotpo_v3_variant_id' );
+delete_post_meta_by_key( '_yotpo_v3_blocklisted' );
 if ( function_exists( 'as_unschedule_all_actions' ) ) {
 	as_unschedule_all_actions( '', array(), 'yotpo-product-sync' );
 }

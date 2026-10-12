@@ -57,7 +57,7 @@ class Yotpo_Sync_CLI {
 	 * @subcommand product
 	 */
 	public function product( $args ) {
-		$result = Yotpo_Product_Sync::sync_product( (int) $args[0] );
+		$result = Yotpo_Product_Sync::sync_product( (int) $args[0], true );
 		if ( is_wp_error( $result ) ) {
 			WP_CLI::error( $result->get_error_code() . ': ' . $result->get_error_message() );
 		}
