@@ -224,3 +224,9 @@ Version 1.8.3
 Version 1.8.4
 1) Review export: only cells starting with "=" get the spreadsheet-safety apostrophe (1.8.3 also prefixed -, + and @, which Yotpo's importer kept).
 2) New Yotpo icon on the WordPress.org listing and in the wp-admin menu; removed the old banner from the plugin.
+
+2026-10-12
+---
+Version 1.9.0
+1) Category widgets (star ratings, Reviews Carousel, Promoted Products, Reviews Tab) now also render on WooCommerce product category, tag and attribute pages, not only the Shop page.
+2) Home page widgets now also render on stores with a static front page.
