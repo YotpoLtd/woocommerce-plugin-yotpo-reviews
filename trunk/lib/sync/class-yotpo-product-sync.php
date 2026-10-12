@@ -83,11 +83,20 @@ class Yotpo_Product_Sync {
 		self::start_full_sync();
 	}
 
+	/**
+	 * @return true|WP_Error
+	 */
 	public static function start_full_sync() {
-		$client = Yotpo_V3_Client::from_settings();
-		if ( ! $client || ! self::scheduler_ready() || ! self::enabled() ) {
-			return false;
+		if ( ! Yotpo_V3_Client::from_settings() ) {
+			return new WP_Error( 'yotpo_no_credentials', 'Save the Yotpo app key and secret first.' );
 		}
+		if ( ! self::scheduler_ready() ) {
+			return new WP_Error( 'yotpo_no_scheduler', 'Action Scheduler is not available.' );
+		}
+		if ( ! self::enabled() ) {
+			return new WP_Error( 'yotpo_sync_disabled', 'Product sync is turned off (filter wc_yotpo_product_sync_enabled).' );
+		}
+		$client = Yotpo_V3_Client::from_settings();
 		self::save_state(
 			array(
 				'app_key'    => $client->app_key(),
@@ -728,6 +737,24 @@ class Yotpo_Product_Sync {
 			ytdbg( $state['synced'] . ' synced, ' . $state['failed'] . ' failed', 'Product sync: full sync done:' );
 		}
 		return $state;
+	}
+
+	/**
+	 * The full sync state plus the number of sync jobs still queued.
+	 */
+	public static function status() {
+		$status           = self::state();
+		$status['queued'] = 0;
+		if ( self::scheduler_ready() && class_exists( 'ActionScheduler' ) ) {
+			$status['queued'] = (int) ActionScheduler::store()->query_actions(
+				array(
+					'group'  => self::GROUP,
+					'status' => ActionScheduler_Store::STATUS_PENDING,
+				),
+				'count'
+			);
+		}
+		return $status;
 	}
 
 	public static function state() {

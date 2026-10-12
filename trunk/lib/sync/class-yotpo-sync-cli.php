@@ -17,12 +17,12 @@ class Yotpo_Sync_CLI {
 	 * @subcommand status
 	 */
 	public function status() {
-		$state = Yotpo_Product_Sync::state();
-		if ( empty( $state ) ) {
+		$state = Yotpo_Product_Sync::status();
+		if ( empty( $state['status'] ) ) {
 			WP_CLI::log( 'No product sync has run yet.' );
 			return;
 		}
-		foreach ( array( 'status', 'synced', 'failed', 'last_error' ) as $key ) {
+		foreach ( array( 'status', 'synced', 'failed', 'last_error', 'queued' ) as $key ) {
 			WP_CLI::log( sprintf( '%-11s %s', $key . ':', isset( $state[ $key ] ) ? $state[ $key ] : '' ) );
 		}
 		foreach ( array( 'started', 'finished', 'last_activity' ) as $key ) {
@@ -30,8 +30,6 @@ class Yotpo_Sync_CLI {
 				WP_CLI::log( sprintf( '%-11s %s UTC', $key . ':', gmdate( 'Y-m-d H:i:s', $state[ $key ] ) ) );
 			}
 		}
-		$pending = as_get_scheduled_actions( array( 'group' => Yotpo_Product_Sync::GROUP, 'status' => ActionScheduler_Store::STATUS_PENDING, 'per_page' => -1 ), 'ids' );
-		WP_CLI::log( sprintf( '%-11s %d', 'queued:', count( $pending ) ) );
 	}
 
 	/**
@@ -40,10 +38,11 @@ class Yotpo_Sync_CLI {
 	 * @subcommand start
 	 */
 	public function start() {
-		if ( ! Yotpo_V3_Client::from_settings() ) {
-			WP_CLI::error( 'Save the Yotpo app key and secret first.' );
+		$result = Yotpo_Product_Sync::start_full_sync();
+		if ( is_wp_error( $result ) ) {
+			WP_CLI::error( $result->get_error_message() );
 		}
-		Yotpo_Product_Sync::start_full_sync() ? WP_CLI::success( 'Full product sync queued.' ) : WP_CLI::error( 'Action Scheduler is not available.' );
+		WP_CLI::success( 'Full product sync queued.' );
 	}
 
 	/**
