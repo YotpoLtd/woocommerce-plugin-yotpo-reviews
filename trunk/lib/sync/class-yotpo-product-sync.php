@@ -16,7 +16,7 @@ defined( 'ABSPATH' ) || exit;
  */
 class Yotpo_Product_Sync {
 
-	// The GROUP, META_* and STATE_OPTION values are also written out in uninstall.php, which runs
+	// The GROUP, META_*, STATE_OPTION and LOCK_OPTION values are also written out in uninstall.php, which runs
 	// without this class loaded. Keep both in sync when one changes, or uninstall leaves data behind.
 	const GROUP           = 'yotpo-product-sync';
 	const BATCH_SIZE      = 20;
@@ -29,6 +29,8 @@ class Yotpo_Product_Sync {
 	const META_VARIANT_HASH = '_yotpo_v3_variant_hash';
 	const META_BLOCKLISTED = '_yotpo_v3_blocklisted'; // 'blocked' or 'absent': what Yotpo was last told, until the product is published again.
 	const STATE_OPTION    = 'wc_yotpo_product_sync';
+	const LOCK_OPTION     = 'wc_yotpo_product_sync_lock'; // Short-lived lock around changes to the sync state.
+	const LOCK_TTL        = 30; // Seconds after which a lock left behind by a killed job is taken over.
 
 	const HOOK_PRODUCT    = 'wc_yotpo_sync_product';
 	const HOOK_BATCH      = 'wc_yotpo_sync_product_batch';
@@ -98,18 +100,25 @@ class Yotpo_Product_Sync {
 		if ( ! self::enabled() ) {
 			return new WP_Error( 'yotpo_sync_disabled', 'Product sync is turned off (filter wc_yotpo_product_sync_enabled).' );
 		}
+		// Restarting while jobs are queued would reset the counters under them and could finish the new sync early.
+		$current = self::status();
+		if ( isset( $current['status'] ) && 'running' === $current['status'] && $current['queued'] > 0 ) {
+			return new WP_Error( 'yotpo_sync_running', 'A full product sync is already running.' );
+		}
 		$client = Yotpo_V3_Client::from_settings();
-		self::save_state(
-			array(
-				'app_key'    => $client->app_key(),
-				'status'     => 'running',
-				'started'    => time(),
-				'finished'   => 0,
-				'synced'     => 0,
-				'failed'     => 0,
-				'total'      => 0,
-				'last_error' => '',
-			)
+		self::update_state(
+			function () use ( $client ) {
+				return array(
+					'app_key'    => $client->app_key(),
+					'status'     => 'running',
+					'started'    => time(),
+					'finished'   => 0,
+					'synced'     => 0,
+					'failed'     => 0,
+					'total'      => 0,
+					'last_error' => '',
+				);
+			}
 		);
 		as_enqueue_async_action( self::HOOK_BATCH, array( 1 ), self::GROUP, true );
 		ytdbg( '', 'Product sync: full sync queued' );
@@ -201,14 +210,19 @@ class Yotpo_Product_Sync {
 				++$queued;
 			}
 		}
-		$state          = self::state();
-		$state['total'] = ( isset( $state['total'] ) ? (int) $state['total'] : 0 ) + $queued;
-		if ( count( $ids ) === self::BATCH_SIZE ) {
+		$more = count( $ids ) === self::BATCH_SIZE;
+		if ( $more ) {
 			as_enqueue_async_action( self::HOOK_BATCH, array( $page + 1 ), self::GROUP, true );
-		} else {
-			$state['pages_done'] = true;
 		}
-		self::save_state( self::finish_if_done( $state ) );
+		self::update_state(
+			function ( $state ) use ( $queued, $more ) {
+				$state['total'] = ( isset( $state['total'] ) ? (int) $state['total'] : 0 ) + $queued;
+				if ( ! $more ) {
+					$state['pages_done'] = true;
+				}
+				return self::finish_if_done( $state );
+			}
+		);
 	}
 
 	/**
@@ -699,21 +713,24 @@ class Yotpo_Product_Sync {
 	}
 
 	private static function count_result( $result ) {
-		$state = self::state();
-		if ( empty( $state ) ) {
-			return;
-		}
-		if ( is_wp_error( $result ) ) {
-			$state['failed']     = (int) $state['failed'] + 1;
-			$state['last_error'] = $result->get_error_message();
-		} elseif ( $result ) {
-			$state['synced'] = (int) $state['synced'] + 1;
-		} else {
-			// Nothing to do: the product was unpublished or removed after the sync was queued.
-			$state['skipped'] = ( isset( $state['skipped'] ) ? (int) $state['skipped'] : 0 ) + 1;
-		}
-		$state['last_activity'] = time();
-		self::save_state( self::finish_if_done( $state ) );
+		self::update_state(
+			function ( $state ) use ( $result ) {
+				if ( empty( $state ) ) {
+					return null;
+				}
+				if ( is_wp_error( $result ) ) {
+					$state['failed']     = (int) $state['failed'] + 1;
+					$state['last_error'] = $result->get_error_message();
+				} elseif ( $result ) {
+					$state['synced'] = (int) $state['synced'] + 1;
+				} else {
+					// Nothing to do: the product was unpublished or removed after the sync was queued.
+					$state['skipped'] = ( isset( $state['skipped'] ) ? (int) $state['skipped'] : 0 ) + 1;
+				}
+				$state['last_activity'] = time();
+				return self::finish_if_done( $state );
+			}
+		);
 	}
 
 	/**
@@ -721,11 +738,15 @@ class Yotpo_Product_Sync {
 	 * so maybe_start_initial_sync() can start it again instead of leaving it 'running' for good.
 	 */
 	private static function stop_full_sync() {
-		$state = self::state();
-		if ( isset( $state['status'] ) && 'running' === $state['status'] ) {
-			$state['status'] = 'stopped';
-			self::save_state( $state );
-		}
+		self::update_state(
+			function ( $state ) {
+				if ( isset( $state['status'] ) && 'running' === $state['status'] ) {
+					$state['status'] = 'stopped';
+					return $state;
+				}
+				return null;
+			}
+		);
 	}
 
 	/**
@@ -762,6 +783,51 @@ class Yotpo_Product_Sync {
 	public static function state() {
 		$state = get_option( self::STATE_OPTION, array() );
 		return is_array( $state ) ? $state : array();
+	}
+
+	/**
+	 * Changes the sync state without losing a concurrent change: product jobs of one full sync can
+	 * run in parallel, and each would otherwise overwrite the counters the others just saved.
+	 *
+	 * @param callable $change Receives the current state; returns the state to save, or null to save nothing.
+	 */
+	private static function update_state( $change ) {
+		$locked = self::lock_state();
+		// Another runner may have saved since this request loaded its options.
+		wp_cache_delete( 'alloptions', 'options' );
+		wp_cache_delete( self::STATE_OPTION, 'options' );
+		$new_state = call_user_func( $change, self::state() );
+		if ( is_array( $new_state ) ) {
+			self::save_state( $new_state );
+		}
+		if ( $locked ) {
+			delete_option( self::LOCK_OPTION );
+		}
+	}
+
+	/**
+	 * Takes the state lock (an option that add_option() only creates once). Waits up to five seconds;
+	 * a lock older than LOCK_TTL was left by a killed job and is taken over. Best effort: after
+	 * the wait the change goes ahead without the lock rather than being lost.
+	 *
+	 * @return bool Whether this request now holds the lock.
+	 */
+	private static function lock_state() {
+		for ( $try = 0; $try < 50; $try++ ) {
+			// add_option() trusts these caches when deciding whether the option exists.
+			wp_cache_delete( self::LOCK_OPTION, 'options' );
+			wp_cache_delete( 'notoptions', 'options' );
+			if ( add_option( self::LOCK_OPTION, time(), '', false ) ) {
+				return true;
+			}
+			$taken = (int) get_option( self::LOCK_OPTION );
+			if ( $taken && time() - $taken > self::LOCK_TTL ) {
+				delete_option( self::LOCK_OPTION );
+				continue;
+			}
+			usleep( 100000 );
+		}
+		return false;
 	}
 
 	private static function save_state( $state ) {

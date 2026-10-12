@@ -4,10 +4,11 @@ delete_option('yotpo_settings');
 
 // Product sync (Core API V3): access token, sync state, stored Yotpo IDs and queued jobs.
 // These names must match the constants in Yotpo_V3_Client (TOKEN_OPTION) and Yotpo_Product_Sync
-// (STATE_OPTION, META_*, GROUP). This file runs without those classes loaded, so it cannot use them;
+// (STATE_OPTION, LOCK_OPTION, META_*, GROUP). This file runs without those classes loaded, so it cannot use them;
 // when a constant changes, change it here too, or uninstall leaves data behind.
 delete_option( 'wc_yotpo_v3_token' );
 delete_option( 'wc_yotpo_product_sync' );
+delete_option( 'wc_yotpo_product_sync_lock' );
 delete_post_meta_by_key( '_yotpo_v3_product_id' );
 delete_post_meta_by_key( '_yotpo_v3_variant_id' );
 delete_post_meta_by_key( '_yotpo_v3_blocklisted' );
