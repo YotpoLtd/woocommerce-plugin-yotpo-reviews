@@ -393,9 +393,15 @@ class Yotpo_Product_Sync {
 	}
 
 	/**
-	 * What differs between products and variants in the Yotpo API: the collection path, the key
-	 * the object travels under, the key of the list in a lookup answer and the post meta that
-	 * remembers the Yotpo ID.
+	 * What differs between products and variants in the Yotpo API:
+	 * - path:     the collection path.
+	 * - key:      the key the object travels under.
+	 * - list_key: the key of the list in a lookup answer.
+	 * - meta:     the post meta that remembers the Yotpo ID.
+	 * - hash:     the post meta that remembers the fingerprint of the data Yotpo last accepted;
+	 *             upsert() skips a request when the data still matches it.
+	 * - salt:     text added to the fingerprint for anything else the accepted data depends on
+	 *             (a variant is only up to date under the Yotpo product it was sent to; empty for products).
 	 */
 	private static function product_spec() {
 		return array(
