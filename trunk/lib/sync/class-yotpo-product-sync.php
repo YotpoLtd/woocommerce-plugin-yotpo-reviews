@@ -29,6 +29,9 @@ class Yotpo_Product_Sync {
 	const META_VARIANT_HASH = '_yotpo_v3_variant_hash';
 	const META_BLOCKLISTED = '_yotpo_v3_blocklisted'; // Set ('1') once Yotpo has been told, or found to be without the product, until it is published again.
 	const STATE_OPTION    = 'wc_yotpo_product_sync';
+	const STATUS_RUNNING  = 'running';
+	const STATUS_STOPPED  = 'stopped'; // Cut short by the off switch; starts again once the switch is back on.
+	const STATUS_COMPLETE = 'complete';
 	const PAUSE_TRANSIENT = 'wc_yotpo_product_sync_paused_until'; // Set after a 429: until then no job calls Yotpo.
 	const LOCK_OPTION     = 'wc_yotpo_product_sync_lock'; // Short-lived lock around changes to the sync state.
 	const LOCK_TTL        = 30; // Seconds after which a lock left behind by a killed job is taken over.
@@ -81,19 +84,26 @@ class Yotpo_Product_Sync {
 		if ( ! $client ) {
 			return;
 		}
-		$state = self::state();
-		// A sync stopped by the off switch starts again once the switch is back on.
-		if ( isset( $state['app_key'] ) && $state['app_key'] === $client->app_key() && ( ! isset( $state['status'] ) || 'stopped' !== $state['status'] ) ) {
-			return;
+		if ( self::initial_sync_due( self::state(), $client ) ) {
+			self::start_full_sync();
 		}
-		self::start_full_sync();
+	}
+
+	/**
+	 * Whether the full sync has to be started: it never ran for this app key, or it was stopped by the off switch.
+	 */
+	private static function initial_sync_due( $state, $client ) {
+		$ran_for_this_account = isset( $state['app_key'] ) && $state['app_key'] === $client->app_key();
+		$was_stopped          = isset( $state['status'] ) && self::STATUS_STOPPED === $state['status'];
+		return ! $ran_for_this_account || $was_stopped;
 	}
 
 	/**
 	 * @return true|WP_Error
 	 */
 	public static function start_full_sync() {
-		if ( ! Yotpo_V3_Client::from_settings() ) {
+		$client = Yotpo_V3_Client::from_settings();
+		if ( ! $client ) {
 			return new WP_Error( 'yotpo_no_credentials', 'Save the Yotpo app key and secret first.' );
 		}
 		if ( ! self::scheduler_ready() ) {
@@ -104,21 +114,23 @@ class Yotpo_Product_Sync {
 		}
 		// Restarting while jobs are queued would reset the counters under them and could finish the new sync early.
 		$current = self::status();
-		if ( isset( $current['status'] ) && 'running' === $current['status'] && $current['queued'] > 0 ) {
+		if ( isset( $current['status'] ) && self::STATUS_RUNNING === $current['status'] && $current['queued'] > 0 ) {
 			return new WP_Error( 'yotpo_sync_running', 'A full product sync is already running.' );
 		}
-		$client = Yotpo_V3_Client::from_settings();
 		self::update_state(
 			function () use ( $client ) {
 				return array(
-					'app_key'    => $client->app_key(),
-					'status'     => 'running',
-					'started'    => time(),
-					'finished'   => 0,
-					'synced'     => 0,
-					'failed'     => 0,
-					'total'      => 0,
-					'last_error' => '',
+					'app_key'       => $client->app_key(),
+					'status'        => self::STATUS_RUNNING,
+					'started'       => time(),
+					'finished'      => 0,
+					'synced'        => 0,
+					'failed'        => 0,
+					'skipped'       => 0,
+					'total'         => 0,
+					'pages_done'    => false, // True once the last page of products is queued.
+					'last_activity' => 0,
+					'last_error'    => '',
 				);
 			}
 		);
@@ -798,8 +810,8 @@ class Yotpo_Product_Sync {
 	private static function stop_full_sync() {
 		self::update_state(
 			function ( $state ) {
-				if ( isset( $state['status'] ) && 'running' === $state['status'] ) {
-					$state['status'] = 'stopped';
+				if ( isset( $state['status'] ) && self::STATUS_RUNNING === $state['status'] ) {
+					$state['status'] = self::STATUS_STOPPED;
 					return $state;
 				}
 				return null;
@@ -811,9 +823,9 @@ class Yotpo_Product_Sync {
 	 * Marks a running full sync complete once every page is queued and every queued product job finished.
 	 */
 	private static function finish_if_done( $state ) {
-		if ( isset( $state['status'] ) && 'running' === $state['status'] && ! empty( $state['pages_done'] )
+		if ( isset( $state['status'] ) && self::STATUS_RUNNING === $state['status'] && ! empty( $state['pages_done'] )
 			&& (int) $state['synced'] + (int) $state['failed'] + ( isset( $state['skipped'] ) ? (int) $state['skipped'] : 0 ) >= (int) $state['total'] ) {
-			$state['status']   = 'complete';
+			$state['status']   = self::STATUS_COMPLETE;
 			$state['finished'] = time();
 			ytdbg( $state['synced'] . ' synced, ' . $state['failed'] . ' failed', 'Product sync: full sync done:' );
 		}
