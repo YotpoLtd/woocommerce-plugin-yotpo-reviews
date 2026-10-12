@@ -30,7 +30,7 @@ class Yotpo_Product_Sync {
 	const HOOK_VARIANT_GONE = 'wc_yotpo_discontinue_variant';
 
 	public static function init() {
-		add_action( self::HOOK_PRODUCT, array( __CLASS__, 'run_product_job' ), 10, 2 );
+		add_action( self::HOOK_PRODUCT, array( __CLASS__, 'run_product_job' ), 10, 3 );
 		add_action( self::HOOK_BATCH, array( __CLASS__, 'run_batch_job' ), 10, 1 );
 		add_action( self::HOOK_VARIANT_GONE, array( __CLASS__, 'run_variant_gone_job' ), 10, 3 );
 
@@ -99,13 +99,17 @@ class Yotpo_Product_Sync {
 	}
 
 	/**
+	 * @param bool $full_sync True for a job of the full catalog sync: only those are counted in the sync state.
 	 * @return int The queued action ID (0 when nothing was queued, for example a duplicate).
 	 */
-	public static function queue_product( $product_id, $attempt = 1, $delay = 0 ) {
+	public static function queue_product( $product_id, $attempt = 1, $delay = 0, $full_sync = false ) {
 		if ( ! self::scheduler_ready() ) {
 			return 0;
 		}
 		$args = array( (int) $product_id, (int) $attempt );
+		if ( $full_sync ) {
+			$args[] = 1;
+		}
 		if ( $delay > 0 ) {
 			return (int) as_schedule_single_action( time() + $delay, self::HOOK_PRODUCT, $args, self::GROUP, true );
 		}
@@ -174,7 +178,7 @@ class Yotpo_Product_Sync {
 		);
 		$queued = 0;
 		foreach ( $ids as $product_id ) {
-			if ( self::queue_product( $product_id ) ) {
+			if ( self::queue_product( $product_id, 1, 0, true ) ) {
 				++$queued;
 			}
 		}
@@ -189,18 +193,21 @@ class Yotpo_Product_Sync {
 	}
 
 	/**
-	 * One product, queued by a change in WooCommerce. Retries with growing delays.
+	 * One product, queued by a change in WooCommerce or by the full sync. Retries with growing delays.
+	 * Only the full sync's jobs count towards its progress.
 	 */
-	public static function run_product_job( $product_id, $attempt = 1 ) {
+	public static function run_product_job( $product_id, $attempt = 1, $full_sync = 0 ) {
 		if ( ! self::enabled() ) {
 			return;
 		}
 		$result = self::sync_product( $product_id );
 		if ( is_wp_error( $result ) && self::is_retryable( $result ) && $attempt < self::MAX_ATTEMPTS ) {
-			self::queue_product( $product_id, $attempt + 1, self::retry_delay( $result, $attempt ) );
+			self::queue_product( $product_id, $attempt + 1, self::retry_delay( $result, $attempt ), (bool) $full_sync );
 			return;
 		}
-		self::count_result( $result );
+		if ( $full_sync ) {
+			self::count_result( $result );
+		}
 	}
 
 	public static function run_variant_gone_job( $variation_id, $parent_id, $attempt = 1 ) {
@@ -640,8 +647,11 @@ class Yotpo_Product_Sync {
 		if ( is_wp_error( $result ) ) {
 			$state['failed']     = (int) $state['failed'] + 1;
 			$state['last_error'] = $result->get_error_message();
-		} else {
+		} elseif ( $result ) {
 			$state['synced'] = (int) $state['synced'] + 1;
+		} else {
+			// Nothing to do: the product was unpublished or removed after the sync was queued.
+			$state['skipped'] = ( isset( $state['skipped'] ) ? (int) $state['skipped'] : 0 ) + 1;
 		}
 		$state['last_activity'] = time();
 		self::save_state( self::finish_if_done( $state ) );
@@ -652,7 +662,7 @@ class Yotpo_Product_Sync {
 	 */
 	private static function finish_if_done( $state ) {
 		if ( isset( $state['status'] ) && 'running' === $state['status'] && ! empty( $state['pages_done'] )
-			&& (int) $state['synced'] + (int) $state['failed'] >= (int) $state['total'] ) {
+			&& (int) $state['synced'] + (int) $state['failed'] + ( isset( $state['skipped'] ) ? (int) $state['skipped'] : 0 ) >= (int) $state['total'] ) {
 			$state['status']   = 'complete';
 			$state['finished'] = time();
 			ytdbg( $state['synced'] . ' synced, ' . $state['failed'] . ' failed', 'Product sync: full sync done:' );
