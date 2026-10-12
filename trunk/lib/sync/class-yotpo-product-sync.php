@@ -27,7 +27,7 @@ class Yotpo_Product_Sync {
 	const META_VARIANT_ID = '_yotpo_v3_variant_id';
 	const META_PRODUCT_HASH = '_yotpo_v3_product_hash'; // Fingerprint of the product data Yotpo last accepted.
 	const META_VARIANT_HASH = '_yotpo_v3_variant_hash';
-	const META_BLOCKLISTED = '_yotpo_v3_blocklisted'; // 'blocked' or 'absent': what Yotpo was last told, until the product is published again.
+	const META_BLOCKLISTED = '_yotpo_v3_blocklisted'; // Set ('1') once Yotpo has been told, or found to be without the product, until it is published again.
 	const STATE_OPTION    = 'wc_yotpo_product_sync';
 	const PAUSE_TRANSIENT = 'wc_yotpo_product_sync_paused_until'; // Set after a 429: until then no job calls Yotpo.
 	const LOCK_OPTION     = 'wc_yotpo_product_sync_lock'; // Short-lived lock around changes to the sync state.
@@ -525,7 +525,7 @@ class Yotpo_Product_Sync {
 			return $yotpo_id;
 		}
 		if ( ! $yotpo_id ) {
-			self::remember_blocklist( $product_id, 'absent' );
+			self::remember_blocklist( $product_id );
 			return 0;
 		}
 		$payload = array( 'custom_properties' => array( 'is_blocklisted' => true ) );
@@ -538,7 +538,7 @@ class Yotpo_Product_Sync {
 				return $found;
 			}
 			if ( ! $found ) {
-				self::remember_blocklist( $product_id, 'absent' );
+				self::remember_blocklist( $product_id );
 				return 0; // Yotpo no longer has it: nothing to blocklist.
 			}
 			if ( $found !== $yotpo_id ) {
@@ -549,14 +549,14 @@ class Yotpo_Product_Sync {
 		if ( $error ) {
 			return $error;
 		}
-		self::remember_blocklist( $product_id, 'blocked' );
+		self::remember_blocklist( $product_id );
 		ytdbg( 'Yotpo ID ' . $yotpo_id, 'Product sync: product #' . $product_id . ' blocklisted,' );
 		return $yotpo_id;
 	}
 
-	private static function remember_blocklist( $product_id, $outcome ) {
+	private static function remember_blocklist( $product_id ) {
 		if ( get_post_status( $product_id ) ) { // A deleted product has no meta to keep.
-			update_post_meta( $product_id, self::META_BLOCKLISTED, $outcome );
+			update_post_meta( $product_id, self::META_BLOCKLISTED, '1' );
 			// Yotpo no longer has the data last sent; publishing again must send it.
 			delete_post_meta( $product_id, self::META_PRODUCT_HASH );
 		}
