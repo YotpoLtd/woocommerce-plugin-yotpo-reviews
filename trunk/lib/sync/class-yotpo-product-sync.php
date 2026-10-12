@@ -417,12 +417,29 @@ class Yotpo_Product_Sync {
 	 * Blocklists a product that is gone or not published. Nothing to do if Yotpo never had it.
 	 */
 	private static function blocklist_product( $client, $product_id ) {
-		$yotpo_id = self::find_yotpo_product_id( $client, $product_id );
+		$spec     = self::product_spec();
+		$cached   = (int) get_post_meta( $product_id, self::META_PRODUCT_ID, true );
+		$yotpo_id = self::find_yotpo_id( $client, $spec, $product_id );
 		if ( is_wp_error( $yotpo_id ) || ! $yotpo_id ) {
 			return $yotpo_id;
 		}
-		$response = $client->request( 'PATCH', '/products/' . $yotpo_id, array( 'product' => array( 'custom_properties' => array( 'is_blocklisted' => true ) ) ) );
-		$error    = self::response_error( $response );
+		$payload = array( 'custom_properties' => array( 'is_blocklisted' => true ) );
+		$error   = self::patch( $client, $spec, $yotpo_id, $payload );
+		if ( $error && $cached && ! self::is_retryable( $error ) ) {
+			// Rejected: the stored ID may be stale. Look it up again by external ID, as upsert() does.
+			delete_post_meta( $product_id, self::META_PRODUCT_ID );
+			$found = self::find_yotpo_id( $client, $spec, $product_id );
+			if ( is_wp_error( $found ) ) {
+				return $found;
+			}
+			if ( ! $found ) {
+				return 0; // Yotpo no longer has it: nothing to blocklist.
+			}
+			if ( $found !== $yotpo_id ) {
+				$yotpo_id = $found;
+				$error    = self::patch( $client, $spec, $yotpo_id, $payload );
+			}
+		}
 		if ( $error ) {
 			return $error;
 		}
