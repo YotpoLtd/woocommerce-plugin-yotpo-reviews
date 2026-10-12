@@ -70,14 +70,15 @@ class Yotpo_Product_Sync {
 		}
 		$state    = self::state();
 		$settings = get_option( 'yotpo_settings', wc_yotpo_get_default_settings() );
-		if ( isset( $state['app_key'] ) && $state['app_key'] === $settings['app_key'] ) {
+		// A sync stopped by the off switch starts again once the switch is back on.
+		if ( isset( $state['app_key'] ) && $state['app_key'] === $settings['app_key'] && ( ! isset( $state['status'] ) || 'stopped' !== $state['status'] ) ) {
 			return;
 		}
 		self::start_full_sync();
 	}
 
 	public static function start_full_sync() {
-		if ( ! self::scheduler_ready() ) {
+		if ( ! self::scheduler_ready() || ! self::enabled() ) {
 			return false;
 		}
 		$settings = get_option( 'yotpo_settings', wc_yotpo_get_default_settings() );
@@ -163,6 +164,7 @@ class Yotpo_Product_Sync {
 	public static function run_batch_job( $page ) {
 		// The off switch also stops jobs that were queued before it was turned on.
 		if ( ! self::enabled() ) {
+			self::stop_full_sync();
 			return;
 		}
 		$page = max( 1, (int) $page );
@@ -198,6 +200,9 @@ class Yotpo_Product_Sync {
 	 */
 	public static function run_product_job( $product_id, $attempt = 1, $full_sync = 0 ) {
 		if ( ! self::enabled() ) {
+			if ( $full_sync ) {
+				self::stop_full_sync();
+			}
 			return;
 		}
 		$result = self::sync_product( $product_id );
@@ -655,6 +660,18 @@ class Yotpo_Product_Sync {
 		}
 		$state['last_activity'] = time();
 		self::save_state( self::finish_if_done( $state ) );
+	}
+
+	/**
+	 * A running full sync that can no longer continue (the off switch is on) is marked stopped,
+	 * so maybe_start_initial_sync() can start it again instead of leaving it 'running' for good.
+	 */
+	private static function stop_full_sync() {
+		$state = self::state();
+		if ( isset( $state['status'] ) && 'running' === $state['status'] ) {
+			$state['status'] = 'stopped';
+			self::save_state( $state );
+		}
 	}
 
 	/**
