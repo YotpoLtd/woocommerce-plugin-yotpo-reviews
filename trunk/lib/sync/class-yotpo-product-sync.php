@@ -54,8 +54,8 @@ class Yotpo_Product_Sync {
 	 * Sync runs when credentials are saved. Filterable as a kill switch.
 	 */
 	public static function enabled() {
-		$settings = get_option( 'yotpo_settings', wc_yotpo_get_default_settings() );
-		$ready    = ! empty( $settings['app_key'] ) && ! empty( $settings['secret'] );
+		// The client is the only reader of the saved credentials: no client means they are missing.
+		$ready = (bool) Yotpo_V3_Client::from_settings();
 		return (bool) apply_filters( 'wc_yotpo_product_sync_enabled', $ready );
 	}
 
@@ -71,23 +71,26 @@ class Yotpo_Product_Sync {
 		if ( ! self::scheduler_ready() ) {
 			return;
 		}
-		$state    = self::state();
-		$settings = get_option( 'yotpo_settings', wc_yotpo_get_default_settings() );
+		$client = Yotpo_V3_Client::from_settings();
+		if ( ! $client ) {
+			return;
+		}
+		$state = self::state();
 		// A sync stopped by the off switch starts again once the switch is back on.
-		if ( isset( $state['app_key'] ) && $state['app_key'] === $settings['app_key'] && ( ! isset( $state['status'] ) || 'stopped' !== $state['status'] ) ) {
+		if ( isset( $state['app_key'] ) && $state['app_key'] === $client->app_key() && ( ! isset( $state['status'] ) || 'stopped' !== $state['status'] ) ) {
 			return;
 		}
 		self::start_full_sync();
 	}
 
 	public static function start_full_sync() {
-		if ( ! self::scheduler_ready() || ! self::enabled() ) {
+		$client = Yotpo_V3_Client::from_settings();
+		if ( ! $client || ! self::scheduler_ready() || ! self::enabled() ) {
 			return false;
 		}
-		$settings = get_option( 'yotpo_settings', wc_yotpo_get_default_settings() );
 		self::save_state(
 			array(
-				'app_key'    => $settings['app_key'],
+				'app_key'    => $client->app_key(),
 				'status'     => 'running',
 				'started'    => time(),
 				'finished'   => 0,
