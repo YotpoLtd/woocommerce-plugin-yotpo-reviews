@@ -35,6 +35,7 @@ class Yotpo_Product_Sync {
 	const PAUSE_TRANSIENT = 'wc_yotpo_product_sync_paused_until'; // Set after a 429: until then no job calls Yotpo.
 	const LOCK_OPTION     = 'wc_yotpo_product_sync_lock'; // Short-lived lock around changes to the sync state.
 	const LOCK_TTL        = 30; // Seconds after which a lock left behind by a killed job is taken over.
+	const STALL_AFTER     = 3600; // Seconds without progress after which a running sync with no jobs left counts as dead.
 
 	const HOOK_PRODUCT    = 'wc_yotpo_sync_product';
 	const HOOK_BATCH      = 'wc_yotpo_sync_product_batch';
@@ -90,12 +91,30 @@ class Yotpo_Product_Sync {
 	}
 
 	/**
-	 * Whether the full sync has to be started: it never ran for this app key, or it was stopped by the off switch.
+	 * Whether the full sync has to be started: it never ran for this app key, it was stopped by the off switch,
+	 * or it died while running (see is_stalled()).
 	 */
 	private static function initial_sync_due( $state, $client ) {
 		$ran_for_this_account = isset( $state['app_key'] ) && $state['app_key'] === $client->app_key();
 		$was_stopped          = isset( $state['status'] ) && self::STATUS_STOPPED === $state['status'];
-		return ! $ran_for_this_account || $was_stopped;
+		return ! $ran_for_this_account || $was_stopped || self::is_stalled( $state );
+	}
+
+	/**
+	 * A sync that is 'running' but has made no progress for STALL_AFTER seconds and has no job left to
+	 * make any (for example an action was killed mid-product and never counted itself). Cheap checks
+	 * first: this runs on every request while a sync is running.
+	 */
+	private static function is_stalled( $state ) {
+		if ( ! isset( $state['status'] ) || self::STATUS_RUNNING !== $state['status'] ) {
+			return false;
+		}
+		$last_progress = max( isset( $state['last_activity'] ) ? (int) $state['last_activity'] : 0, isset( $state['started'] ) ? (int) $state['started'] : 0 );
+		if ( time() - $last_progress <= self::STALL_AFTER ) {
+			return false;
+		}
+		$status = self::status();
+		return 0 === $status['queued'] && 0 === $status['in_progress'];
 	}
 
 	/**
@@ -838,12 +857,20 @@ class Yotpo_Product_Sync {
 	 */
 	public static function status() {
 		$status           = self::state();
-		$status['queued'] = 0;
+		$status['queued']      = 0;
+		$status['in_progress'] = 0;
 		if ( self::scheduler_ready() && class_exists( 'ActionScheduler' ) ) {
-			$status['queued'] = (int) ActionScheduler::store()->query_actions(
+			$status['queued']      = (int) ActionScheduler::store()->query_actions(
 				array(
 					'group'  => self::GROUP,
 					'status' => ActionScheduler_Store::STATUS_PENDING,
+				),
+				'count'
+			);
+			$status['in_progress'] = (int) ActionScheduler::store()->query_actions(
+				array(
+					'group'  => self::GROUP,
+					'status' => ActionScheduler_Store::STATUS_RUNNING,
 				),
 				'count'
 			);
@@ -863,7 +890,7 @@ class Yotpo_Product_Sync {
 	 * @param callable $change Receives the current state; returns the state to save, or null to save nothing.
 	 */
 	private static function update_state( $change ) {
-		$locked = self::lock_state();
+		$token = self::lock_state();
 		// Another runner may have saved since this request loaded its options.
 		wp_cache_delete( 'alloptions', 'options' );
 		wp_cache_delete( self::STATE_OPTION, 'options' );
@@ -871,8 +898,8 @@ class Yotpo_Product_Sync {
 		if ( is_array( $new_state ) ) {
 			self::save_state( $new_state );
 		}
-		if ( $locked ) {
-			delete_option( self::LOCK_OPTION );
+		if ( $token ) {
+			self::unlock_state( $token );
 		}
 	}
 
@@ -881,24 +908,42 @@ class Yotpo_Product_Sync {
 	 * a lock older than LOCK_TTL was left by a killed job and is taken over. Best effort: after
 	 * the wait the change goes ahead without the lock rather than being lost.
 	 *
-	 * @return bool Whether this request now holds the lock.
+	 * The lock value is "<time>:<owner token>", so only the request that took the lock releases it.
+	 *
+	 * @return string The owner token, or '' when the lock was not obtained.
 	 */
 	private static function lock_state() {
+		$token = wp_generate_password( 12, false );
 		for ( $try = 0; $try < 50; $try++ ) {
 			// add_option() trusts these caches when deciding whether the option exists.
 			wp_cache_delete( self::LOCK_OPTION, 'options' );
 			wp_cache_delete( 'notoptions', 'options' );
-			if ( add_option( self::LOCK_OPTION, time(), '', false ) ) {
-				return true;
+			if ( add_option( self::LOCK_OPTION, time() . ':' . $token, '', false ) ) {
+				return $token;
 			}
-			$taken = (int) get_option( self::LOCK_OPTION );
-			if ( $taken && time() - $taken > self::LOCK_TTL ) {
-				delete_option( self::LOCK_OPTION );
+			$taken = (string) get_option( self::LOCK_OPTION );
+			if ( '' !== $taken && time() - (int) $taken > self::LOCK_TTL ) {
+				// Only remove the stale lock that was read, not a fresh one taken since.
+				wp_cache_delete( self::LOCK_OPTION, 'options' );
+				if ( (string) get_option( self::LOCK_OPTION ) === $taken ) {
+					delete_option( self::LOCK_OPTION );
+				}
 				continue;
 			}
 			usleep( 100000 );
 		}
-		return false;
+		return '';
+	}
+
+	/**
+	 * Releases the lock, unless it expired and another request took it over in the meantime.
+	 */
+	private static function unlock_state( $token ) {
+		wp_cache_delete( self::LOCK_OPTION, 'options' );
+		$value = (string) get_option( self::LOCK_OPTION );
+		if ( substr( $value, - strlen( $token ) - 1 ) === ':' . $token ) {
+			delete_option( self::LOCK_OPTION );
+		}
 	}
 
 	private static function save_state( $state ) {
