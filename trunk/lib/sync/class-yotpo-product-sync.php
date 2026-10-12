@@ -87,6 +87,7 @@ class Yotpo_Product_Sync {
 				'finished'   => 0,
 				'synced'     => 0,
 				'failed'     => 0,
+				'total'      => 0,
 				'last_error' => '',
 			)
 		);
@@ -95,16 +96,18 @@ class Yotpo_Product_Sync {
 		return true;
 	}
 
+	/**
+	 * @return int The queued action ID (0 when nothing was queued, for example a duplicate).
+	 */
 	public static function queue_product( $product_id, $attempt = 1, $delay = 0 ) {
 		if ( ! self::scheduler_ready() ) {
-			return;
+			return 0;
 		}
 		$args = array( (int) $product_id, (int) $attempt );
 		if ( $delay > 0 ) {
-			as_schedule_single_action( time() + $delay, self::HOOK_PRODUCT, $args, self::GROUP, true );
-		} else {
-			as_enqueue_async_action( self::HOOK_PRODUCT, $args, self::GROUP, true );
+			return (int) as_schedule_single_action( time() + $delay, self::HOOK_PRODUCT, $args, self::GROUP, true );
 		}
+		return (int) as_enqueue_async_action( self::HOOK_PRODUCT, $args, self::GROUP, true );
 	}
 
 	public static function queue_variation_parent( $variation_id ) {
@@ -147,7 +150,9 @@ class Yotpo_Product_Sync {
 	// ---------------------------------------------------------------------------------------
 
 	/**
-	 * One page of the full sync: syncs BATCH_SIZE published products, then queues the next page.
+	 * One page of the full sync: queues one job per published product (so each action stays short
+	 * and gets its own retries), then queues the next page. The sync is complete once every queued
+	 * product job has finished (see count_result()).
 	 */
 	public static function run_batch_job( $page ) {
 		// The off switch also stops jobs that were queued before it was turned on.
@@ -165,30 +170,20 @@ class Yotpo_Product_Sync {
 				'return'  => 'ids',
 			)
 		);
+		$queued = 0;
 		foreach ( $ids as $product_id ) {
-			$result = self::sync_product( $product_id );
-			if ( is_wp_error( $result ) && 'yotpo_rate_limited' === $result->get_error_code() ) {
-				// Retry this whole page later; products already done are updates the second time.
-				$retry_after = (int) $result->get_error_data();
-				as_schedule_single_action( time() + max( 5, $retry_after ), self::HOOK_BATCH, array( $page ), self::GROUP, true );
-				return;
+			if ( self::queue_product( $product_id ) ) {
+				++$queued;
 			}
-			if ( is_wp_error( $result ) && self::is_retryable( $result ) ) {
-				// Network or server trouble: give this product the same retries as a single-product job.
-				self::queue_product( $product_id, 2, 60 * ( 2 ** 1 ) );
-				continue;
-			}
-			self::count_result( $result );
 		}
+		$state          = self::state();
+		$state['total'] = ( isset( $state['total'] ) ? (int) $state['total'] : 0 ) + $queued;
 		if ( count( $ids ) === self::BATCH_SIZE ) {
 			as_enqueue_async_action( self::HOOK_BATCH, array( $page + 1 ), self::GROUP, true );
 		} else {
-			$state             = self::state();
-			$state['status']   = 'complete';
-			$state['finished'] = time();
-			self::save_state( $state );
-			ytdbg( $state['synced'] . ' synced, ' . $state['failed'] . ' failed', 'Product sync: full sync done:' );
+			$state['pages_done'] = true;
 		}
+		self::save_state( self::finish_if_done( $state ) );
 	}
 
 	/**
@@ -607,7 +602,20 @@ class Yotpo_Product_Sync {
 			$state['synced'] = (int) $state['synced'] + 1;
 		}
 		$state['last_activity'] = time();
-		self::save_state( $state );
+		self::save_state( self::finish_if_done( $state ) );
+	}
+
+	/**
+	 * Marks a running full sync complete once every page is queued and every queued product job finished.
+	 */
+	private static function finish_if_done( $state ) {
+		if ( isset( $state['status'] ) && 'running' === $state['status'] && ! empty( $state['pages_done'] )
+			&& (int) $state['synced'] + (int) $state['failed'] >= (int) $state['total'] ) {
+			$state['status']   = 'complete';
+			$state['finished'] = time();
+			ytdbg( $state['synced'] . ' synced, ' . $state['failed'] . ' failed', 'Product sync: full sync done:' );
+		}
+		return $state;
 	}
 
 	public static function state() {
