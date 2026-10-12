@@ -260,7 +260,9 @@ class Yotpo_Product_Sync {
 			self::queue_product( $product_id, $attempt, $paused_for, (bool) $full_sync );
 			return;
 		}
-		$result = self::sync_product( $product_id, (bool) $full_sync );
+		// The full sync forces a resend on the first attempt only; a retry resumes from the stored
+		// hashes, so it does not send again what Yotpo already accepted.
+		$result = self::sync_product( $product_id, $full_sync && 1 === (int) $attempt );
 		self::pause_if_rate_limited( $result, $attempt );
 		if ( is_wp_error( $result ) && self::is_retryable( $result ) && $attempt < self::MAX_ATTEMPTS ) {
 			self::queue_product( $product_id, $attempt + 1, self::retry_delay( $result, $attempt ), (bool) $full_sync );
