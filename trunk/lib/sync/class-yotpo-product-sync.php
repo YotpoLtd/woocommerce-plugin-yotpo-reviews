@@ -16,6 +16,8 @@ defined( 'ABSPATH' ) || exit;
  */
 class Yotpo_Product_Sync {
 
+	// The GROUP, META_* and STATE_OPTION values are also written out in uninstall.php, which runs
+	// without this class loaded. Keep both in sync when one changes, or uninstall leaves data behind.
 	const GROUP           = 'yotpo-product-sync';
 	const BATCH_SIZE      = 20;
 	const MAX_ATTEMPTS    = 3;

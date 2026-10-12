@@ -12,7 +12,7 @@ defined( 'ABSPATH' ) || exit;
 class Yotpo_V3_Client {
 
 	const BASE_URL     = 'https://api.yotpo.com/core/v3/stores/';
-	const TOKEN_OPTION = 'wc_yotpo_v3_token';
+	const TOKEN_OPTION = 'wc_yotpo_v3_token'; // Also written out in uninstall.php: keep both in sync.
 	const MIN_INTERVAL = 0.2; // Seconds between calls: 5 requests per second per app key.
 	const TIMEOUT      = 15;
 
