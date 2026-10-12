@@ -211,19 +211,39 @@ class Yotpo_Product_Sync {
 		if ( ! $client ) {
 			return;
 		}
-		$yotpo_product_id = self::find_yotpo_product_id( $client, $parent_id );
-		if ( is_wp_error( $yotpo_product_id ) || ! $yotpo_product_id ) {
+		$error = self::discontinue_variant( $client, $variation_id, $parent_id );
+		if ( ! $error ) {
 			return;
+		}
+		if ( self::is_retryable( $error ) && $attempt < self::MAX_ATTEMPTS ) {
+			as_schedule_single_action( time() + self::retry_delay( $error, $attempt ), self::HOOK_VARIANT_GONE, array( (int) $variation_id, (int) $parent_id, $attempt + 1 ), self::GROUP, true );
+			return;
+		}
+		ytdbg( $error->get_error_message(), 'Product sync: variation #' . $variation_id . ' not discontinued:' );
+	}
+
+	/**
+	 * Marks a deleted variation as discontinued in Yotpo. Nothing to do if Yotpo never had it.
+	 *
+	 * @return WP_Error|null The first error of the lookups or the update.
+	 */
+	private static function discontinue_variant( $client, $variation_id, $parent_id ) {
+		$yotpo_product_id = self::find_yotpo_product_id( $client, $parent_id );
+		if ( is_wp_error( $yotpo_product_id ) ) {
+			return $yotpo_product_id;
+		}
+		if ( ! $yotpo_product_id ) {
+			return null;
 		}
 		$yotpo_variant_id = self::find_yotpo_variant_id( $client, $yotpo_product_id, $variation_id );
-		if ( is_wp_error( $yotpo_variant_id ) || ! $yotpo_variant_id ) {
-			return;
+		if ( is_wp_error( $yotpo_variant_id ) ) {
+			return $yotpo_variant_id;
+		}
+		if ( ! $yotpo_variant_id ) {
+			return null;
 		}
 		$response = $client->request( 'PATCH', '/products/' . $yotpo_product_id . '/variants/' . $yotpo_variant_id, array( 'variant' => array( 'is_discontinued' => true ) ) );
-		$error    = self::response_error( $response );
-		if ( $error && self::is_retryable( $error ) && $attempt < self::MAX_ATTEMPTS ) {
-			as_schedule_single_action( time() + 60 * ( 2 ** $attempt ), self::HOOK_VARIANT_GONE, array( (int) $variation_id, (int) $parent_id, $attempt + 1 ), self::GROUP, true );
-		}
+		return self::response_error( $response );
 	}
 
 	// ---------------------------------------------------------------------------------------
