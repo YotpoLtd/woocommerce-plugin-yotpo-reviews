@@ -173,6 +173,11 @@ class Yotpo_Product_Sync {
 				as_schedule_single_action( time() + max( 5, $retry_after ), self::HOOK_BATCH, array( $page ), self::GROUP, true );
 				return;
 			}
+			if ( is_wp_error( $result ) && self::is_retryable( $result ) ) {
+				// Network or server trouble: give this product the same retries as a single-product job.
+				self::queue_product( $product_id, 2, 60 * ( 2 ** 1 ) );
+				continue;
+			}
 			self::count_result( $result );
 		}
 		if ( count( $ids ) === self::BATCH_SIZE ) {
