@@ -19,6 +19,8 @@ class Yotpo_Product_Sync {
 	const GROUP           = 'yotpo-product-sync';
 	const BATCH_SIZE      = 20;
 	const MAX_ATTEMPTS    = 3;
+	const RETRY_BASE_DELAY    = 60; // Seconds before the first retry; doubles with each attempt.
+	const RATE_LIMIT_MIN_DELAY = 5; // Seconds to wait at least after a 429, even if Retry-After is lower or missing.
 	const META_PRODUCT_ID = '_yotpo_v3_product_id';
 	const META_VARIANT_ID = '_yotpo_v3_variant_id';
 	const STATE_OPTION    = 'wc_yotpo_product_sync';
@@ -195,8 +197,7 @@ class Yotpo_Product_Sync {
 		}
 		$result = self::sync_product( $product_id );
 		if ( is_wp_error( $result ) && self::is_retryable( $result ) && $attempt < self::MAX_ATTEMPTS ) {
-			$delay = 'yotpo_rate_limited' === $result->get_error_code() ? max( 5, (int) $result->get_error_data() ) : 60 * ( 2 ** $attempt );
-			self::queue_product( $product_id, $attempt + 1, $delay );
+			self::queue_product( $product_id, $attempt + 1, self::retry_delay( $result, $attempt ) );
 			return;
 		}
 		self::count_result( $result );
@@ -598,6 +599,17 @@ class Yotpo_Product_Sync {
 	 */
 	private static function is_retryable( $error ) {
 		return in_array( $error->get_error_code(), array( 'yotpo_rate_limited', 'yotpo_network', 'yotpo_server' ), true );
+	}
+
+	/**
+	 * Seconds to wait before retrying after a retryable error: Retry-After for a 429,
+	 * else a delay that doubles with each attempt.
+	 */
+	private static function retry_delay( $error, $attempt ) {
+		if ( 'yotpo_rate_limited' === $error->get_error_code() ) {
+			return max( self::RATE_LIMIT_MIN_DELAY, (int) $error->get_error_data() );
+		}
+		return self::RETRY_BASE_DELAY * ( 2 ** $attempt );
 	}
 
 	private static function count_result( $result ) {
