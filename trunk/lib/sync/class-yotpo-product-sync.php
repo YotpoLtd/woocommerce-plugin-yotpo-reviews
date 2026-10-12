@@ -265,6 +265,7 @@ class Yotpo_Product_Sync {
 	/**
 	 * Creates or updates one product and its variants in Yotpo, or blocklists it.
 	 *
+	 * @param int $product_id WooCommerce product ID. A variation ID is accepted and syncs its parent product.
 	 * @return int|WP_Error The Yotpo product ID (0 when there was nothing to do).
 	 */
 	public static function sync_product( $product_id ) {
@@ -275,7 +276,12 @@ class Yotpo_Product_Sync {
 
 		$product = wc_get_product( $product_id );
 		if ( $product && $product->is_type( 'variation' ) ) {
-			$product = wc_get_product( $product->get_parent_id() );
+			// Work with the parent from here on, including for the blocklist lookup and the logs.
+			$parent_id = $product->get_parent_id();
+			$product   = $parent_id ? wc_get_product( $parent_id ) : false;
+			if ( $parent_id ) {
+				$product_id = $parent_id;
+			}
 		}
 		if ( ! $product || 'publish' !== $product->get_status() ) {
 			return self::blocklist_product( $client, $product_id );
