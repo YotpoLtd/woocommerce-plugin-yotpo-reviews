@@ -4,7 +4,7 @@ Tags: reviews, social reviews, woocommerce, woocommerce reviews, woocommerce pro
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.8.4
+Stable tag: 1.9.0
 License: GPLv2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -225,11 +225,14 @@ For full installation guide, [please click here](https://support.yotpo.com/docs/
 * Review export: only cells starting with "=" get the spreadsheet-safety apostrophe. In 1.8.3, reviews starting with "-", "+" or "@" also got one, and Yotpo's importer kept it, so it showed on the storefront
 * New Yotpo icon on the WordPress.org listing and in the wp-admin menu
 
-= 1.9.0 =
+= 1.9.0 - 12/10/2026 =
 * Category widgets (star ratings, Reviews Carousel, Promoted Products, Reviews Tab) now also show on WooCommerce product category, tag and attribute pages, not only on the Shop page
 * Home page widgets now also show on stores that use a static front page
 
 == Upgrade Notice ==
+
+= 1.9.0 =
+Star ratings, Reviews Carousel, Promoted Products and the Reviews Tab now also show on product category pages and static home pages. To keep them off those pages, turn off the matching toggles in the Yotpo settings before updating.
 
 = 1.8.4 =
 Fixes review exports adding an apostrophe to reviews that start with -, + or @, and updates the Yotpo icon. Recommended if you export reviews to import into Yotpo.
