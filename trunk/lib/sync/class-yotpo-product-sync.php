@@ -144,6 +144,22 @@ class Yotpo_Product_Sync {
 		return (int) as_enqueue_async_action( self::HOOK_PRODUCT, $args, self::GROUP, true );
 	}
 
+	/**
+	 * Queues the job that marks a deleted variation as discontinued in Yotpo.
+	 *
+	 * @return int The queued action ID (0 when nothing was queued, for example a duplicate).
+	 */
+	public static function queue_variant_gone( $variation_id, $parent_id, $attempt = 1, $delay = 0 ) {
+		if ( ! self::scheduler_ready() ) {
+			return 0;
+		}
+		$args = array( (int) $variation_id, (int) $parent_id, (int) $attempt );
+		if ( $delay > 0 ) {
+			return (int) as_schedule_single_action( time() + $delay, self::HOOK_VARIANT_GONE, $args, self::GROUP, true );
+		}
+		return (int) as_enqueue_async_action( self::HOOK_VARIANT_GONE, $args, self::GROUP, true );
+	}
+
 	public static function queue_variation_parent( $variation_id ) {
 		$parent_id = wp_get_post_parent_id( $variation_id );
 		if ( $parent_id ) {
@@ -174,7 +190,7 @@ class Yotpo_Product_Sync {
 		} elseif ( 'product_variation' === $type ) {
 			$parent_id = wp_get_post_parent_id( $post_id );
 			if ( $parent_id ) {
-				as_enqueue_async_action( self::HOOK_VARIANT_GONE, array( (int) $post_id, (int) $parent_id, 1 ), self::GROUP, true );
+				self::queue_variant_gone( $post_id, $parent_id );
 			}
 		}
 	}
@@ -264,7 +280,7 @@ class Yotpo_Product_Sync {
 		}
 		$paused_for = self::paused_for();
 		if ( $paused_for > 0 ) {
-			as_schedule_single_action( time() + $paused_for, self::HOOK_VARIANT_GONE, array( (int) $variation_id, (int) $parent_id, (int) $attempt ), self::GROUP, true );
+			self::queue_variant_gone( $variation_id, $parent_id, $attempt, $paused_for );
 			return;
 		}
 		$error = self::discontinue_variant( $client, $variation_id, $parent_id );
@@ -273,7 +289,7 @@ class Yotpo_Product_Sync {
 			return;
 		}
 		if ( self::is_retryable( $error ) && $attempt < self::MAX_ATTEMPTS ) {
-			as_schedule_single_action( time() + self::retry_delay( $error, $attempt ), self::HOOK_VARIANT_GONE, array( (int) $variation_id, (int) $parent_id, $attempt + 1 ), self::GROUP, true );
+			self::queue_variant_gone( $variation_id, $parent_id, $attempt + 1, self::retry_delay( $error, $attempt ) );
 			return;
 		}
 		ytdbg( $error->get_error_message(), 'Product sync: variation #' . $variation_id . ' not discontinued:' );
