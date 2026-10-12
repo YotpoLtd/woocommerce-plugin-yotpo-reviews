@@ -316,23 +316,56 @@ class Yotpo_Product_Sync {
 	}
 
 	private static function upsert_product( $client, $product ) {
-		$product_id = $product->get_id();
-		$payload    = self::product_payload( $product );
-		$yotpo_id   = (int) get_post_meta( $product_id, self::META_PRODUCT_ID, true );
+		return self::upsert( $client, self::product_spec(), $product->get_id(), self::product_payload( $product ) );
+	}
+
+	private static function upsert_variant( $client, $yotpo_product_id, $variation, $parent ) {
+		return self::upsert( $client, self::variant_spec( $yotpo_product_id ), $variation->get_id(), self::variant_payload( $variation, $parent ) );
+	}
+
+	/**
+	 * What differs between products and variants in the Yotpo API: the collection path, the key
+	 * the object travels under, the key of the list in a lookup answer and the post meta that
+	 * remembers the Yotpo ID.
+	 */
+	private static function product_spec() {
+		return array(
+			'path'     => '/products',
+			'key'      => 'product',
+			'list_key' => 'products',
+			'meta'     => self::META_PRODUCT_ID,
+		);
+	}
+
+	private static function variant_spec( $yotpo_product_id ) {
+		return array(
+			'path'     => '/products/' . $yotpo_product_id . '/variants',
+			'key'      => 'variant',
+			'list_key' => 'variants',
+			'meta'     => self::META_VARIANT_ID,
+		);
+	}
+
+	/**
+	 * Creates or updates one product or variant in Yotpo (see product_spec() and variant_spec()).
+	 *
+	 * @return int|WP_Error The Yotpo ID.
+	 */
+	private static function upsert( $client, $spec, $post_id, $payload ) {
+		$yotpo_id = (int) get_post_meta( $post_id, $spec['meta'], true );
 
 		if ( $yotpo_id ) {
-			$response = $client->request( 'PATCH', '/products/' . $yotpo_id, array( 'product' => $payload ) );
-			$error    = self::response_error( $response );
+			$error = self::patch( $client, $spec, $yotpo_id, $payload );
 			if ( ! $error ) {
 				return $yotpo_id;
 			}
 			if ( self::is_retryable( $error ) ) {
 				return $error;
 			}
-			// Rejected: the stored ID may be stale (product deleted in Yotpo, or an ID that isn't
-			// this store's). Look it up again by external ID before deciding.
-			delete_post_meta( $product_id, self::META_PRODUCT_ID );
-			$found = self::find_yotpo_product_id( $client, $product_id );
+			// Rejected: the stored ID may be stale (deleted in Yotpo, or an ID that isn't this
+			// store's). Look it up again by external ID before deciding.
+			delete_post_meta( $post_id, $spec['meta'] );
+			$found = self::find_yotpo_id( $client, $spec, $post_id );
 			if ( is_wp_error( $found ) ) {
 				return $found;
 			}
@@ -340,20 +373,19 @@ class Yotpo_Product_Sync {
 				return $error; // The ID was right; Yotpo rejected the data itself.
 			}
 			if ( $found ) {
-				$response = $client->request( 'PATCH', '/products/' . $found, array( 'product' => $payload ) );
-				$error    = self::response_error( $response );
+				$error = self::patch( $client, $spec, $found, $payload );
 				return $error ? $error : $found;
 			}
 			// Not in Yotpo any more: create it again below.
 		}
 
-		$response = $client->request( 'POST', '/products', array( 'product' => array_merge( array( 'external_id' => (string) $product_id ), $payload ) ) );
+		$response = $client->request( 'POST', $spec['path'], array( $spec['key'] => array_merge( array( 'external_id' => (string) $post_id ), $payload ) ) );
 		if ( 201 === $response['code'] || 200 === $response['code'] ) {
-			$yotpo_id = isset( $response['body']['product']['yotpo_id'] ) ? (int) $response['body']['product']['yotpo_id'] : 0;
+			$yotpo_id = isset( $response['body'][ $spec['key'] ]['yotpo_id'] ) ? (int) $response['body'][ $spec['key'] ]['yotpo_id'] : 0;
 			if ( ! $yotpo_id ) {
-				return new WP_Error( 'yotpo_bad_response', 'Create product returned no yotpo_id' );
+				return new WP_Error( 'yotpo_bad_response', 'Create ' . $spec['key'] . ' returned no yotpo_id' );
 			}
-			update_post_meta( $product_id, self::META_PRODUCT_ID, $yotpo_id );
+			update_post_meta( $post_id, $spec['meta'], $yotpo_id );
 			return $yotpo_id;
 		}
 		if ( 409 !== $response['code'] ) {
@@ -361,72 +393,24 @@ class Yotpo_Product_Sync {
 		}
 
 		// Already in Yotpo (often created from widgets or orders): find it and update it.
-		$yotpo_id = self::find_yotpo_product_id( $client, $product_id );
+		$yotpo_id = self::find_yotpo_id( $client, $spec, $post_id );
 		if ( is_wp_error( $yotpo_id ) ) {
 			return $yotpo_id;
 		}
 		if ( ! $yotpo_id ) {
-			return new WP_Error( 'yotpo_not_found', 'Create answered "already exists" but the lookup found nothing' );
+			return new WP_Error( 'yotpo_not_found', 'Create ' . $spec['key'] . ' answered "already exists" but the lookup found nothing' );
 		}
-		$response = $client->request( 'PATCH', '/products/' . $yotpo_id, array( 'product' => $payload ) );
-		$error    = self::response_error( $response );
+		$error = self::patch( $client, $spec, $yotpo_id, $payload );
 		return $error ? $error : $yotpo_id;
 	}
 
-	private static function upsert_variant( $client, $yotpo_product_id, $variation, $parent ) {
-		$variation_id = $variation->get_id();
-		$base         = '/products/' . $yotpo_product_id . '/variants';
-		$payload      = self::variant_payload( $variation, $parent );
-		$variant_id   = (int) get_post_meta( $variation_id, self::META_VARIANT_ID, true );
-
-		if ( $variant_id ) {
-			$response = $client->request( 'PATCH', $base . '/' . $variant_id, array( 'variant' => $payload ) );
-			$error    = self::response_error( $response );
-			if ( ! $error ) {
-				return $variant_id;
-			}
-			if ( self::is_retryable( $error ) ) {
-				return $error;
-			}
-			// Same stale-ID check as for products.
-			delete_post_meta( $variation_id, self::META_VARIANT_ID );
-			$found = self::find_yotpo_variant_id( $client, $yotpo_product_id, $variation_id );
-			if ( is_wp_error( $found ) ) {
-				return $found;
-			}
-			if ( $found === $variant_id ) {
-				return $error;
-			}
-			if ( $found ) {
-				$response = $client->request( 'PATCH', $base . '/' . $found, array( 'variant' => $payload ) );
-				$error    = self::response_error( $response );
-				return $error ? $error : $found;
-			}
-		}
-
-		$response = $client->request( 'POST', $base, array( 'variant' => array_merge( array( 'external_id' => (string) $variation_id ), $payload ) ) );
-		if ( 201 === $response['code'] || 200 === $response['code'] ) {
-			$variant_id = isset( $response['body']['variant']['yotpo_id'] ) ? (int) $response['body']['variant']['yotpo_id'] : 0;
-			if ( ! $variant_id ) {
-				return new WP_Error( 'yotpo_bad_response', 'Create variant returned no yotpo_id' );
-			}
-			update_post_meta( $variation_id, self::META_VARIANT_ID, $variant_id );
-			return $variant_id;
-		}
-		if ( 409 !== $response['code'] ) {
-			return self::response_error( $response );
-		}
-
-		$variant_id = self::find_yotpo_variant_id( $client, $yotpo_product_id, $variation_id );
-		if ( is_wp_error( $variant_id ) ) {
-			return $variant_id;
-		}
-		if ( ! $variant_id ) {
-			return new WP_Error( 'yotpo_not_found', 'Create variant answered "already exists" but the lookup found nothing' );
-		}
-		$response = $client->request( 'PATCH', $base . '/' . $variant_id, array( 'variant' => $payload ) );
-		$error    = self::response_error( $response );
-		return $error ? $error : $variant_id;
+	/**
+	 * Updates one product or variant by its Yotpo ID.
+	 *
+	 * @return WP_Error|null Null when Yotpo accepted it.
+	 */
+	private static function patch( $client, $spec, $yotpo_id, $payload ) {
+		return self::response_error( $client->request( 'PATCH', $spec['path'] . '/' . $yotpo_id, array( $spec['key'] => $payload ) ) );
 	}
 
 	/**
@@ -447,22 +431,24 @@ class Yotpo_Product_Sync {
 	}
 
 	/**
-	 * Yotpo product ID from post meta, else from the API by external ID (0 when Yotpo doesn't have it).
+	 * Yotpo ID from post meta, else from the API by external ID (0 when Yotpo doesn't have it).
+	 *
+	 * @return int|WP_Error
 	 */
-	private static function find_yotpo_product_id( $client, $product_id ) {
-		$cached = (int) get_post_meta( $product_id, self::META_PRODUCT_ID, true );
+	private static function find_yotpo_id( $client, $spec, $post_id ) {
+		$cached = (int) get_post_meta( $post_id, $spec['meta'], true );
 		if ( $cached ) {
 			return $cached;
 		}
-		$response = $client->request( 'GET', '/products', null, array( 'external_ids' => (string) $product_id ) );
+		$response = $client->request( 'GET', $spec['path'], null, array( 'external_ids' => (string) $post_id ) );
 		$error    = self::response_error( $response );
 		if ( $error ) {
 			return $error;
 		}
-		foreach ( isset( $response['body']['products'] ) ? (array) $response['body']['products'] : array() as $found ) {
-			if ( isset( $found['external_id'], $found['yotpo_id'] ) && (string) $found['external_id'] === (string) $product_id ) {
-				if ( get_post_status( $product_id ) ) {
-					update_post_meta( $product_id, self::META_PRODUCT_ID, (int) $found['yotpo_id'] );
+		foreach ( isset( $response['body'][ $spec['list_key'] ] ) ? (array) $response['body'][ $spec['list_key'] ] : array() as $found ) {
+			if ( isset( $found['external_id'], $found['yotpo_id'] ) && (string) $found['external_id'] === (string) $post_id ) {
+				if ( get_post_status( $post_id ) ) {
+					update_post_meta( $post_id, $spec['meta'], (int) $found['yotpo_id'] );
 				}
 				return (int) $found['yotpo_id'];
 			}
@@ -470,25 +456,12 @@ class Yotpo_Product_Sync {
 		return 0;
 	}
 
+	private static function find_yotpo_product_id( $client, $product_id ) {
+		return self::find_yotpo_id( $client, self::product_spec(), $product_id );
+	}
+
 	private static function find_yotpo_variant_id( $client, $yotpo_product_id, $variation_id ) {
-		$cached = (int) get_post_meta( $variation_id, self::META_VARIANT_ID, true );
-		if ( $cached ) {
-			return $cached;
-		}
-		$response = $client->request( 'GET', '/products/' . $yotpo_product_id . '/variants', null, array( 'external_ids' => (string) $variation_id ) );
-		$error    = self::response_error( $response );
-		if ( $error ) {
-			return $error;
-		}
-		foreach ( isset( $response['body']['variants'] ) ? (array) $response['body']['variants'] : array() as $found ) {
-			if ( isset( $found['external_id'], $found['yotpo_id'] ) && (string) $found['external_id'] === (string) $variation_id ) {
-				if ( get_post_status( $variation_id ) ) {
-					update_post_meta( $variation_id, self::META_VARIANT_ID, (int) $found['yotpo_id'] );
-				}
-				return (int) $found['yotpo_id'];
-			}
-		}
-		return 0;
+		return self::find_yotpo_id( $client, self::variant_spec( $yotpo_product_id ), $variation_id );
 	}
 
 	// ---------------------------------------------------------------------------------------
