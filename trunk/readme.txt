@@ -225,6 +225,10 @@ For full installation guide, [please click here](https://support.yotpo.com/docs/
 * Review export: only cells starting with "=" get the spreadsheet-safety apostrophe. In 1.8.3, reviews starting with "-", "+" or "@" also got one, and Yotpo's importer kept it, so it showed on the storefront
 * New Yotpo icon on the WordPress.org listing and in the wp-admin menu
 
+= 1.9.0 =
+* Category widgets (star ratings, Reviews Carousel, Promoted Products, Reviews Tab) now also show on WooCommerce product category, tag and attribute pages, not only on the Shop page
+* Home page widgets now also show on stores that use a static front page
+
 == Upgrade Notice ==
 
 = 1.8.4 =
