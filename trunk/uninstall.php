@@ -2,6 +2,15 @@
 if( !defined('WP_UNINSTALL_PLUGIN') ) exit();
 delete_option('yotpo_settings');
 
+// Product sync (Core API V3): access token, sync state, stored Yotpo IDs and queued jobs.
+delete_option( 'wc_yotpo_v3_token' );
+delete_option( 'wc_yotpo_product_sync' );
+delete_post_meta_by_key( '_yotpo_v3_product_id' );
+delete_post_meta_by_key( '_yotpo_v3_variant_id' );
+if ( function_exists( 'as_unschedule_all_actions' ) ) {
+	as_unschedule_all_actions( '', array(), 'yotpo-product-sync' );
+}
+
 // Remove the private debug log directory (log, .htaccess and index.php guards); the log contains customer emails.
 require_once ABSPATH . 'wp-admin/includes/file.php';
 if ( WP_Filesystem() ) {
