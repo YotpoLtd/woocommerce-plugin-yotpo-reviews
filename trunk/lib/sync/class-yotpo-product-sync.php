@@ -113,8 +113,9 @@ class Yotpo_Product_Sync {
 			return new WP_Error( 'yotpo_sync_disabled', 'Product sync is turned off (filter wc_yotpo_product_sync_enabled).' );
 		}
 		// Restarting while jobs are queued would reset the counters under them and could finish the new sync early.
+		// That includes a sync stopped by the off switch: its product jobs stay queued until they run (and do nothing).
 		$current = self::status();
-		if ( isset( $current['status'] ) && self::STATUS_RUNNING === $current['status'] && $current['queued'] > 0 ) {
+		if ( isset( $current['status'] ) && in_array( $current['status'], array( self::STATUS_RUNNING, self::STATUS_STOPPED ), true ) && $current['queued'] > 0 ) {
 			return new WP_Error( 'yotpo_sync_running', 'A full product sync is already running.' );
 		}
 		self::update_state(
