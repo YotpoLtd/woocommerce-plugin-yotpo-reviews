@@ -255,6 +255,7 @@ class Yotpo_Product_Sync {
 		}
 
 		if ( $product->is_type( 'variable' ) ) {
+			$first_error = null;
 			foreach ( $product->get_children() as $variation_id ) {
 				$variation = wc_get_product( $variation_id );
 				if ( ! $variation ) {
@@ -263,8 +264,17 @@ class Yotpo_Product_Sync {
 				$variant = self::upsert_variant( $client, $yotpo_id, $variation, $product );
 				if ( is_wp_error( $variant ) ) {
 					ytdbg( $variant->get_error_message(), 'Product sync: variation #' . $variation_id . ' failed:' );
-					return $variant;
+					if ( self::is_retryable( $variant ) ) {
+						return $variant; // The retry runs the whole product again.
+					}
+					// A variation Yotpo rejected for good must not block the others.
+					if ( ! $first_error ) {
+						$first_error = $variant;
+					}
 				}
+			}
+			if ( $first_error ) {
+				return $first_error;
 			}
 		}
 
