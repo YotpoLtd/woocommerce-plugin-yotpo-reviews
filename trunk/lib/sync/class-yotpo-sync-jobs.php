@@ -11,7 +11,7 @@ class Yotpo_Sync_Jobs {
 
 	// GROUP is also written out in uninstall.php, which runs without this class loaded: keep both in sync.
 	const GROUP                = 'yotpo-product-sync';
-	const BATCH_SIZE           = 100; // Products per full-sync page: one lookup request compares them all with Yotpo.
+	const BATCH_SIZE           = Yotpo_Catalog_Api::LOOKUP_MAX; // Products per full-sync page: one lookup request compares them all with Yotpo, so never more than it holds.
 	const MAX_ATTEMPTS         = 3;
 	const RETRY_BASE_DELAY     = 60; // Seconds before the first retry; doubles with each attempt.
 	const RATE_LIMIT_MIN_DELAY = 5; // Seconds to wait at least after a 429, even if Retry-After is lower or missing.
