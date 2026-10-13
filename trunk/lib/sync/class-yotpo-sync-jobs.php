@@ -21,6 +21,10 @@ class Yotpo_Sync_Jobs {
 	const RECHECK_TRANSIENT    = 'wc_yotpo_product_sync_recheck'; // Throttles the queue checks of maybe_start_initial_sync().
 	const RECHECK_EVERY        = 300; // Seconds between those checks while a sync is stopped or possibly stalled.
 
+	// The third argument of a product job: 0 for a job of a product save, else the stage of a full-sync job.
+	const FULL_SYNC          = 1; // The variations are still to be compared with Yotpo.
+	const FULL_SYNC_COMPARED = 2; // They were; a requeue or a retry doesn't compare again.
+
 	const HOOK_PRODUCT      = 'wc_yotpo_sync_product';
 	const HOOK_BATCH        = 'wc_yotpo_sync_product_batch';
 	const HOOK_VARIANT_GONE = 'wc_yotpo_discontinue_variant';
@@ -128,16 +132,17 @@ class Yotpo_Sync_Jobs {
 	// ---------------------------------------------------------------------------------------
 
 	/**
-	 * @param bool $full_sync True for a job of the full catalog sync: only those are counted in the sync state.
+	 * @param int|bool $full_sync 0 (or false) for a product save; FULL_SYNC or FULL_SYNC_COMPARED (true is FULL_SYNC)
+	 *                            for a job of the full catalog sync: only those are counted in the sync state.
 	 * @return int The queued action ID (0 when nothing was queued, for example a duplicate).
 	 */
-	public static function queue_product( $product_id, $attempt = 1, $delay = 0, $full_sync = false ) {
+	public static function queue_product( $product_id, $attempt = 1, $delay = 0, $full_sync = 0 ) {
 		if ( ! self::scheduler_ready() || ! Yotpo_Product_Sync::enabled() ) {
 			return 0;
 		}
 		$args = array( (int) $product_id, (int) $attempt );
 		if ( $full_sync ) {
-			$args[] = 1;
+			$args[] = (int) $full_sync;
 		}
 		if ( $delay > 0 ) {
 			return (int) as_schedule_single_action( time() + $delay, self::HOOK_PRODUCT, $args, self::GROUP, true );
@@ -226,7 +231,7 @@ class Yotpo_Sync_Jobs {
 		self::compare_with_yotpo( $ids );
 		$queued = 0;
 		foreach ( $ids as $product_id ) {
-			if ( self::queue_product( $product_id, 1, 0, true ) ) {
+			if ( self::queue_product( $product_id, 1, 0, self::FULL_SYNC ) ) {
 				++$queued;
 			}
 		}
@@ -251,24 +256,26 @@ class Yotpo_Sync_Jobs {
 		// Yotpo asked every caller to slow down: wait without spending an attempt.
 		$paused_for = self::paused_for();
 		if ( $paused_for > 0 ) {
-			self::queue_product( $product_id, $attempt, $paused_for, (bool) $full_sync );
+			self::queue_product( $product_id, $attempt, $paused_for, $full_sync );
 			return;
 		}
 		// The page job compared the product with Yotpo; its variations are compared here, in their own
-		// request. A retry skips this: it resumes from what Yotpo already accepted.
-		if ( $full_sync && 1 === (int) $attempt ) {
+		// request. Once, whatever follows (a pause, a retry): the answer is in post meta, and the job
+		// resumes from what Yotpo already accepted.
+		if ( self::FULL_SYNC === (int) $full_sync ) {
 			self::compare_variants_with_yotpo( $product_id );
+			$full_sync  = self::FULL_SYNC_COMPARED;
 			// That lookup may have got a 429, which pauses every job: wait, as above, instead of sending now.
 			$paused_for = self::paused_for();
 			if ( $paused_for > 0 ) {
-				self::queue_product( $product_id, $attempt, $paused_for, true );
+				self::queue_product( $product_id, $attempt, $paused_for, $full_sync );
 				return;
 			}
 		}
 		$result = Yotpo_Product_Sync::sync_product( $product_id );
 		self::pause_if_rate_limited( $result, $attempt );
 		if ( is_wp_error( $result ) && Yotpo_Catalog_Api::is_retryable( $result ) && $attempt < self::MAX_ATTEMPTS ) {
-			self::queue_product( $product_id, $attempt + 1, self::retry_delay( $result, $attempt ), (bool) $full_sync );
+			self::queue_product( $product_id, $attempt + 1, self::retry_delay( $result, $attempt ), $full_sync );
 			return;
 		}
 		if ( $full_sync ) {

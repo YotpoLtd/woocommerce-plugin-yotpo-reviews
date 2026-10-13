@@ -209,7 +209,20 @@ class FullSyncCompareTest extends Yotpo_Test_Case {
 		$this->assertGreaterThan( time(), (int) get_transient( Yotpo_Sync_Jobs::PAUSE_TRANSIENT ), 'Every job waits' );
 		$jobs = $this->pending_jobs( Yotpo_Sync_Jobs::HOOK_PRODUCT );
 		$this->assertCount( 1, $jobs );
-		$this->assertSame( array( $hoodie->get_id(), 1, 1 ), array_values( reset( $jobs )->get_args() ), 'The same attempt, queued for after the pause' );
+		$this->assertSame( array( $hoodie->get_id(), 1, Yotpo_Sync_Jobs::FULL_SYNC_COMPARED ), array_values( reset( $jobs )->get_args() ), 'The same attempt, queued for after the pause, marked as compared' );
+	}
+
+	public function test_a_requeued_job_does_not_compare_the_variations_again() {
+		$hoodie = $this->create_variable_product();
+		$this->put_in_yotpo( $hoodie );
+		$this->full_sync(); // Stored IDs and fingerprints now match Yotpo.
+		$this->requests         = array();
+		$this->variants_limited = true; // A second comparison would get a 429 and pause every job.
+
+		Yotpo_Sync_Jobs::run_product_job( $hoodie->get_id(), 1, Yotpo_Sync_Jobs::FULL_SYNC_COMPARED );
+
+		$this->assertSame( array(), $this->calls(), 'Nothing is looked up or sent' );
+		$this->assertFalse( get_transient( Yotpo_Sync_Jobs::PAUSE_TRANSIENT ) );
 	}
 
 	public function test_rate_limited_page_lookup_pauses_the_jobs_and_sends_the_page_in_full() {
