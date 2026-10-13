@@ -321,7 +321,7 @@ class Yotpo_Catalog_Api {
 			}
 			if ( array_values( $sent ) === $sent ) {
 				// A list (gtins, options): the same entries in any order.
-				return self::list_key( $sent ) === self::list_key( $stored );
+				return self::normalized_entries( $sent ) === self::normalized_entries( $stored );
 			}
 			return self::same_data( $sent, $stored );
 		}
@@ -345,7 +345,13 @@ class Yotpo_Catalog_Api {
 		return trim( (string) $stored ) === trim( (string) $sent );
 	}
 
-	private static function list_key( $list ) {
+	/**
+	 * The entries of a list as sorted, normalised JSON strings, so two lists with the same entries
+	 * in any order (and scalars in any type) give the same result.
+	 *
+	 * @return string[]
+	 */
+	private static function normalized_entries( $list ) {
 		$entries = array();
 		foreach ( $list as $entry ) {
 			if ( is_array( $entry ) ) {
