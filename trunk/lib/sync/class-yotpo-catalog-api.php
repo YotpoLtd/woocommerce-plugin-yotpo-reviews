@@ -196,7 +196,13 @@ class Yotpo_Catalog_Api {
 	}
 
 	/**
-	 * @param array $payloads What would be sent, keyed by WooCommerce ID (the external ID).
+	 * Sets the stored Yotpo ID and fingerprint of each payload's object to what a lookup of the
+	 * whole set found. Writes the same post meta upsert() reads (see the META_*_HASH constants).
+	 *
+	 * @param Yotpo_V3_Client $client   The API client.
+	 * @param array           $spec     product_spec() or variant_spec().
+	 * @param array           $payloads What would be sent, keyed by WooCommerce ID (the external ID).
+	 * @return WP_Error|null
 	 */
 	private static function compare( $client, $spec, array $payloads ) {
 		$not_compared = array_keys( $payloads );
@@ -208,29 +214,41 @@ class Yotpo_Catalog_Api {
 				}
 				return $items;
 			}
-			$in_yotpo = array();
-			foreach ( $items as $item ) {
-				if ( isset( $item['external_id'], $item['yotpo_id'] ) ) {
-					$in_yotpo[ (string) $item['external_id'] ] = $item;
-				}
-			}
+			$in_yotpo = self::index_by_external_id( $items );
 			foreach ( $chunk as $post_id => $payload ) {
 				if ( ! isset( $in_yotpo[ (string) $post_id ] ) ) {
 					// Not in Yotpo (any more): forget a stored ID, so it is created.
 					delete_post_meta( $post_id, $spec['meta'] );
 					delete_post_meta( $post_id, $spec['hash'] );
+					continue;
+				}
+				$item = $in_yotpo[ (string) $post_id ];
+				update_post_meta( $post_id, $spec['meta'], (int) $item['yotpo_id'] );
+				if ( self::same_data( $payload, $item ) ) {
+					update_post_meta( $post_id, $spec['hash'], self::fingerprint( $spec, $payload ) );
 				} else {
-					update_post_meta( $post_id, $spec['meta'], (int) $in_yotpo[ (string) $post_id ]['yotpo_id'] );
-					if ( self::same_data( $payload, $in_yotpo[ (string) $post_id ] ) ) {
-						update_post_meta( $post_id, $spec['hash'], self::fingerprint( $spec, $payload ) );
-					} else {
-						delete_post_meta( $post_id, $spec['hash'] );
-					}
+					delete_post_meta( $post_id, $spec['hash'] );
 				}
 			}
 			$not_compared = array_diff( $not_compared, array_keys( $chunk ) );
 		}
 		return null;
+	}
+
+	/**
+	 * The items of a lookup answer that name an external ID and a Yotpo ID, by external ID.
+	 *
+	 * @param array $items The answer's list ($response['body'][ $spec['list_key'] ]).
+	 * @return array[]
+	 */
+	private static function index_by_external_id( array $items ) {
+		$by_external_id = array();
+		foreach ( $items as $item ) {
+			if ( isset( $item['external_id'], $item['yotpo_id'] ) ) {
+				$by_external_id[ (string) $item['external_id'] ] = $item;
+			}
+		}
+		return $by_external_id;
 	}
 
 	/**
@@ -444,15 +462,14 @@ class Yotpo_Catalog_Api {
 		if ( $error ) {
 			return $error;
 		}
-		foreach ( isset( $response['body'][ $spec['list_key'] ] ) ? (array) $response['body'][ $spec['list_key'] ] : array() as $found ) {
-			if ( isset( $found['external_id'], $found['yotpo_id'] ) && (string) $found['external_id'] === (string) $post_id ) {
-				if ( get_post_status( $post_id ) ) {
-					update_post_meta( $post_id, $spec['meta'], (int) $found['yotpo_id'] );
-				}
-				return (int) $found['yotpo_id'];
-			}
+		$found = self::index_by_external_id( isset( $response['body'][ $spec['list_key'] ] ) ? (array) $response['body'][ $spec['list_key'] ] : array() );
+		if ( ! isset( $found[ (string) $post_id ] ) ) {
+			return 0;
 		}
-		return 0;
+		if ( get_post_status( $post_id ) ) {
+			update_post_meta( $post_id, $spec['meta'], (int) $found[ (string) $post_id ]['yotpo_id'] );
+		}
+		return (int) $found[ (string) $post_id ]['yotpo_id'];
 	}
 
 	private static function find_yotpo_product_id( $client, $product_id ) {
