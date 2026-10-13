@@ -182,6 +182,8 @@ class Yotpo_Product_Sync {
 				return $line;
 			case Yotpo_Sync_State::STATUS_STOPPED:
 				return 'Full sync stopped. It starts again on the next page load.';
+			case Yotpo_Sync_State::STATUS_STALLED:
+				return sprintf( 'Full sync stalled: %d of %d products done. %s', $synced + $failed + ( isset( $status['skipped'] ) ? (int) $status['skipped'] : 0 ), isset( $status['total'] ) ? (int) $status['total'] : 0, isset( $status['last_error'] ) ? $status['last_error'] : '' );
 			default:
 				return 'Full sync starts on the next page load.';
 		}

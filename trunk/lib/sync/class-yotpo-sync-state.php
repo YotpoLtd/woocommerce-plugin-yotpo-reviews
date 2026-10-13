@@ -12,9 +12,12 @@ class Yotpo_Sync_State {
 	const STATE_OPTION    = 'wc_yotpo_product_sync';
 	const LOCK_OPTION     = 'wc_yotpo_product_sync_lock'; // Short-lived lock around changes to the sync state.
 	const LOCK_TTL        = 30; // Seconds after which a lock left behind by a killed job is taken over.
+	const LOCK_WAIT_TRIES = 50; // Attempts to take the lock, LOCK_WAIT_USEC apart: five seconds in all.
+	const LOCK_WAIT_USEC  = 100000;
 	const STATUS_RUNNING  = 'running';
 	const STATUS_STOPPED  = 'stopped'; // Cut short by the off switch; starts again once the switch is back on.
 	const STATUS_COMPLETE = 'complete';
+	const STATUS_STALLED  = 'stalled'; // Restarted automatically too often; waits for the merchant to retry.
 
 	public static function get() {
 		$state = get_option( self::STATE_OPTION, array() );
@@ -23,10 +26,12 @@ class Yotpo_Sync_State {
 
 	/**
 	 * Starts a new full sync for the given app key, with all counters at zero.
+	 *
+	 * @param int $stall_restarts How many times a stalled sync was restarted automatically (0 for a normal start).
 	 */
-	public static function start( $app_key ) {
+	public static function start( $app_key, $stall_restarts = 0 ) {
 		self::update(
-			function () use ( $app_key ) {
+			function () use ( $app_key, $stall_restarts ) {
 				return array(
 					'app_key'       => $app_key,
 					'status'        => self::STATUS_RUNNING,
@@ -38,7 +43,8 @@ class Yotpo_Sync_State {
 					'total'         => 0,
 					'pages_done'    => false, // True once the last page of products is queued.
 					'last_activity' => 0,
-					'last_error'    => '',
+					'last_error'    => $stall_restarts ? 'The previous full sync stalled (a product job ended without finishing); restarted it.' : '',
+					'stall_restarts' => (int) $stall_restarts,
 				);
 			}
 		);
@@ -97,6 +103,23 @@ class Yotpo_Sync_State {
 	}
 
 	/**
+	 * A full sync that kept stalling is left for the merchant: turning the setting off and on starts it again.
+	 */
+	public static function mark_stalled( $restarts ) {
+		self::update(
+			function ( $state ) use ( $restarts ) {
+				if ( ! isset( $state['status'] ) || self::STATUS_RUNNING !== $state['status'] ) {
+					return null;
+				}
+				$state['status']     = self::STATUS_STALLED;
+				$state['finished']   = time();
+				$state['last_error'] = sprintf( 'The full sync stalled %d times: a product job keeps ending without finishing (see the PHP error log). Turn "Sync products to Yotpo" off and on to try again.', $restarts );
+				return $state;
+			}
+		);
+	}
+
+	/**
 	 * Marks a running full sync complete once every page is queued and every queued product job finished.
 	 */
 	private static function finish_if_done( $state ) {
@@ -130,7 +153,8 @@ class Yotpo_Sync_State {
 	}
 
 	/**
-	 * Takes the state lock (an option that add_option() only creates once). Waits up to five seconds;
+	 * Takes the state lock (an option that add_option() only creates once). Waits up to five seconds
+	 * (LOCK_WAIT_TRIES x LOCK_WAIT_USEC);
 	 * a lock older than LOCK_TTL was left by a killed job and is taken over. Best effort: after
 	 * the wait the change goes ahead without the lock rather than being lost.
 	 *
@@ -140,15 +164,15 @@ class Yotpo_Sync_State {
 	 */
 	private static function lock() {
 		$token = wp_generate_password( 12, false );
-		for ( $try = 0; $try < 50; $try++ ) {
+		for ( $try = 0; $try < self::LOCK_WAIT_TRIES; $try++ ) {
 			// add_option() trusts these caches when deciding whether the option exists.
 			wp_cache_delete( self::LOCK_OPTION, 'options' );
 			wp_cache_delete( 'notoptions', 'options' );
-			if ( add_option( self::LOCK_OPTION, time() . ':' . $token, '', false ) ) {
+			if ( add_option( self::LOCK_OPTION, self::lock_value( $token ), '', false ) ) {
 				return $token;
 			}
 			$taken = (string) get_option( self::LOCK_OPTION );
-			if ( '' !== $taken && time() - (int) $taken > self::LOCK_TTL ) {
+			if ( '' !== $taken && time() - self::lock_part( $taken, 0 ) > self::LOCK_TTL ) {
 				// Only remove the stale lock that was read, not a fresh one taken since.
 				wp_cache_delete( self::LOCK_OPTION, 'options' );
 				if ( (string) get_option( self::LOCK_OPTION ) === $taken ) {
@@ -156,9 +180,24 @@ class Yotpo_Sync_State {
 				}
 				continue;
 			}
-			usleep( 100000 );
+			usleep( self::LOCK_WAIT_USEC );
 		}
 		return '';
+	}
+
+	private static function lock_value( $token ) {
+		return time() . ':' . $token;
+	}
+
+	/**
+	 * Part 0 of a lock value is the time it was taken (int), part 1 the owner token (string).
+	 */
+	private static function lock_part( $value, $part ) {
+		$parts = explode( ':', (string) $value, 2 );
+		if ( 0 === $part ) {
+			return (int) $parts[0];
+		}
+		return isset( $parts[1] ) ? $parts[1] : '';
 	}
 
 	/**
@@ -166,8 +205,7 @@ class Yotpo_Sync_State {
 	 */
 	private static function unlock( $token ) {
 		wp_cache_delete( self::LOCK_OPTION, 'options' );
-		$value = (string) get_option( self::LOCK_OPTION );
-		if ( substr( $value, - strlen( $token ) - 1 ) === ':' . $token ) {
+		if ( self::lock_part( get_option( self::LOCK_OPTION ), 1 ) === $token ) {
 			delete_option( self::LOCK_OPTION );
 		}
 	}

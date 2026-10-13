@@ -12,7 +12,7 @@ defined( 'ABSPATH' ) || exit;
 class Yotpo_Sync_CLI {
 
 	/**
-	 * Shows the state of the full catalog sync and the jobs still queued.
+	 * Shows the state of the full catalog sync and the sync jobs queued or running.
 	 *
 	 * @subcommand status
 	 */
@@ -22,12 +22,12 @@ class Yotpo_Sync_CLI {
 			WP_CLI::log( 'No product sync has run yet.' );
 			return;
 		}
-		foreach ( array( 'status', 'synced', 'failed', 'last_error', 'queued' ) as $key ) {
-			WP_CLI::log( sprintf( '%-11s %s', $key . ':', isset( $state[ $key ] ) ? $state[ $key ] : '' ) );
+		foreach ( array( 'status', 'total', 'synced', 'failed', 'skipped', 'last_error', 'queued', 'in_progress' ) as $key ) {
+			WP_CLI::log( sprintf( '%-14s %s', $key . ':', isset( $state[ $key ] ) ? $state[ $key ] : '' ) );
 		}
 		foreach ( array( 'started', 'finished', 'last_activity' ) as $key ) {
 			if ( ! empty( $state[ $key ] ) ) {
-				WP_CLI::log( sprintf( '%-11s %s UTC', $key . ':', gmdate( 'Y-m-d H:i:s', $state[ $key ] ) ) );
+				WP_CLI::log( sprintf( '%-14s %s UTC', $key . ':', gmdate( 'Y-m-d H:i:s', $state[ $key ] ) ) );
 			}
 		}
 	}

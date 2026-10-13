@@ -17,6 +17,9 @@ class Yotpo_Sync_Jobs {
 	const RATE_LIMIT_MIN_DELAY = 5; // Seconds to wait at least after a 429, even if Retry-After is lower or missing.
 	const PAUSE_TRANSIENT      = 'wc_yotpo_product_sync_paused_until'; // Set after a 429: until then no job calls Yotpo.
 	const STALL_AFTER          = 3600; // Seconds without progress after which a running sync with no jobs left counts as dead.
+	const MAX_STALL_RESTARTS   = 3; // Automatic restarts of a stalled full sync before it is left stalled for the merchant to retry.
+	const RECHECK_TRANSIENT    = 'wc_yotpo_product_sync_recheck'; // Throttles the queue checks of maybe_start_initial_sync().
+	const RECHECK_EVERY        = 300; // Seconds between those checks while a sync is stopped or possibly stalled.
 
 	const HOOK_PRODUCT      = 'wc_yotpo_sync_product';
 	const HOOK_BATCH        = 'wc_yotpo_sync_product_batch';
@@ -44,8 +47,11 @@ class Yotpo_Sync_Jobs {
 	// ---------------------------------------------------------------------------------------
 
 	/**
-	 * Starts the full catalog sync once per app key: after updating to this version, or after
-	 * the merchant connects a different Yotpo account.
+	 * Runs on every request (init). Starts the full catalog sync when it never ran for this app key
+	 * (after updating to this version, or after the merchant connects a different Yotpo account),
+	 * restarts one stopped by the off switch, and restarts one that stalled (a job died without
+	 * counting itself). The usual case, a finished sync for this account, costs no query; the
+	 * queue checks for the other cases run at most once every RECHECK_EVERY seconds.
 	 */
 	public static function maybe_start_initial_sync() {
 		if ( ! self::scheduler_ready() || ! Yotpo_Product_Sync::enabled() ) {
@@ -55,42 +61,46 @@ class Yotpo_Sync_Jobs {
 		if ( ! $client ) {
 			return;
 		}
-		if ( self::initial_sync_due( Yotpo_Sync_State::get(), $client ) ) {
+		$state  = Yotpo_Sync_State::get();
+		$status = isset( $state['status'] ) ? $state['status'] : '';
+		if ( ! isset( $state['app_key'] ) || $state['app_key'] !== $client->app_key() ) {
 			self::start_full_sync();
+			return;
 		}
+		$last_progress  = max( isset( $state['last_activity'] ) ? (int) $state['last_activity'] : 0, isset( $state['started'] ) ? (int) $state['started'] : 0 );
+		$was_stopped    = Yotpo_Sync_State::STATUS_STOPPED === $status;
+		$may_be_stalled = Yotpo_Sync_State::STATUS_RUNNING === $status && time() - $last_progress > self::STALL_AFTER;
+		if ( ! $was_stopped && ! $may_be_stalled ) {
+			return;
+		}
+		if ( get_transient( self::RECHECK_TRANSIENT ) ) {
+			return;
+		}
+		set_transient( self::RECHECK_TRANSIENT, 1, self::RECHECK_EVERY );
+		if ( self::jobs_left() ) {
+			return; // Still draining (stopped) or still working (not stalled after all).
+		}
+		if ( $was_stopped ) {
+			self::start_full_sync();
+			return;
+		}
+		// Stalled: restart a few times, then leave it for the merchant (a product whose job keeps dying
+		// would otherwise re-send the whole catalog every hour).
+		$restarts = isset( $state['stall_restarts'] ) ? (int) $state['stall_restarts'] : 0;
+		if ( $restarts >= self::MAX_STALL_RESTARTS ) {
+			Yotpo_Sync_State::mark_stalled( $restarts );
+			ytdbg( $restarts . ' restarts', 'Product sync: full sync left stalled after' );
+			return;
+		}
+		ytdbg( 'restart ' . ( $restarts + 1 ) . ' of ' . self::MAX_STALL_RESTARTS, 'Product sync: full sync stalled,' );
+		self::start_full_sync( $restarts + 1 );
 	}
 
 	/**
-	 * Whether the full sync has to be started: it never ran for this app key, it was stopped by the off switch,
-	 * or it died while running (see is_stalled()).
-	 */
-	private static function initial_sync_due( $state, $client ) {
-		$ran_for_this_account = isset( $state['app_key'] ) && $state['app_key'] === $client->app_key();
-		$was_stopped          = isset( $state['status'] ) && Yotpo_Sync_State::STATUS_STOPPED === $state['status'];
-		return ! $ran_for_this_account || $was_stopped || self::is_stalled( $state );
-	}
-
-	/**
-	 * A sync that is 'running' but has made no progress for STALL_AFTER seconds and has no job left to
-	 * make any (for example an action was killed mid-product and never counted itself). Cheap checks
-	 * first: this runs on every request while a sync is running.
-	 */
-	private static function is_stalled( $state ) {
-		if ( ! isset( $state['status'] ) || Yotpo_Sync_State::STATUS_RUNNING !== $state['status'] ) {
-			return false;
-		}
-		$last_progress = max( isset( $state['last_activity'] ) ? (int) $state['last_activity'] : 0, isset( $state['started'] ) ? (int) $state['started'] : 0 );
-		if ( time() - $last_progress <= self::STALL_AFTER ) {
-			return false;
-		}
-		$counts = self::queue_counts();
-		return 0 === $counts['queued'] && 0 === $counts['in_progress'];
-	}
-
-	/**
+	 * @param int $stall_restarts How many times a stalled sync was restarted automatically (0 for a normal start).
 	 * @return true|WP_Error
 	 */
-	public static function start_full_sync() {
+	public static function start_full_sync( $stall_restarts = 0 ) {
 		$client = Yotpo_V3_Client::from_settings();
 		if ( ! $client ) {
 			return new WP_Error( 'yotpo_no_credentials', 'Save the Yotpo app key and secret first.' );
@@ -101,14 +111,13 @@ class Yotpo_Sync_Jobs {
 		if ( ! Yotpo_Product_Sync::enabled() ) {
 			return new WP_Error( 'yotpo_sync_disabled', 'Product sync is turned off (Yotpo settings, or the wc_yotpo_product_sync_enabled filter).' );
 		}
-		// Restarting while jobs are queued would reset the counters under them and could finish the new sync early.
-		// That includes a sync stopped by the off switch: its product jobs stay queued until they run (and do nothing).
+		// Restarting while jobs are queued or running would reset the counters under them and could finish the
+		// new sync early. That includes a sync stopped by the off switch: its jobs stay queued until they run.
 		$current = Yotpo_Sync_State::get();
-		$counts  = self::queue_counts();
-		if ( isset( $current['status'] ) && in_array( $current['status'], array( Yotpo_Sync_State::STATUS_RUNNING, Yotpo_Sync_State::STATUS_STOPPED ), true ) && $counts['queued'] > 0 ) {
-			return new WP_Error( 'yotpo_sync_running', 'A full product sync is already running.' );
+		if ( isset( $current['status'] ) && in_array( $current['status'], array( Yotpo_Sync_State::STATUS_RUNNING, Yotpo_Sync_State::STATUS_STOPPED ), true ) && self::jobs_left() ) {
+			return new WP_Error( 'yotpo_sync_busy', 'A full product sync still has jobs queued or running. Try again when they have finished.' );
 		}
-		Yotpo_Sync_State::start( $client->app_key() );
+		Yotpo_Sync_State::start( $client->app_key(), $stall_restarts );
 		as_enqueue_async_action( self::HOOK_BATCH, array( 1 ), self::GROUP, true );
 		ytdbg( '', 'Product sync: full sync queued' );
 		return true;
@@ -343,6 +352,14 @@ class Yotpo_Sync_Jobs {
 			);
 		}
 		return $counts;
+	}
+
+	/**
+	 * Whether sync jobs are still queued or running.
+	 */
+	private static function jobs_left() {
+		$counts = self::queue_counts();
+		return $counts['queued'] + $counts['in_progress'] > 0;
 	}
 
 	/**
