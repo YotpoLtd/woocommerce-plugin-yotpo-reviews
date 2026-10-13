@@ -293,9 +293,10 @@ class Yotpo_Sync_Jobs {
 			return;
 		}
 		self::compare_or_send_all(
-			$product_ids,
-			false,
 			'comparing a page with Yotpo',
+			function () use ( $product_ids ) {
+				Yotpo_Catalog_Api::forget_product_fingerprints( $product_ids );
+			},
 			function ( $client ) use ( $product_ids ) {
 				return Yotpo_Catalog_Api::compare_products( $client, array_filter( array_map( 'wc_get_product', $product_ids ) ) );
 			}
@@ -303,17 +304,19 @@ class Yotpo_Sync_Jobs {
 	}
 
 	/**
-	 * The same for the variations of one variable product (see Yotpo_Catalog_Api::compare_variants()).
+	 * The same for the variations of one variable product (see Yotpo_Catalog_Api::compare_variants(),
+	 * which knows which variations those are, and does nothing for any other product).
 	 */
 	private static function compare_variants_with_yotpo( $product_id ) {
 		$product = wc_get_product( $product_id );
-		if ( ! $product || ! $product->is_type( 'variable' ) ) {
+		if ( ! $product ) {
 			return;
 		}
 		self::compare_or_send_all(
-			$product->get_children(),
-			true,
 			'comparing the variations of #' . $product_id . ' with Yotpo',
+			function () use ( $product ) {
+				Yotpo_Catalog_Api::forget_variant_fingerprints( $product );
+			},
 			function ( $client ) use ( $product ) {
 				return Yotpo_Catalog_Api::compare_variants( $client, $product );
 			}
@@ -321,22 +324,22 @@ class Yotpo_Sync_Jobs {
 	}
 
 	/**
-	 * The policy both comparisons share. While Yotpo asked us to slow down, or when the comparison
-	 * fails, the fingerprints of $post_ids are dropped (the products, or their variations when
-	 * $variations) so that everything is sent, as without a comparison. A 429 also pauses every job.
+	 * The policy both comparisons share. While Yotpo asked us to slow down, nothing is compared and
+	 * $forget drops the fingerprints of what the comparison covers, so that everything is sent, as
+	 * without a comparison. When the comparison fails, it drops the fingerprints it did not reach
+	 * itself. A 429 also pauses every job.
 	 *
-	 * @param int[]    $post_ids   What the comparison covers.
-	 * @param bool     $variations Whether those are variations.
-	 * @param string   $what       For the log: what was being compared.
-	 * @param callable $compare    Receives the client; returns the WP_Error of the comparison, or null.
+	 * @param string   $what    For the log: what was being compared.
+	 * @param callable $forget  Drops the fingerprints of what the comparison covers.
+	 * @param callable $compare Receives the client; returns the WP_Error of the comparison, or null.
 	 */
-	private static function compare_or_send_all( array $post_ids, $variations, $what, $compare ) {
+	private static function compare_or_send_all( $what, $forget, $compare ) {
 		$client = Yotpo_V3_Client::from_settings();
 		if ( ! $client ) {
 			return;
 		}
 		if ( self::paused_for() > 0 ) {
-			Yotpo_Catalog_Api::forget_fingerprints( $post_ids, $variations );
+			call_user_func( $forget );
 			return;
 		}
 		$error = call_user_func( $compare, $client );

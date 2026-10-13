@@ -173,11 +173,11 @@ class Yotpo_Catalog_Api {
 	 */
 	public static function compare_variants( $client, $product ) {
 		$yotpo_product_id = (int) get_post_meta( $product->get_id(), self::META_PRODUCT_ID, true );
-		if ( ! $yotpo_product_id || ! $product->is_type( 'variable' ) ) {
+		if ( ! $yotpo_product_id ) {
 			return null;
 		}
 		$payloads = array();
-		foreach ( $product->get_children() as $variation_id ) {
+		foreach ( self::variation_ids( $product ) as $variation_id ) {
 			$variation = wc_get_product( $variation_id );
 			if ( $variation ) {
 				$payloads[ $variation_id ] = Yotpo_Product_Payload::variant( $variation, $product );
@@ -187,15 +187,33 @@ class Yotpo_Catalog_Api {
 	}
 
 	/**
-	 * Drops the fingerprints of these products, or of these variations when $variations, so the next
-	 * sync sends them. Used instead of compare_products() when the comparison cannot run.
+	 * The variations compare_variants() covers: those of a variable product, none for any other.
+	 *
+	 * @return int[]
 	 */
-	public static function forget_fingerprints( array $post_ids, $variations = false ) {
-		self::forget_hashes( $post_ids, $variations ? self::META_VARIANT_HASH : self::META_PRODUCT_HASH );
+	private static function variation_ids( $product ) {
+		return $product->is_type( 'variable' ) ? $product->get_children() : array();
 	}
 
 	/**
-	 * The one way fingerprints are dropped, for the public forget_fingerprints() and for compare().
+	 * Drops the fingerprints of these products, so the next sync sends them. Used instead of
+	 * compare_products() when the comparison cannot run.
+	 *
+	 * @param int[] $product_ids
+	 */
+	public static function forget_product_fingerprints( array $product_ids ) {
+		self::forget_hashes( $product_ids, self::META_PRODUCT_HASH );
+	}
+
+	/**
+	 * The same for the variations compare_variants() covers, instead of compare_variants().
+	 */
+	public static function forget_variant_fingerprints( $product ) {
+		self::forget_hashes( self::variation_ids( $product ), self::META_VARIANT_HASH );
+	}
+
+	/**
+	 * The one way fingerprints are dropped, for the public forget_*_fingerprints() and for compare().
 	 *
 	 * @param string $hash_key META_PRODUCT_HASH or META_VARIANT_HASH.
 	 */
