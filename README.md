@@ -52,7 +52,7 @@ GitHub `master` is the source of truth. The plugin code that ships is `trunk/`; 
 
 # Development
 
-Only `trunk/` (plugin code) and the listing images (`assets/`) reach WordPress.org. Everything else at the repo root (`composer.json`, `phpcs.xml.dist`, `bin/`, `test-data/`) is development tooling.
+Only `trunk/` (plugin code) and the listing images (`assets/`) reach WordPress.org. Everything else at the repo root (`composer.json`, `phpcs.xml.dist`, `phpunit.xml.dist`, `bin/`, `tests/`, `test-data/`, `.github/`) is development tooling.
 
 Install the tools once (requires PHP 7.4+ and Composer):
 
@@ -62,9 +62,25 @@ Run these before opening a PR:
 
 | Check | Command | What it catches |
 |---|---|---|
+| Tests | `composer test` | Product sync, settings page and uninstall behavior. See [Tests](#tests) below. Also run on every PR by GitHub Actions (PHP 7.4 and 8.3) |
 | PHP lint | `composer lint` | Syntax errors and deprecations. Set `PHP_BINARIES` to test several PHP versions, e.g. `PHP_BINARIES="php7.4 php8.4" composer lint` |
 | PHPCS | `composer phpcs` | Security (escaping, nonces, sanitization), PHP 7.4+ compatibility, unprefixed globals. Rules are in `phpcs.xml.dist` |
 | Plugin Check | `wp plugin check yotpo-social-reviews-for-woocommerce` | WordPress.org directory requirements (readme headers, direct file access, etc.). Run inside a WordPress install with the [Plugin Check](https://wordpress.org/plugins/plugin-check/) plugin active |
+
+## Tests
+
+PHPUnit tests in `tests/` run inside a real WordPress with WooCommerce, against a MySQL database of their own. The Yotpo API is never called: each test answers the requests it expects (`Yotpo_Test_Case::route()`), and any other request fails.
+
+Once, download the WordPress and WooCommerce versions the tests use (into `.wp-tests/`, git-ignored; the versions are set in `bin/install-wp-tests.sh`) and create an empty database:
+
+    composer test:install
+    mysql -u root -p -e "CREATE DATABASE yotpo_wp_tests"
+
+Then run the tests, pointing them at that database:
+
+    WP_TESTS_DB_HOST=localhost WP_TESTS_DB_PASSWORD=... composer test
+
+The test suite deletes every table in its database, so never give it a site's database. Its name must contain `test`. The defaults (`yotpo_wp_tests`, user `root`, password `root`, host `127.0.0.1`) match CI; override them with `WP_TESTS_DB_NAME`, `WP_TESTS_DB_USER`, `WP_TESTS_DB_PASSWORD` and `WP_TESTS_DB_HOST`.
 
 `test-data/yotpo-test-products.csv` is a WooCommerce product import (Products → Import) with edge cases for testing the widgets: names with `&` and quotes, a product with reviews disabled, a variable product, a product without an image, and SKU/UPC/MPN/ISBN attributes.
 
