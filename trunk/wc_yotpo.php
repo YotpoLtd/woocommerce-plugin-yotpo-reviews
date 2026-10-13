@@ -40,6 +40,10 @@ require plugin_dir_path( __FILE__ ) . 'lib/utils/wc-yotpo-functions.php';
 require plugin_dir_path( __FILE__ ) . 'lib/utils/widgets-rendering-logic.php';
 require plugin_dir_path( __FILE__ ) . 'lib/utils/allowed-html-functions.php';
 require plugin_dir_path( __FILE__ ) . 'lib/yotpo-api/class-yotpo-v3-client.php';
+require plugin_dir_path( __FILE__ ) . 'lib/sync/class-yotpo-product-payload.php';
+require plugin_dir_path( __FILE__ ) . 'lib/sync/class-yotpo-catalog-api.php';
+require plugin_dir_path( __FILE__ ) . 'lib/sync/class-yotpo-sync-state.php';
+require plugin_dir_path( __FILE__ ) . 'lib/sync/class-yotpo-sync-jobs.php';
 require plugin_dir_path( __FILE__ ) . 'lib/sync/class-yotpo-product-sync.php';
 
 function wc_yotpo_init() {
