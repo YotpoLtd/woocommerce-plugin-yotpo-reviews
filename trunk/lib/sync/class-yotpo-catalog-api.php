@@ -18,6 +18,7 @@ class Yotpo_Catalog_Api {
 	const META_PRODUCT_HASH = '_yotpo_v3_product_hash'; // Fingerprint of the product data Yotpo last accepted.
 	const META_VARIANT_HASH = '_yotpo_v3_variant_hash';
 	const META_BLOCKLISTED  = '_yotpo_v3_blocklisted'; // Set ('1') once Yotpo has been told, or found to be without the product, until it is published again.
+	const LOOKUP_MAX        = 100; // External IDs per lookup request: Yotpo's maximum.
 
 	public static function upsert_product( $client, $product, $force = false ) {
 		return self::upsert( $client, self::product_spec(), $product->get_id(), Yotpo_Product_Payload::product( $product ), $force );
@@ -67,7 +68,7 @@ class Yotpo_Catalog_Api {
 	 * @return int|WP_Error The Yotpo ID.
 	 */
 	private static function upsert( $client, $spec, $post_id, $payload, $force = false ) {
-		$hash     = md5( $spec['salt'] . wp_json_encode( $payload ) );
+		$hash     = self::fingerprint( $spec, $payload );
 		$yotpo_id = (int) get_post_meta( $post_id, $spec['meta'], true );
 		if ( $yotpo_id && ! $force && get_post_meta( $post_id, $spec['hash'], true ) === $hash ) {
 			return $yotpo_id;
@@ -133,6 +134,155 @@ class Yotpo_Catalog_Api {
 		}
 		$error = self::patch( $client, $spec, $yotpo_id, $payload );
 		return $error ? $error : $yotpo_id;
+	}
+
+	private static function fingerprint( $spec, $payload ) {
+		return md5( $spec['salt'] . wp_json_encode( $payload ) );
+	}
+
+	// ---------------------------------------------------------------------------------------
+	// Comparing with Yotpo before a full sync
+	// ---------------------------------------------------------------------------------------
+
+	/**
+	 * Before the full sync sends a page of products, looks them up in Yotpo (one request per
+	 * LOOKUP_MAX products) and sets their stored IDs and fingerprints to what Yotpo has. upsert()
+	 * then skips a product whose data Yotpo already has, updates one whose data differs, and creates
+	 * one Yotpo doesn't have. Without this, the full sync tried to create every product: three
+	 * requests for each one Yotpo already had, even when nothing had changed.
+	 *
+	 * On an error, the products not yet compared lose their fingerprints, so they are all sent.
+	 *
+	 * @param WC_Product[] $products Published products.
+	 * @return WP_Error|null
+	 */
+	public static function compare_products( $client, array $products ) {
+		$payloads = array();
+		foreach ( $products as $product ) {
+			$payloads[ $product->get_id() ] = Yotpo_Product_Payload::product( $product );
+		}
+		return self::compare( $client, self::product_spec(), $payloads );
+	}
+
+	/**
+	 * The same for the variations of a variable product, once the product is known in Yotpo.
+	 *
+	 * @return WP_Error|null
+	 */
+	public static function compare_variants( $client, $product ) {
+		$yotpo_product_id = (int) get_post_meta( $product->get_id(), self::META_PRODUCT_ID, true );
+		if ( ! $yotpo_product_id || ! $product->is_type( 'variable' ) ) {
+			return null;
+		}
+		$payloads = array();
+		foreach ( $product->get_children() as $variation_id ) {
+			$variation = wc_get_product( $variation_id );
+			if ( $variation ) {
+				$payloads[ $variation_id ] = Yotpo_Product_Payload::variant( $variation, $product );
+			}
+		}
+		return self::compare( $client, self::variant_spec( $yotpo_product_id ), $payloads );
+	}
+
+	/**
+	 * Drops the fingerprints of these products, or of these variations when $variations, so the next
+	 * sync sends them. Used instead of compare_products() when the comparison cannot run.
+	 */
+	public static function forget_fingerprints( array $post_ids, $variations = false ) {
+		foreach ( $post_ids as $post_id ) {
+			delete_post_meta( $post_id, $variations ? self::META_VARIANT_HASH : self::META_PRODUCT_HASH );
+		}
+	}
+
+	/**
+	 * @param array $payloads What would be sent, keyed by WooCommerce ID (the external ID).
+	 */
+	private static function compare( $client, $spec, array $payloads ) {
+		$not_compared = array_keys( $payloads );
+		foreach ( array_chunk( $payloads, self::LOOKUP_MAX, true ) as $chunk ) {
+			$response = $client->request( 'GET', $spec['path'], null, array( 'external_ids' => implode( ',', array_keys( $chunk ) ) ) );
+			$error    = self::response_error( $response );
+			if ( $error ) {
+				foreach ( $not_compared as $post_id ) {
+					delete_post_meta( $post_id, $spec['hash'] );
+				}
+				return $error;
+			}
+			$in_yotpo = array();
+			foreach ( isset( $response['body'][ $spec['list_key'] ] ) ? (array) $response['body'][ $spec['list_key'] ] : array() as $item ) {
+				if ( isset( $item['external_id'], $item['yotpo_id'] ) ) {
+					$in_yotpo[ (string) $item['external_id'] ] = $item;
+				}
+			}
+			foreach ( $chunk as $post_id => $payload ) {
+				if ( ! isset( $in_yotpo[ (string) $post_id ] ) ) {
+					// Not in Yotpo (any more): forget a stored ID, so it is created.
+					delete_post_meta( $post_id, $spec['meta'] );
+					delete_post_meta( $post_id, $spec['hash'] );
+				} else {
+					update_post_meta( $post_id, $spec['meta'], (int) $in_yotpo[ (string) $post_id ]['yotpo_id'] );
+					if ( self::same_data( $payload, $in_yotpo[ (string) $post_id ] ) ) {
+						update_post_meta( $post_id, $spec['hash'], self::fingerprint( $spec, $payload ) );
+					} else {
+						delete_post_meta( $post_id, $spec['hash'] );
+					}
+				}
+			}
+			$not_compared = array_diff( $not_compared, array_keys( $chunk ) );
+		}
+		return null;
+	}
+
+	/**
+	 * Whether Yotpo's copy has every field the payload would send, with the same value. Fields
+	 * Yotpo has and the payload doesn't send are ignored: an update wouldn't change them either.
+	 * When in doubt it answers no, which only costs an update.
+	 */
+	private static function same_data( $sent, $stored ) {
+		foreach ( $sent as $key => $value ) {
+			if ( ! self::same_value( $value, is_array( $stored ) && isset( $stored[ $key ] ) ? $stored[ $key ] : null ) ) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	private static function same_value( $sent, $stored ) {
+		if ( is_array( $sent ) ) {
+			if ( ! is_array( $stored ) ) {
+				return array() === $sent;
+			}
+			if ( array_values( $sent ) === $sent ) {
+				// A list (gtins, options): the same entries in any order.
+				return self::list_key( $sent ) === self::list_key( $stored );
+			}
+			return self::same_data( $sent, $stored );
+		}
+		if ( is_bool( $sent ) ) {
+			return (bool) $stored === $sent;
+		}
+		if ( is_int( $sent ) || is_float( $sent ) ) {
+			return is_numeric( $stored ) && abs( (float) $stored - (float) $sent ) < 0.005;
+		}
+		return trim( (string) $stored ) === trim( (string) $sent );
+	}
+
+	private static function list_key( $list ) {
+		$entries = array();
+		foreach ( $list as $entry ) {
+			if ( is_array( $entry ) ) {
+				ksort( $entry );
+				$entry = array_map(
+					function ( $value ) {
+						return is_scalar( $value ) || null === $value ? (string) $value : wp_json_encode( $value );
+					},
+					$entry
+				);
+			}
+			$entries[] = wp_json_encode( $entry );
+		}
+		sort( $entries );
+		return $entries;
 	}
 
 	/**

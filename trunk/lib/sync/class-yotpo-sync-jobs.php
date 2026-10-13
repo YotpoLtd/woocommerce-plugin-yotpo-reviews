@@ -11,7 +11,7 @@ class Yotpo_Sync_Jobs {
 
 	// GROUP is also written out in uninstall.php, which runs without this class loaded: keep both in sync.
 	const GROUP                = 'yotpo-product-sync';
-	const BATCH_SIZE           = 20;
+	const BATCH_SIZE           = 100; // Products per full-sync page: one lookup request compares them all with Yotpo.
 	const MAX_ATTEMPTS         = 3;
 	const RETRY_BASE_DELAY     = 60; // Seconds before the first retry; doubles with each attempt.
 	const RATE_LIMIT_MIN_DELAY = 5; // Seconds to wait at least after a 429, even if Retry-After is lower or missing.
@@ -201,9 +201,10 @@ class Yotpo_Sync_Jobs {
 	// ---------------------------------------------------------------------------------------
 
 	/**
-	 * One page of the full sync: queues one job per published product (so each action stays short
-	 * and gets its own retries), then queues the next page. The sync is complete once every queued
-	 * product job has finished (see Yotpo_Sync_State::count_result()).
+	 * One page of the full sync: compares the page's published products with Yotpo (one request),
+	 * queues one job per product (so each action stays short and gets its own retries), then queues
+	 * the next page. The sync is complete once every queued product job has finished (see
+	 * Yotpo_Sync_State::count_result()).
 	 */
 	public static function run_batch_job( $page ) {
 		// The off switch also stops jobs that were queued before it was turned on.
@@ -222,6 +223,7 @@ class Yotpo_Sync_Jobs {
 				'return'  => 'ids',
 			)
 		);
+		self::compare_with_yotpo( $ids );
 		$queued = 0;
 		foreach ( $ids as $product_id ) {
 			if ( self::queue_product( $product_id, 1, 0, true ) ) {
@@ -252,9 +254,12 @@ class Yotpo_Sync_Jobs {
 			self::queue_product( $product_id, $attempt, $paused_for, (bool) $full_sync );
 			return;
 		}
-		// The full sync forces a resend on the first attempt only; a retry resumes from the stored
-		// hashes, so it does not send again what Yotpo already accepted.
-		$result = Yotpo_Product_Sync::sync_product( $product_id, $full_sync && 1 === (int) $attempt );
+		// The page job compared the product with Yotpo; its variations are compared here, in their own
+		// request. A retry skips this: it resumes from what Yotpo already accepted.
+		if ( $full_sync && 1 === (int) $attempt ) {
+			self::compare_variants_with_yotpo( $product_id );
+		}
+		$result = Yotpo_Product_Sync::sync_product( $product_id );
 		self::pause_if_rate_limited( $result, $attempt );
 		if ( is_wp_error( $result ) && Yotpo_Catalog_Api::is_retryable( $result ) && $attempt < self::MAX_ATTEMPTS ) {
 			self::queue_product( $product_id, $attempt + 1, self::retry_delay( $result, $attempt ), (bool) $full_sync );
@@ -262,6 +267,44 @@ class Yotpo_Sync_Jobs {
 		}
 		if ( $full_sync ) {
 			Yotpo_Sync_State::count_result( $result );
+		}
+	}
+
+	/**
+	 * Sets the stored IDs and fingerprints of a page of products to what Yotpo has (see
+	 * Yotpo_Catalog_Api::compare_products()). If Yotpo can't be asked now, the products are all
+	 * sent, as they would be without the comparison.
+	 */
+	private static function compare_with_yotpo( array $product_ids ) {
+		$client = Yotpo_V3_Client::from_settings();
+		if ( ! $client || ! $product_ids ) {
+			return;
+		}
+		if ( self::paused_for() > 0 ) {
+			Yotpo_Catalog_Api::forget_fingerprints( $product_ids );
+			return;
+		}
+		$error = Yotpo_Catalog_Api::compare_products( $client, array_filter( array_map( 'wc_get_product', $product_ids ) ) );
+		if ( $error ) {
+			self::pause_if_rate_limited( $error, 1 );
+			ytdbg( $error->get_error_message(), 'Product sync: comparing a page with Yotpo failed, sending it all:' );
+		}
+	}
+
+	private static function compare_variants_with_yotpo( $product_id ) {
+		$client  = Yotpo_V3_Client::from_settings();
+		$product = wc_get_product( $product_id );
+		if ( ! $client || ! $product || ! $product->is_type( 'variable' ) ) {
+			return;
+		}
+		if ( self::paused_for() > 0 ) {
+			Yotpo_Catalog_Api::forget_fingerprints( $product->get_children(), true );
+			return;
+		}
+		$error = Yotpo_Catalog_Api::compare_variants( $client, $product );
+		if ( $error ) {
+			self::pause_if_rate_limited( $error, 1 );
+			ytdbg( $error->get_error_message(), 'Product sync: comparing the variations of #' . $product_id . ' with Yotpo failed, sending them all:' );
 		}
 	}
 
