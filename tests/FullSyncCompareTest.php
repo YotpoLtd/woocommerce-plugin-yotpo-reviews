@@ -122,10 +122,34 @@ class FullSyncCompareTest extends Yotpo_Test_Case {
 		$this->assertSame( Yotpo_Sync_State::STATUS_COMPLETE, Yotpo_Product_Sync::state()['status'] );
 	}
 
+	public function test_paginated_lookups_are_followed_to_the_last_page() {
+		$products = array();
+		for ( $i = 1; $i <= 25; $i++ ) {
+			$products[] = $this->create_product( "Product $i", "SKU-$i", '10' );
+			$this->put_in_yotpo( $products[ $i - 1 ] );
+		}
+		$this->page_size = 10; // Yotpo answers 10 at a time, whatever limit was asked.
+
+		$this->full_sync();
+
+		$lookups = array_values( array_filter( $this->requests, function ( $request ) {
+			return 'GET /products' === $request['method'] . ' ' . $request['path'];
+		} ) );
+		$this->assertCount( 3, $lookups, 'Three pages of the one lookup' );
+		$this->assertSame( array(), $this->sent(), 'Nothing is created or updated: every product was found' );
+		foreach ( $products as $product ) {
+			$this->assertSame( $this->yotpo_id( $product ), (int) get_post_meta( $product->get_id(), Yotpo_Catalog_Api::META_PRODUCT_ID, true ) );
+		}
+		$this->assertSame( 25, (int) Yotpo_Product_Sync::state()['synced'] );
+	}
+
 	// -----------------------------------------------------------------------------------------
 
 	/** @var bool False makes product lookups fail with a 500. */
 	private $lookup_ok = true;
+
+	/** @var int|null Items per page of a lookup answer; null answers everything on one page. */
+	private $page_size = null;
 
 	private function full_sync() {
 		as_unschedule_all_actions( '', array(), Yotpo_Sync_Jobs::GROUP ); // Jobs the product saves queued.
@@ -163,6 +187,18 @@ class FullSyncCompareTest extends Yotpo_Test_Case {
 		return isset( $query['external_ids'] ) ? explode( ',', $query['external_ids'] ) : array();
 	}
 
+	/**
+	 * One page of a lookup answer. With $page_size set, a page holds at most that many items and
+	 * pagination.next_page_info (the offset of the next page) says where to continue.
+	 */
+	private function page_of( $list_key, array $found, $url ) {
+		parse_str( (string) wp_parse_url( $url, PHP_URL_QUERY ), $query );
+		$offset = isset( $query['page_info'] ) ? (int) $query['page_info'] : 0;
+		$size   = $this->page_size ? $this->page_size : max( 1, count( $found ) );
+		$next = $offset + $size < count( $found ) ? (string) ( $offset + $size ) : null;
+		return array( $list_key => array_slice( $found, $offset, $size ), 'pagination' => array( 'next_page_info' => $next ) );
+	}
+
 	/** A minimal Yotpo catalog: lookups by external IDs, creates and updates of products and variants. */
 	private function route_fake_catalog() {
 		$this->route( 'GET', '#^/products$#', function ( $request ) {
@@ -175,7 +211,7 @@ class FullSyncCompareTest extends Yotpo_Test_Case {
 					$found[] = array_diff_key( $this->catalog[ $id ], array( 'variants' => 1 ) );
 				}
 			}
-			return $this->respond( 200, array( 'products' => $found, 'pagination' => array( 'next_page_info' => null ) ) );
+			return $this->respond( 200, $this->page_of( 'products', $found, $request['url'] ) );
 		} );
 		$this->route( 'POST', '#^/products$#', function ( $request ) {
 			$product = $request['body']['product'];
@@ -201,7 +237,7 @@ class FullSyncCompareTest extends Yotpo_Test_Case {
 					$found[] = $this->catalog[ $product ]['variants'][ $id ];
 				}
 			}
-			return $this->respond( 200, array( 'variants' => $found, 'pagination' => array( 'next_page_info' => null ) ) );
+			return $this->respond( 200, $this->page_of( 'variants', $found, $request['url'] ) );
 		} );
 		$this->route( 'POST', '#^/products/\d+/variants$#', function ( $request ) {
 			$product = $this->external_id_of( (int) explode( '/', $request['path'] )[2] );

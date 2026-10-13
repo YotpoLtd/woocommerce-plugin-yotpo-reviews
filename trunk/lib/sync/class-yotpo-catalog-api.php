@@ -19,6 +19,7 @@ class Yotpo_Catalog_Api {
 	const META_VARIANT_HASH = '_yotpo_v3_variant_hash';
 	const META_BLOCKLISTED  = '_yotpo_v3_blocklisted'; // Set ('1') once Yotpo has been told, or found to be without the product, until it is published again.
 	const LOOKUP_MAX        = 100; // External IDs per lookup request: Yotpo's maximum.
+	const LOOKUP_MAX_PAGES  = 10; // Pages one lookup follows before giving up.
 
 	public static function upsert_product( $client, $product, $force = false ) {
 		return self::upsert( $client, self::product_spec(), $product->get_id(), Yotpo_Product_Payload::product( $product ), $force );
@@ -200,16 +201,15 @@ class Yotpo_Catalog_Api {
 	private static function compare( $client, $spec, array $payloads ) {
 		$not_compared = array_keys( $payloads );
 		foreach ( array_chunk( $payloads, self::LOOKUP_MAX, true ) as $chunk ) {
-			$response = $client->request( 'GET', $spec['path'], null, array( 'external_ids' => implode( ',', array_keys( $chunk ) ) ) );
-			$error    = self::response_error( $response );
-			if ( $error ) {
+			$items = self::lookup_all( $client, $spec, array_keys( $chunk ) );
+			if ( is_wp_error( $items ) ) {
 				foreach ( $not_compared as $post_id ) {
 					delete_post_meta( $post_id, $spec['hash'] );
 				}
-				return $error;
+				return $items;
 			}
 			$in_yotpo = array();
-			foreach ( isset( $response['body'][ $spec['list_key'] ] ) ? (array) $response['body'][ $spec['list_key'] ] : array() as $item ) {
+			foreach ( $items as $item ) {
 				if ( isset( $item['external_id'], $item['yotpo_id'] ) ) {
 					$in_yotpo[ (string) $item['external_id'] ] = $item;
 				}
@@ -231,6 +231,45 @@ class Yotpo_Catalog_Api {
 			$not_compared = array_diff( $not_compared, array_keys( $chunk ) );
 		}
 		return null;
+	}
+
+	/**
+	 * Looks up these external IDs in Yotpo with an explicit page size (one page holds them all
+	 * unless Yotpo caps it lower) and follows the answer's pagination, so an ID is only missing from
+	 * the result when Yotpo has no such object.
+	 *
+	 * @param int[] $external_ids At most LOOKUP_MAX.
+	 * @return array|WP_Error The items of every page.
+	 */
+	private static function lookup_all( $client, $spec, array $external_ids ) {
+		$items     = array();
+		$page_info = '';
+		for ( $page = 0; $page < self::LOOKUP_MAX_PAGES; $page++ ) {
+			$query = array(
+				'external_ids' => implode( ',', $external_ids ),
+				'limit'        => count( $external_ids ),
+			);
+			if ( '' !== $page_info ) {
+				$query['page_info'] = $page_info;
+			}
+			$response = $client->request( 'GET', $spec['path'], null, $query );
+			$error    = self::response_error( $response );
+			if ( $error ) {
+				return $error;
+			}
+			if ( isset( $response['body'][ $spec['list_key'] ] ) ) {
+				$items = array_merge( $items, array_values( (array) $response['body'][ $spec['list_key'] ] ) );
+			}
+			$next = isset( $response['body']['pagination']['next_page_info'] ) ? (string) $response['body']['pagination']['next_page_info'] : '';
+			if ( '' === $next ) {
+				return $items;
+			}
+			if ( $next === $page_info ) {
+				break; // The same cursor again: Yotpo would never end.
+			}
+			$page_info = $next;
+		}
+		return new WP_Error( 'yotpo_bad_response', 'The lookup of ' . count( $external_ids ) . ' external IDs did not reach its last page' );
 	}
 
 	/**
