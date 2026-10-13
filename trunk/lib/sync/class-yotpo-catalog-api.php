@@ -15,9 +15,10 @@ class Yotpo_Catalog_Api {
 	// Also written out in uninstall.php, which runs without this class loaded: keep both in sync.
 	const META_PRODUCT_ID   = '_yotpo_v3_product_id';
 	const META_VARIANT_ID   = '_yotpo_v3_variant_id';
-	const META_PRODUCT_HASH = '_yotpo_v3_product_hash'; // Fingerprint of the product data Yotpo last accepted.
-	const META_VARIANT_HASH = '_yotpo_v3_variant_hash';
+	const META_PRODUCT_HASH = '_yotpo_v3_product_hash'; // Fingerprint of the product data Yotpo last accepted, or was found to have (compare() also sets it).
+	const META_VARIANT_HASH = '_yotpo_v3_variant_hash'; // The same for a variant.
 	const META_BLOCKLISTED  = '_yotpo_v3_blocklisted'; // Set ('1') once Yotpo has been told, or found to be without the product, until it is published again.
+	const LOOKUP_MAX        = 100; // External IDs per lookup request: Yotpo's maximum.
 
 	public static function upsert_product( $client, $product, $force = false ) {
 		return self::upsert( $client, self::product_spec(), $product->get_id(), Yotpo_Product_Payload::product( $product ), $force );
@@ -63,11 +64,12 @@ class Yotpo_Catalog_Api {
 	/**
 	 * Creates or updates one product or variant in Yotpo (see product_spec() and variant_spec()).
 	 * A product or variant whose data is the same as the last accepted is not sent again, unless $force.
+	 * "Last accepted" includes what compare() found Yotpo to have: it sets the same ID and fingerprint post meta.
 	 *
 	 * @return int|WP_Error The Yotpo ID.
 	 */
 	private static function upsert( $client, $spec, $post_id, $payload, $force = false ) {
-		$hash     = md5( $spec['salt'] . wp_json_encode( $payload ) );
+		$hash     = self::fingerprint( $spec, $payload );
 		$yotpo_id = (int) get_post_meta( $post_id, $spec['meta'], true );
 		if ( $yotpo_id && ! $force && get_post_meta( $post_id, $spec['hash'], true ) === $hash ) {
 			return $yotpo_id;
@@ -133,6 +135,170 @@ class Yotpo_Catalog_Api {
 		}
 		$error = self::patch( $client, $spec, $yotpo_id, $payload );
 		return $error ? $error : $yotpo_id;
+	}
+
+	private static function fingerprint( $spec, $payload ) {
+		return md5( $spec['salt'] . wp_json_encode( $payload ) );
+	}
+
+	// ---------------------------------------------------------------------------------------
+	// Comparing with Yotpo before a full sync
+	// ---------------------------------------------------------------------------------------
+
+	/**
+	 * Before the full sync sends a page of products, looks them up in Yotpo (one request per
+	 * LOOKUP_MAX products) and sets their stored IDs and fingerprints to what Yotpo has. upsert()
+	 * then skips a product whose data Yotpo already has, updates one whose data differs, and creates
+	 * one Yotpo doesn't have. Without this, the full sync tried to create every product: three
+	 * requests for each one Yotpo already had, even when nothing had changed.
+	 *
+	 * On an error, the products not yet compared lose their fingerprints, so they are all sent.
+	 *
+	 * @param WC_Product[] $products Published products.
+	 * @return WP_Error|null
+	 */
+	public static function compare_products( $client, array $products ) {
+		$payloads = array();
+		foreach ( $products as $product ) {
+			$payloads[ $product->get_id() ] = Yotpo_Product_Payload::product( $product );
+		}
+		return self::compare( $client, self::product_spec(), $payloads );
+	}
+
+	/**
+	 * The same for the variations of a variable product, once the product is known in Yotpo.
+	 *
+	 * @return WP_Error|null
+	 */
+	public static function compare_variants( $client, $product ) {
+		$yotpo_product_id = (int) get_post_meta( $product->get_id(), self::META_PRODUCT_ID, true );
+		if ( ! $yotpo_product_id ) {
+			return null;
+		}
+		$payloads = array();
+		foreach ( self::variation_ids( $product ) as $variation_id ) {
+			$variation = wc_get_product( $variation_id );
+			if ( $variation ) {
+				$payloads[ $variation_id ] = Yotpo_Product_Payload::variant( $variation, $product );
+			}
+		}
+		return self::compare( $client, self::variant_spec( $yotpo_product_id ), $payloads );
+	}
+
+	/**
+	 * The variations compare_variants() covers: those of a variable product, none for any other.
+	 *
+	 * @return int[]
+	 */
+	private static function variation_ids( $product ) {
+		return $product->is_type( 'variable' ) ? $product->get_children() : array();
+	}
+
+	/**
+	 * Drops the fingerprints of these products, so the next sync sends them. Used instead of
+	 * compare_products() when the comparison cannot run.
+	 *
+	 * @param int[] $product_ids
+	 */
+	public static function forget_product_fingerprints( array $product_ids ) {
+		self::forget_hashes( $product_ids, self::META_PRODUCT_HASH );
+	}
+
+	/**
+	 * The same for the variations compare_variants() covers, instead of compare_variants().
+	 */
+	public static function forget_variant_fingerprints( $product ) {
+		self::forget_hashes( self::variation_ids( $product ), self::META_VARIANT_HASH );
+	}
+
+	/**
+	 * The one way fingerprints are dropped, for the public forget_*_fingerprints() and for compare().
+	 *
+	 * @param string $hash_key META_PRODUCT_HASH or META_VARIANT_HASH.
+	 */
+	private static function forget_hashes( array $post_ids, $hash_key ) {
+		foreach ( $post_ids as $post_id ) {
+			delete_post_meta( $post_id, $hash_key );
+		}
+	}
+
+	/**
+	 * Sets the stored Yotpo ID and fingerprint of each payload's object to what a lookup of the
+	 * whole set found. Writes the same post meta upsert() reads (see the META_*_HASH constants).
+	 *
+	 * @param Yotpo_V3_Client $client   The API client.
+	 * @param array           $spec     product_spec() or variant_spec().
+	 * @param array           $payloads What would be sent, keyed by WooCommerce ID (the external ID).
+	 * @return WP_Error|null
+	 */
+	private static function compare( $client, $spec, array $payloads ) {
+		$not_compared = array_keys( $payloads );
+		foreach ( array_chunk( $payloads, self::LOOKUP_MAX, true ) as $chunk ) {
+			$items = self::lookup_all( $client, $spec, array_keys( $chunk ) );
+			if ( is_wp_error( $items ) ) {
+				self::forget_hashes( $not_compared, $spec['hash'] );
+				return $items;
+			}
+			$in_yotpo = self::index_by_external_id( $items );
+			foreach ( $chunk as $post_id => $payload ) {
+				if ( ! isset( $in_yotpo[ (string) $post_id ] ) ) {
+					// Not in Yotpo (any more): forget a stored ID, so it is created.
+					delete_post_meta( $post_id, $spec['meta'] );
+					delete_post_meta( $post_id, $spec['hash'] );
+					continue;
+				}
+				$item = $in_yotpo[ (string) $post_id ];
+				update_post_meta( $post_id, $spec['meta'], (int) $item['yotpo_id'] );
+				if ( Yotpo_Payload_Compare::same( $payload, $item ) ) {
+					update_post_meta( $post_id, $spec['hash'], self::fingerprint( $spec, $payload ) );
+				} else {
+					delete_post_meta( $post_id, $spec['hash'] );
+				}
+			}
+			$not_compared = array_diff( $not_compared, array_keys( $chunk ) );
+		}
+		return null;
+	}
+
+	/**
+	 * The items of a lookup answer that name an external ID and a Yotpo ID, by external ID.
+	 *
+	 * @param array $items The answer's list ($response['body'][ $spec['list_key'] ]).
+	 * @return array[]
+	 */
+	private static function index_by_external_id( array $items ) {
+		$by_external_id = array();
+		foreach ( $items as $item ) {
+			if ( isset( $item['external_id'], $item['yotpo_id'] ) ) {
+				$by_external_id[ (string) $item['external_id'] ] = $item;
+			}
+		}
+		return $by_external_id;
+	}
+
+	/**
+	 * Looks up these external IDs in Yotpo in one request. Yotpo's reference for external_ids:
+	 * "Max 100 IDs. Can't come with page_info or limit." So the request carries nothing else, and one
+	 * answer holds every match. An answer that still says there is more is not trusted (an ID missing
+	 * from it may be on a page that can't be asked for): it is an error, and the caller sends in full.
+	 *
+	 * @param int[] $external_ids At most LOOKUP_MAX.
+	 * @return array|WP_Error The items of the answer.
+	 */
+	private static function lookup_all( $client, $spec, array $external_ids ) {
+		$response = $client->request( 'GET', $spec['path'], null, array( 'external_ids' => implode( ',', $external_ids ) ) );
+		$error    = self::response_error( $response );
+		if ( $error ) {
+			return $error;
+		}
+		if ( ! is_array( $response['body'] ) || ! isset( $response['body'][ $spec['list_key'] ] ) || ! is_array( $response['body'][ $spec['list_key'] ] ) ) {
+			// A 2xx that is not a lookup answer (a proxy's page, say) is not "Yotpo has none of these".
+			return new WP_Error( 'yotpo_bad_response', 'The lookup answer has no "' . $spec['list_key'] . '" list' );
+		}
+		if ( ! empty( $response['body']['pagination']['next_page_info'] ) ) {
+			return new WP_Error( 'yotpo_bad_response', 'The lookup of ' . count( $external_ids ) . ' external IDs answered with more pages' );
+		}
+		return array_values( $response['body'][ $spec['list_key'] ] );
 	}
 
 	/**
@@ -242,15 +408,14 @@ class Yotpo_Catalog_Api {
 		if ( $error ) {
 			return $error;
 		}
-		foreach ( isset( $response['body'][ $spec['list_key'] ] ) ? (array) $response['body'][ $spec['list_key'] ] : array() as $found ) {
-			if ( isset( $found['external_id'], $found['yotpo_id'] ) && (string) $found['external_id'] === (string) $post_id ) {
-				if ( get_post_status( $post_id ) ) {
-					update_post_meta( $post_id, $spec['meta'], (int) $found['yotpo_id'] );
-				}
-				return (int) $found['yotpo_id'];
-			}
+		$found = self::index_by_external_id( isset( $response['body'][ $spec['list_key'] ] ) ? (array) $response['body'][ $spec['list_key'] ] : array() );
+		if ( ! isset( $found[ (string) $post_id ] ) ) {
+			return 0;
 		}
-		return 0;
+		if ( get_post_status( $post_id ) ) {
+			update_post_meta( $post_id, $spec['meta'], (int) $found[ (string) $post_id ]['yotpo_id'] );
+		}
+		return (int) $found[ (string) $post_id ]['yotpo_id'];
 	}
 
 	private static function find_yotpo_product_id( $client, $product_id ) {

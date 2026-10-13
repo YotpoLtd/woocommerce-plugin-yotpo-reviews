@@ -11,7 +11,7 @@ class Yotpo_Sync_Jobs {
 
 	// GROUP is also written out in uninstall.php, which runs without this class loaded: keep both in sync.
 	const GROUP                = 'yotpo-product-sync';
-	const BATCH_SIZE           = 20;
+	const BATCH_SIZE           = Yotpo_Catalog_Api::LOOKUP_MAX; // Products per full-sync page: one lookup request compares them all with Yotpo, so never more than it holds.
 	const MAX_ATTEMPTS         = 3;
 	const RETRY_BASE_DELAY     = 60; // Seconds before the first retry; doubles with each attempt.
 	const RATE_LIMIT_MIN_DELAY = 5; // Seconds to wait at least after a 429, even if Retry-After is lower or missing.
@@ -20,6 +20,10 @@ class Yotpo_Sync_Jobs {
 	const MAX_STALL_RESTARTS   = 3; // Automatic restarts of a stalled full sync before it is left stalled for the merchant to retry.
 	const RECHECK_TRANSIENT    = 'wc_yotpo_product_sync_recheck'; // Throttles the queue checks of maybe_start_initial_sync().
 	const RECHECK_EVERY        = 300; // Seconds between those checks while a sync is stopped or possibly stalled.
+
+	// The third argument of a product job: 0 for a job of a product save, else the stage of a full-sync job.
+	const FULL_SYNC          = 1; // The variations are still to be compared with Yotpo.
+	const FULL_SYNC_COMPARED = 2; // They were; a requeue or a retry doesn't compare again.
 
 	const HOOK_PRODUCT      = 'wc_yotpo_sync_product';
 	const HOOK_BATCH        = 'wc_yotpo_sync_product_batch';
@@ -128,16 +132,17 @@ class Yotpo_Sync_Jobs {
 	// ---------------------------------------------------------------------------------------
 
 	/**
-	 * @param bool $full_sync True for a job of the full catalog sync: only those are counted in the sync state.
+	 * @param int|bool $full_sync 0 (or false) for a product save; FULL_SYNC or FULL_SYNC_COMPARED (true is FULL_SYNC)
+	 *                            for a job of the full catalog sync: only those are counted in the sync state.
 	 * @return int The queued action ID (0 when nothing was queued, for example a duplicate).
 	 */
-	public static function queue_product( $product_id, $attempt = 1, $delay = 0, $full_sync = false ) {
+	public static function queue_product( $product_id, $attempt = 1, $delay = 0, $full_sync = 0 ) {
 		if ( ! self::scheduler_ready() || ! Yotpo_Product_Sync::enabled() ) {
 			return 0;
 		}
 		$args = array( (int) $product_id, (int) $attempt );
 		if ( $full_sync ) {
-			$args[] = 1;
+			$args[] = (int) $full_sync;
 		}
 		if ( $delay > 0 ) {
 			return (int) as_schedule_single_action( time() + $delay, self::HOOK_PRODUCT, $args, self::GROUP, true );
@@ -201,9 +206,10 @@ class Yotpo_Sync_Jobs {
 	// ---------------------------------------------------------------------------------------
 
 	/**
-	 * One page of the full sync: queues one job per published product (so each action stays short
-	 * and gets its own retries), then queues the next page. The sync is complete once every queued
-	 * product job has finished (see Yotpo_Sync_State::count_result()).
+	 * One page of the full sync: compares the page's published products with Yotpo (one request),
+	 * queues one job per product (so each action stays short and gets its own retries), then queues
+	 * the next page. The sync is complete once every queued product job has finished (see
+	 * Yotpo_Sync_State::count_result()).
 	 */
 	public static function run_batch_job( $page ) {
 		// The off switch also stops jobs that were queued before it was turned on.
@@ -222,9 +228,10 @@ class Yotpo_Sync_Jobs {
 				'return'  => 'ids',
 			)
 		);
+		self::compare_with_yotpo( $ids );
 		$queued = 0;
 		foreach ( $ids as $product_id ) {
-			if ( self::queue_product( $product_id, 1, 0, true ) ) {
+			if ( self::queue_product( $product_id, 1, 0, self::FULL_SYNC ) ) {
 				++$queued;
 			}
 		}
@@ -249,19 +256,97 @@ class Yotpo_Sync_Jobs {
 		// Yotpo asked every caller to slow down: wait without spending an attempt.
 		$paused_for = self::paused_for();
 		if ( $paused_for > 0 ) {
-			self::queue_product( $product_id, $attempt, $paused_for, (bool) $full_sync );
+			self::queue_product( $product_id, $attempt, $paused_for, $full_sync );
 			return;
 		}
-		// The full sync forces a resend on the first attempt only; a retry resumes from the stored
-		// hashes, so it does not send again what Yotpo already accepted.
-		$result = Yotpo_Product_Sync::sync_product( $product_id, $full_sync && 1 === (int) $attempt );
+		// The page job compared the product with Yotpo; its variations are compared here, in their own
+		// request. Once, whatever follows (a pause, a retry): the answer is in post meta, and the job
+		// resumes from what Yotpo already accepted.
+		if ( self::FULL_SYNC === (int) $full_sync ) {
+			self::compare_variants_with_yotpo( $product_id );
+			$full_sync  = self::FULL_SYNC_COMPARED;
+			// That lookup may have got a 429, which pauses every job: wait, as above, instead of sending now.
+			$paused_for = self::paused_for();
+			if ( $paused_for > 0 ) {
+				self::queue_product( $product_id, $attempt, $paused_for, $full_sync );
+				return;
+			}
+		}
+		$result = Yotpo_Product_Sync::sync_product( $product_id );
 		self::pause_if_rate_limited( $result, $attempt );
 		if ( is_wp_error( $result ) && Yotpo_Catalog_Api::is_retryable( $result ) && $attempt < self::MAX_ATTEMPTS ) {
-			self::queue_product( $product_id, $attempt + 1, self::retry_delay( $result, $attempt ), (bool) $full_sync );
+			self::queue_product( $product_id, $attempt + 1, self::retry_delay( $result, $attempt ), $full_sync );
 			return;
 		}
 		if ( $full_sync ) {
 			Yotpo_Sync_State::count_result( $result );
+		}
+	}
+
+	/**
+	 * Sets the stored IDs and fingerprints of a page of products to what Yotpo has (see
+	 * Yotpo_Catalog_Api::compare_products()). If Yotpo can't be asked now, the products are all
+	 * sent, as they would be without the comparison.
+	 */
+	private static function compare_with_yotpo( array $product_ids ) {
+		if ( ! $product_ids ) {
+			return;
+		}
+		self::compare_or_send_all(
+			'comparing a page with Yotpo',
+			function () use ( $product_ids ) {
+				Yotpo_Catalog_Api::forget_product_fingerprints( $product_ids );
+			},
+			function ( $client ) use ( $product_ids ) {
+				return Yotpo_Catalog_Api::compare_products( $client, array_filter( array_map( 'wc_get_product', $product_ids ) ) );
+			}
+		);
+	}
+
+	/**
+	 * The same for the variations of one variable product (see Yotpo_Catalog_Api::compare_variants(),
+	 * which knows which variations those are, and does nothing for any other product).
+	 */
+	private static function compare_variants_with_yotpo( $product_id ) {
+		$product = wc_get_product( $product_id );
+		if ( ! $product ) {
+			return;
+		}
+		self::compare_or_send_all(
+			'comparing the variations of #' . $product_id . ' with Yotpo',
+			function () use ( $product ) {
+				Yotpo_Catalog_Api::forget_variant_fingerprints( $product );
+			},
+			function ( $client ) use ( $product ) {
+				return Yotpo_Catalog_Api::compare_variants( $client, $product );
+			}
+		);
+	}
+
+	/**
+	 * The policy both comparisons share. While Yotpo asked us to slow down, nothing is compared and
+	 * $forget drops the fingerprints of what the comparison covers, so that everything is sent, as
+	 * without a comparison. When the comparison fails, it drops the fingerprints it did not reach
+	 * itself. A 429 also pauses every job.
+	 *
+	 * @param string   $what    For the log: what was being compared.
+	 * @param callable $forget  Drops the fingerprints of what the comparison covers.
+	 * @param callable $compare Receives the client; returns the WP_Error of the comparison, or null.
+	 */
+	private static function compare_or_send_all( $what, $forget, $compare ) {
+		$client = Yotpo_V3_Client::from_settings();
+		if ( ! $client ) {
+			return;
+		}
+		if ( self::paused_for() > 0 ) {
+			call_user_func( $forget );
+			return;
+		}
+		$error = call_user_func( $compare, $client );
+		if ( $error ) {
+			// Attempt 1: only a 429 pauses, and its delay comes from Retry-After, not from the attempt.
+			self::pause_if_rate_limited( $error, 1 );
+			ytdbg( $error->get_error_message(), 'Product sync: ' . $what . ' failed, sending it all:' );
 		}
 	}
 
