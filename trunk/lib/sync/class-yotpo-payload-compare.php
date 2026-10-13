@@ -4,12 +4,14 @@ defined( 'ABSPATH' ) || exit;
 
 /**
  * The matching rules of the full sync's comparison with Yotpo: whether the copy Yotpo returned has
- * the same data as the payload the plugin would send. Pure functions of the two values (plus the
- * store's price decimals), so they can be tested without a Yotpo catalog.
+ * the same data as the payload the plugin would send. Pure functions of the two values, so they can
+ * be tested without a Yotpo catalog.
  *
  * Allows for the formats Yotpo answers in: a price as a string, flags as strings, lists in another order.
  */
 class Yotpo_Payload_Compare {
+
+	const PRICE_EPSILON = 0.000001; // Below any price a store can charge, above float noise.
 
 	/**
 	 * Whether Yotpo's copy has every field the payload would send, with the same value. Fields
@@ -53,9 +55,9 @@ class Yotpo_Payload_Compare {
 			return is_numeric( $stored ) && (float) $stored === (float) $sent; // A count: any difference is a change.
 		}
 		if ( is_float( $sent ) ) {
-			// A price: equal at the precision the store shows prices with (its currency's decimals).
-			$decimals = function_exists( 'wc_get_price_decimals' ) ? wc_get_price_decimals() : 2;
-			return is_numeric( $stored ) && abs( round( (float) $stored, $decimals ) - round( $sent, $decimals ) ) < 0.5 * pow( 10, -$decimals );
+			// A price: the payload sends the raw value, so equal means equal on that value; the epsilon
+			// only absorbs float representation ("18.00" against 18.0), never a real price difference.
+			return is_numeric( $stored ) && abs( (float) $stored - $sent ) < self::PRICE_EPSILON;
 		}
 		return trim( (string) $stored ) === trim( (string) $sent );
 	}

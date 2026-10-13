@@ -51,13 +51,18 @@ class PayloadCompareTest extends WP_UnitTestCase {
 		$this->assertFalse( Yotpo_Payload_Compare::same( array( 'inventory_quantity' => 5 ), array( 'inventory_quantity' => 'five' ) ) );
 	}
 
-	public function test_prices_match_at_the_stores_decimals() {
-		$this->assertTrue( Yotpo_Payload_Compare::same( array( 'price' => 18.0 ), array( 'price' => '18.004' ) ), 'Two decimals by default' );
+	public function test_prices_match_on_the_value_the_plugin_sends() {
+		$this->assertTrue( Yotpo_Payload_Compare::same( array( 'price' => 18.0 ), array( 'price' => '18.00' ) ), 'Only the format differs' );
+		$this->assertTrue( Yotpo_Payload_Compare::same( array( 'price' => 18.456 ), array( 'price' => '18.4560' ) ) );
 		$this->assertFalse( Yotpo_Payload_Compare::same( array( 'price' => 18.0 ), array( 'price' => '18.01' ) ) );
+		$this->assertFalse( Yotpo_Payload_Compare::same( array( 'price' => 18.0 ), array( 'price' => '18.004' ) ), 'Any real difference in the sent price is a change' );
 
-		update_option( 'woocommerce_price_num_decimals', 3 );
-		$this->assertFalse( Yotpo_Payload_Compare::same( array( 'price' => 1.234 ), array( 'price' => '1.230' ) ), 'A change of 0.004 is a change in a three-decimal currency' );
-		$this->assertTrue( Yotpo_Payload_Compare::same( array( 'price' => 1.234 ), array( 'price' => '1.2340' ) ) );
+		// The store's display decimals do not matter: the plugin sends the raw price.
+		foreach ( array( 0, 2, 3 ) as $decimals ) {
+			update_option( 'woocommerce_price_num_decimals', $decimals );
+			$this->assertFalse( Yotpo_Payload_Compare::same( array( 'price' => 18.456 ), array( 'price' => '18.45' ) ), "{$decimals} decimals" );
+			$this->assertFalse( Yotpo_Payload_Compare::same( array( 'price' => 9.99 ), array( 'price' => '9.50' ) ), "{$decimals} decimals" );
+		}
 	}
 
 	public function test_a_list_or_object_where_a_single_value_was_sent_is_different() {

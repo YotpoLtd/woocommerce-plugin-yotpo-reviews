@@ -184,6 +184,18 @@ class FullSyncCompareTest extends Yotpo_Test_Case {
 		$this->assertEquals( 1.234, $this->catalog[ $beanie->get_id() ]['price'] );
 	}
 
+	public function test_a_price_that_differs_only_beyond_the_store_decimals_is_still_sent() {
+		update_option( 'woocommerce_price_num_decimals', 2 );
+		$beanie = $this->create_product( 'Wool Beanie', 'YT-ACC-001', '18.456' );
+		$this->put_in_yotpo( $beanie );
+		$this->catalog[ $beanie->get_id() ]['price'] = '18.45'; // The same at 2 decimals, not the price the plugin sends.
+
+		$this->full_sync();
+
+		$this->assertSame( array( 'PATCH /products/' . $this->yotpo_id( $beanie ) ), $this->sent() );
+		$this->assertEquals( 18.456, $this->catalog[ $beanie->get_id() ]['price'] );
+	}
+
 	public function test_rate_limited_variations_lookup_pauses_the_job_instead_of_sending() {
 		$hoodie = $this->create_variable_product();
 		$this->put_in_yotpo( $hoodie );
