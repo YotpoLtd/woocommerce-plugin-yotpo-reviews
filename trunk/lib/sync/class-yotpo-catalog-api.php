@@ -299,8 +299,14 @@ class Yotpo_Catalog_Api {
 			}
 			return self::same_data( $sent, $stored );
 		}
+		if ( null !== $stored && ! is_scalar( $stored ) ) {
+			return false; // An array or object where a single value was sent.
+		}
 		if ( is_bool( $sent ) ) {
-			return (bool) $stored === $sent;
+			// Yotpo may answer a flag as a string ("false", "0"): read it as a flag, and a missing or
+			// unreadable one as different.
+			$flag = null === $stored ? null : filter_var( $stored, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE );
+			return null !== $flag && $flag === $sent;
 		}
 		if ( is_int( $sent ) || is_float( $sent ) ) {
 			return is_numeric( $stored ) && abs( (float) $stored - (float) $sent ) < 0.005;

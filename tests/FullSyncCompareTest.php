@@ -157,6 +157,21 @@ class FullSyncCompareTest extends Yotpo_Test_Case {
 		$this->assertSame( Yotpo_Sync_State::STATUS_COMPLETE, Yotpo_Product_Sync::state()['status'] );
 	}
 
+	public function test_flags_yotpo_answers_as_strings_are_read_as_flags() {
+		$hoodie   = $this->create_variable_product();
+		$variants = $hoodie->get_children();
+		$this->put_in_yotpo( $hoodie );
+		$id = $hoodie->get_id();
+		$this->catalog[ $id ]['custom_properties']['is_blocklisted']         = 'false';
+		$this->catalog[ $id ]['variants'][ $variants[0] ]['is_discontinued'] = 'false';
+		$this->catalog[ $id ]['variants'][ $variants[1] ]['is_discontinued'] = 'true';
+
+		$this->full_sync();
+
+		$this->assertSame( array( 'PATCH /products/' . $this->yotpo_id( $hoodie ) . '/variants/' . $this->catalog[ $id ]['variants'][ $variants[1] ]['yotpo_id'] ), $this->sent(), 'Only the variation Yotpo has as discontinued is updated' );
+		$this->assertFalse( $this->catalog[ $id ]['variants'][ $variants[1] ]['is_discontinued'] );
+	}
+
 	// -----------------------------------------------------------------------------------------
 
 	/** @var bool True makes product lookups answer 200 without a product list (a proxy's page, for example). */
