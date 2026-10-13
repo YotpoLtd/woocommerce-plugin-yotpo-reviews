@@ -557,8 +557,9 @@ function wc_yotpo_conversion_track($order_id) {
 }
 function wc_yotpo_admin_styles($hook) {
 	if($hook == 'toplevel_page_woocommerce-yotpo-settings-page') {
-		wp_enqueue_script( 'yotpoSettingsJs', plugins_url('assets/js/settings.js', __FILE__), array('jquery-effects-core'));
-		wp_enqueue_style( 'yotpoSettingsStylesheet', plugins_url('assets/css/yotpo.css', __FILE__));
+		// Versioned by file time: without a version WordPress appends its own, so browsers kept the old files after a plugin update.
+		wp_enqueue_script( 'yotpoSettingsJs', plugins_url('assets/js/settings.js', __FILE__), array('jquery-effects-core'), filemtime( __DIR__ . '/assets/js/settings.js' ) );
+		wp_enqueue_style( 'yotpoSettingsStylesheet', plugins_url('assets/css/yotpo.css', __FILE__), array(), filemtime( __DIR__ . '/assets/css/yotpo.css' ) );
 	}
 }
 function wc_yotpo_compatible() {

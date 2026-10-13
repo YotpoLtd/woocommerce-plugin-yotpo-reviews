@@ -3,18 +3,25 @@
 defined( 'ABSPATH' ) || exit;
 
 function yotpo_order_status_option($yotpo_settings) {
-  return "<tr valign='top'>
-      <th scope='row'><div>Order Status:</div></th>
-      <td>
-          <select name='yotpo_order_status' class='yotpo-order-status' >
-              <option value='wc-completed' " . selected('wc-completed', $yotpo_settings['yotpo_order_status'], false) . ">Completed</option>
-              <option value='wc-pending' " . selected('wc-pending', $yotpo_settings['yotpo_order_status'], false) . ">Pending Payment</option>
-              <option value='wc-processing' " . selected('wc-processing', $yotpo_settings['yotpo_order_status'], false) . ">Processing</option>
-              <option value='wc-on-hold' " . selected('wc-on-hold', $yotpo_settings['yotpo_order_status'], false) . ">On Hold</option>
-              <option value='wc-cancelled' " . selected('wc-cancelled', $yotpo_settings['yotpo_order_status'], false) . ">Cancelled</option>
-              <option value='wc-refunded' " . selected('wc-refunded', $yotpo_settings['yotpo_order_status'], false) . ">Refunded</option>
-              <option value='wc-failed' " . selected('wc-failed', $yotpo_settings['yotpo_order_status'], false) . ">Failed</option>
-          </select>
-      </td>
-  </tr>";
+  $statuses = array(
+    'wc-completed' => 'Completed',
+    'wc-pending' => 'Pending Payment',
+    'wc-processing' => 'Processing',
+    'wc-on-hold' => 'On Hold',
+    'wc-cancelled' => 'Cancelled',
+    'wc-refunded' => 'Refunded',
+    'wc-failed' => 'Failed',
+  );
+  $options = '';
+  foreach ($statuses as $value => $label) {
+    $options .= "<option value='$value' " . selected($value, $yotpo_settings['yotpo_order_status'], false) . ">$label</option>";
+  }
+  return yotpo_select_row(
+    'yotpo_order_status',
+    'yotpo_order_status',
+    'yotpo-order-status',
+    'Send orders to Yotpo at status',
+    $options,
+    'Orders are sent to Yotpo when they reach this status, so Yotpo can send the review request.'
+  );
 }

@@ -6,10 +6,10 @@ function info_dialog($use_v3_widgets, $widgets_to_customize) {
   return !strlen($widgets_to_customize) || !$use_v3_widgets
     ? ''
     : "
-      <dialog id='info-dialog'>
+      <dialog id='info-dialog' class='yotpo-dialog'>
           <h3>You haven't customized your widgets yet</h3>
           <p>Please customize " . $widgets_to_customize . " in Yotpo Reviews, and then try updating again.</p>
-          <button id='close-info-modal'>Go to Yotpo Reviews</button>
+          <button type='button' id='close-info-modal' class='yotpo-btn yotpo-btn--primary'>Go to Yotpo Reviews</button>
       </dialog>
     ";
 }

@@ -1,42 +1,561 @@
-#icon-woocommerce-yotpo-settings-page {
-    background: transparent url( '../images/logo.png' ) no-repeat;
+/*
+ * Yotpo settings page. Loaded only on this page (wc_yotpo_admin_styles).
+ *
+ * Follows the Yotpo app's design system (shadcn "new-york" components): the tokens below are
+ * copied from the Yotpo theme, scoped to .yotpo-admin so nothing leaks into the rest of wp-admin.
+ * Plain CSS on purpose: no build step, no Tailwind, no React.
+ */
+
+.yotpo-admin {
+	--color-mg-blue-100: oklch(93.4% 0.0318 260);
+	--color-mg-blue-600: oklch(51.4% 0.2554 269.3);
+	--color-mg-blue-800: oklch(41.1% 0.2049 269.4);
+	--color-mg-green-100: oklch(96.7% 0.0782 128.7);
+	--color-mg-green-800: oklch(46.4% 0.1334 136.6);
+	--color-mg-orange-100: oklch(95.4% 0.0394 77.2);
+	--color-mg-orange-800: oklch(47.8% 0.154 36.6);
+	--color-mg-pink-100: oklch(94.7% 0.0288 347.1);
+	--color-mg-pink-800: oklch(46% 0.1728 12.3);
+
+	--radius: 0.625rem;
+	--background: oklch(100% 0 0);
+	--foreground: oklch(12.9% 0.041 264.695);
+	--card: oklch(100% 0 0);
+	--card-foreground: oklch(20.8% 0.04 265.755);
+	--muted: oklch(97.3% 0 0);
+	--muted-foreground: oklch(55.6% 0 0);
+	--accent: oklch(94.9% 0 0);
+	--border: oklch(92% 0 0);
+	--input: oklch(90% 0 0);
+	--ring: oklch(71.5% 0 0);
+
+	/* Yotpo blue (the brand mark's #0042E4) for switches and checkboxes that are on, and the main action. */
+	--brand: var(--color-mg-blue-600);
+	--brand-hover: var(--color-mg-blue-800);
+	--brand-foreground: oklch(100% 0 0);
+
+	--font-sans: Geist, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+	--font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+	max-width: 880px;
+	margin: 24px 20px 0 2px;
+	color: var(--foreground);
+	font-family: var(--font-sans);
+	font-size: 14px;
+	line-height: 1.5;
 }
 
-.form-table th {
-	width: 300px;
+.yotpo-admin *,
+.yotpo-admin *::before,
+.yotpo-admin *::after {
+	box-sizing: border-box;
 }
 
-.button-primary.submit-btn {
-	margin-left:92px;
+/* Header */
+
+.yotpo-header {
+	display: flex;
+	align-items: center;
+	gap: 14px;
 }
-.button-secondary.not-user-btn {
-	margin-left: 12px;
+.yotpo-header__logo {
+	flex: none;
+	width: 40px;
+	height: 40px;
+}
+.yotpo-header__text {
+	flex: 1;
+	min-width: 0;
+}
+.yotpo-admin .yotpo-header__title {
+	margin: 0;
+	padding: 0;
+	font-size: 22px;
+	font-weight: 600;
+	line-height: 1.25;
+	letter-spacing: -0.01em;
+	color: var(--foreground);
+}
+.yotpo-header__subtitle {
+	margin: 2px 0 0;
+	color: var(--muted-foreground);
+}
+.yotpo-admin .wp-header-end {
+	margin: 8px 0 0;
+	border: 0;
+	visibility: hidden;
 }
 
-.buttons-container {
-	width: 501px;
+/* Cards */
+
+.yotpo-card {
+	margin: 16px 0;
+	background: var(--card);
+	color: var(--card-foreground);
+	border: 1px solid var(--border);
+	border-radius: calc(var(--radius) + 2px);
+	box-shadow: 0 1px 2px 0 oklch(0% 0 0 / 0.05);
 }
-.button-secondary.past-orders-btn {
-	float: right;
+.yotpo-card__header {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 16px;
+	padding: 20px 24px 4px;
 }
-#save_yotpo_settings {
-	float: right;
-	margin-left: 5px;
+.yotpo-admin .yotpo-card__title {
+	margin: 0;
+	padding: 0;
+	font-size: 16px;
+	font-weight: 600;
+	line-height: 1.4;
+	color: var(--foreground);
+}
+.yotpo-card__description {
+	margin: 4px 0 0;
+	color: var(--muted-foreground);
+}
+.yotpo-card__content {
+	padding: 4px 24px 12px;
 }
 
-.yotpo-widget-location {
-	width: 158px;
+/* Rows: label and help text on the left, control on the right. */
+
+.yotpo-row {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 24px;
+	padding: 16px 0;
+	border-bottom: 1px solid var(--border);
 }
+.yotpo-card__content .yotpo-row:last-child,
+.yotpo-card__content > div:last-child > .yotpo-row:last-child {
+	border-bottom: 0;
+}
+.yotpo-row__text {
+	flex: 1;
+	min-width: 0;
+}
+.yotpo-row__control {
+	flex: none;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 8px 16px;
+	padding-top: 1px;
+}
+
+.yotpo-label {
+	display: block;
+	font-weight: 500;
+	color: var(--foreground);
+}
+.yotpo-help {
+	margin: 2px 0 0;
+	color: var(--muted-foreground);
+	font-size: 13px;
+}
+.yotpo-admin .yotpo-help a,
+.yotpo-admin .yotpo-callout a,
+.yotpo-admin .yotpo-card__description a {
+	color: var(--brand);
+	text-decoration: underline;
+	text-underline-offset: 2px;
+}
+.yotpo-admin code {
+	padding: 1px 5px;
+	border-radius: 4px;
+	background: oklch(100% 0 0 / 0.7);
+	font-family: var(--font-mono);
+	font-size: 12px;
+}
+
+/* Text fields and selects */
+
+.yotpo-field {
+	padding: 12px 0;
+}
+.yotpo-field .yotpo-label {
+	margin-bottom: 6px;
+}
+.yotpo-field .yotpo-help {
+	margin-top: 6px;
+}
+.yotpo-admin input.yotpo-input,
+.yotpo-admin select.yotpo-select,
+.yotpo-admin textarea.yotpo-textarea {
+	width: 100%;
+	max-width: 440px;
+	min-height: 36px;
+	margin: 0;
+	padding: 6px 12px;
+	background-color: var(--background);
+	color: var(--foreground);
+	border: 1px solid var(--input);
+	border-radius: calc(var(--radius) - 2px);
+	box-shadow: 0 1px 2px 0 oklch(0% 0 0 / 0.04);
+	font-family: inherit;
+	font-size: 14px;
+	line-height: 1.5;
+	transition: border-color 0.15s, box-shadow 0.15s;
+}
+.yotpo-admin input.yotpo-input--short {
+	max-width: 120px;
+}
+.yotpo-admin input.yotpo-input--mono {
+	font-family: var(--font-mono);
+	font-size: 13px;
+}
+.yotpo-admin input.yotpo-input[readonly] {
+	background-color: var(--muted);
+	color: var(--muted-foreground);
+}
+.yotpo-admin select.yotpo-select {
+	width: auto;
+	min-width: 200px;
+	padding-right: 36px;
+	-webkit-appearance: none;
+	appearance: none;
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23737373' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+	background-repeat: no-repeat;
+	background-position: right 10px center;
+	background-size: 16px;
+	cursor: pointer;
+}
+.yotpo-admin textarea.yotpo-textarea {
+	display: block;
+	max-width: none;
+	min-height: 220px;
+	margin-bottom: 12px;
+	font-family: var(--font-mono);
+	font-size: 12px;
+}
+.yotpo-admin input.yotpo-input:focus,
+.yotpo-admin select.yotpo-select:focus,
+.yotpo-admin textarea.yotpo-textarea:focus {
+	border-color: var(--ring);
+	outline: none;
+	box-shadow: 0 0 0 3px oklch(71.5% 0 0 / 0.35);
+}
+
+/* Switch: a plain checkbox, drawn as the shadcn switch. */
+
+.yotpo-admin input[type="checkbox"].yotpo-switch {
+	position: relative;
+	width: 36px;
+	min-width: 36px;
+	height: 20px;
+	margin: 0;
+	padding: 0;
+	-webkit-appearance: none;
+	appearance: none;
+	background: var(--input);
+	border: 0;
+	border-radius: 999px;
+	box-shadow: none;
+	cursor: pointer;
+	transition: background-color 0.15s;
+}
+.yotpo-admin input[type="checkbox"].yotpo-switch::before,
+.yotpo-admin input[type="checkbox"].yotpo-switch:checked::before {
+	content: "";
+	position: absolute;
+	top: 2px;
+	left: 2px;
+	width: 16px;
+	height: 16px;
+	margin: 0;
+	background: var(--background);
+	border-radius: 999px;
+	box-shadow: 0 1px 2px oklch(0% 0 0 / 0.25);
+	transition: transform 0.15s;
+}
+.yotpo-admin input[type="checkbox"].yotpo-switch:checked {
+	background: var(--brand);
+}
+.yotpo-admin input[type="checkbox"].yotpo-switch:checked::before {
+	transform: translateX(16px);
+}
+
+/* Checkbox, where one setting applies to several pages (product / category / home). */
+
+.yotpo-check {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	color: var(--foreground);
+	white-space: nowrap;
+	cursor: pointer;
+}
+.yotpo-admin input[type="checkbox"].yotpo-checkbox {
+	width: 16px;
+	min-width: 16px;
+	height: 16px;
+	margin: 0;
+	-webkit-appearance: none;
+	appearance: none;
+	background: var(--background);
+	border: 1px solid var(--ring);
+	border-radius: 4px;
+	box-shadow: 0 1px 2px 0 oklch(0% 0 0 / 0.04);
+	cursor: pointer;
+}
+.yotpo-admin input[type="checkbox"].yotpo-checkbox:checked {
+	background: var(--brand) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / 12px no-repeat;
+	border-color: var(--brand);
+}
+.yotpo-admin input[type="checkbox"].yotpo-checkbox:checked::before {
+	content: none;
+}
+
+.yotpo-admin input.yotpo-switch:focus,
+.yotpo-admin input.yotpo-checkbox:focus {
+	outline: none;
+	box-shadow: none;
+}
+.yotpo-admin input.yotpo-switch:focus-visible,
+.yotpo-admin input.yotpo-checkbox:focus-visible,
+.yotpo-admin .yotpo-btn:focus-visible {
+	outline: none;
+	box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--ring);
+}
+
+/* Buttons */
+
+.yotpo-admin .yotpo-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	height: 36px;
+	min-height: 36px;
+	margin: 0;
+	padding: 0 16px;
+	border: 1px solid transparent;
+	border-radius: calc(var(--radius) - 2px);
+	font-family: inherit;
+	font-size: 14px;
+	font-weight: 500;
+	line-height: 1;
+	text-decoration: none;
+	white-space: nowrap;
+	cursor: pointer;
+	transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+.yotpo-admin .yotpo-btn--primary {
+	background: var(--brand);
+	color: var(--brand-foreground);
+	box-shadow: 0 1px 2px 0 oklch(0% 0 0 / 0.08);
+}
+.yotpo-admin .yotpo-btn--primary:hover,
+.yotpo-admin .yotpo-btn--primary:focus {
+	background: var(--brand-hover);
+	color: var(--brand-foreground);
+}
+.yotpo-admin .yotpo-btn--outline {
+	background: var(--background);
+	color: var(--foreground);
+	border-color: var(--input);
+	box-shadow: 0 1px 2px 0 oklch(0% 0 0 / 0.04);
+}
+.yotpo-admin .yotpo-btn--outline:hover,
+.yotpo-admin .yotpo-btn--outline:focus {
+	background: var(--accent);
+	color: var(--foreground);
+}
+.yotpo-admin .yotpo-btn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+.yotpo-btn__icon {
+	width: 14px;
+	height: 14px;
+}
+
+/* Badges and status lines */
+
+.yotpo-badge {
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	gap: 6px;
+	padding: 2px 10px;
+	border-radius: 999px;
+	font-size: 12px;
+	font-weight: 500;
+	line-height: 1.5;
+	white-space: nowrap;
+}
+.yotpo-badge::before {
+	content: "";
+	width: 6px;
+	height: 6px;
+	border-radius: 999px;
+	background: currentColor;
+}
+.yotpo-tone--neutral {
+	background: var(--muted);
+	color: var(--muted-foreground);
+}
+.yotpo-tone--success {
+	background: var(--color-mg-green-100);
+	color: var(--color-mg-green-800);
+}
+.yotpo-tone--info {
+	background: var(--color-mg-blue-100);
+	color: var(--color-mg-blue-800);
+}
+.yotpo-tone--warning {
+	background: var(--color-mg-orange-100);
+	color: var(--color-mg-orange-800);
+}
+.yotpo-tone--danger {
+	background: var(--color-mg-pink-100);
+	color: var(--color-mg-pink-800);
+}
+
+.yotpo-status {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	margin: 10px 0 0;
+	padding: 8px 12px;
+	border-radius: calc(var(--radius) - 2px);
+	font-size: 13px;
+}
+.yotpo-status::before {
+	content: "";
+	flex: none;
+	width: 8px;
+	height: 8px;
+	margin-top: 6px;
+	border-radius: 999px;
+	background: currentColor;
+}
+
+.yotpo-callout {
+	margin: 0 0 16px;
+	padding: 12px 14px;
+	background: var(--muted);
+	border-radius: calc(var(--radius) - 2px);
+	color: var(--card-foreground);
+	font-size: 13px;
+}
+
+/* Save bar: stays at the bottom of the window while the settings scroll. */
+
+.yotpo-actions {
+	position: sticky;
+	bottom: 0;
+	z-index: 10;
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 12px;
+	margin: 16px 0;
+	padding: 12px 16px;
+	background: oklch(100% 0 0 / 0.92);
+	border: 1px solid var(--border);
+	border-radius: calc(var(--radius) + 2px);
+	box-shadow: 0 -4px 12px -6px oklch(0% 0 0 / 0.12);
+	-webkit-backdrop-filter: blur(6px);
+	backdrop-filter: blur(6px);
+}
+.yotpo-actions__note {
+	flex: 1;
+	margin: 0;
+	color: var(--muted-foreground);
+	font-size: 13px;
+}
+
+/* Rows the settings script shows and hides. */
+
 .yotpo-qna-widget-tab-name--hidden {
 	display: none !important;
 }
-.y-register-title {
-	font-size: 22px;
+
+/* "Customize your widgets first" dialog */
+
+.yotpo-dialog {
+	max-width: 440px;
+	padding: 24px;
+	border: 1px solid var(--border);
+	border-radius: calc(var(--radius) + 2px);
+	box-shadow: 0 10px 30px -10px oklch(0% 0 0 / 0.3);
+	color: var(--foreground);
 }
-.yotpo-terms{
-	color: rgb(138, 138, 138);
-	font-size: 11.8px;
+.yotpo-dialog::backdrop {
+	background: oklch(0% 0 0 / 0.4);
 }
-#wpfooter{
+.yotpo-admin .yotpo-dialog h3 {
+	margin: 0 0 8px;
+	font-size: 16px;
+	font-weight: 600;
+}
+.yotpo-dialog p {
+	margin: 0 0 20px;
+	color: var(--muted-foreground);
+}
+
+/* Registration screen */
+
+.yotpo-terms {
+	margin: 0;
+	color: var(--muted-foreground);
+	font-size: 12px;
+}
+
+/* Debug mode (support only) */
+
+.yotpo-debug pre {
+	max-height: 280px;
+	margin: 0 0 12px;
+	padding: 12px;
+	overflow: auto;
+	background: var(--muted);
+	border-radius: calc(var(--radius) - 2px);
+	font-family: var(--font-mono);
+	font-size: 12px;
+	white-space: pre-wrap;
+	word-break: break-all;
+}
+
+#wpfooter {
 	display: none;
+}
+
+@media (max-width: 782px) {
+	.yotpo-admin {
+		margin: 16px 12px 0 0;
+	}
+	.yotpo-header {
+		flex-wrap: wrap;
+	}
+	.yotpo-header__text {
+		flex-basis: 220px;
+	}
+	.yotpo-admin .yotpo-header__title {
+		font-size: 20px;
+	}
+	.yotpo-card__header {
+		padding: 16px 16px 4px;
+	}
+	.yotpo-card__content {
+		padding: 4px 16px 8px;
+	}
+	.yotpo-row {
+		flex-direction: column;
+		gap: 10px;
+	}
+	.yotpo-row__control {
+		justify-content: flex-start;
+	}
+	.yotpo-admin select.yotpo-select {
+		width: 100%;
+	}
+	.yotpo-actions {
+		flex-wrap: wrap;
+	}
 }

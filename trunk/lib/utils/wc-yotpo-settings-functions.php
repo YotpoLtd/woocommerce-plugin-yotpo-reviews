@@ -125,39 +125,40 @@ function wc_proccess_yotpo_settings() {
 function wc_display_yotpo_register() {
   $email = isset($_POST['yotpo_user_email']) ? sanitize_email($_POST['yotpo_user_email']) : '';
   $user_name = isset($_POST['yotpo_user_name']) ? sanitize_user($_POST['yotpo_user_name']) : '';
-  $register_html = "<div class='wrap'><h2>Yotpo Registration</h2>
-  <form method='post'>
-  <table class='form-table'>"
-          . wp_nonce_field('yotpo_registration_form', '_wpnonce', true, false) .
-          "<fieldset>
-      <h2 class='y-register-title'>Fill out the form below and click register to get started with Yotpo.</h2></br></br>    
-      <tr valign='top'>
-        <th scope='row'><div>Email address:</div></th>			 			  
-        <td><div><input type='text' name='yotpo_user_email' value='$email' /></div></td>
-      </tr>
-      <tr valign='top'>
-        <th scope='row'><div>Name:</div></th>			 			  
-        <td><div><input type='text' name='yotpo_user_name' value='$user_name' /></div></td>
-      </tr>
-      <tr valign='top'>
-        <th scope='row'><div>Password:</div></th>			 			  
-        <td><div><input type='password' name='yotpo_user_password' /></div></td>
-      </tr>
-      <tr valign='top'>
-        <th scope='row'><div>Confirm password:</div></th>			 			  
-        <td><div><input type='password' name='yotpo_user_confirm_password' /></div></td>
-      </tr>
-      <tr valign='top'>
-        <th scope='row'></th>
-        <td><div><input type='submit' name='yotpo_register' value='Register' class='button-primary submit-btn' /></div></td>
-      </tr>			  
-    </fieldset>			
-    <table/>
-  </form>
-  <form method='post'>
-    <div>Already registered to Yotpo?<input type='submit' name='log_in_button' value='click here' class='button-secondary not-user-btn' /></div>
-  </form></br><p class='description'>*Learn <a href='http://support.yotpo.com/entries/24454261-Exporting-reviews-for-Woocommerce'>how to export your existing reviews</a> into Yotpo.</p></br></br>
-  <div class='yotpo-terms'>By registering I accept the <a href='https://www.yotpo.com/terms-of-service' target='_blank'>Terms of Use</a> and recognize that a 'Powered by Yotpo' link will appear on the bottom of my Yotpo widget.</div>
-</div>";
+  $fields = "
+      <div class='yotpo-field'>
+        <label class='yotpo-label' for='yotpo_user_email'>Email address</label>
+        <input type='email' class='yotpo-input' id='yotpo_user_email' name='yotpo_user_email' value='" . esc_attr($email) . "' />
+      </div>
+      <div class='yotpo-field'>
+        <label class='yotpo-label' for='yotpo_user_name'>Name</label>
+        <input type='text' class='yotpo-input' id='yotpo_user_name' name='yotpo_user_name' value='" . esc_attr($user_name) . "' />
+      </div>
+      <div class='yotpo-field'>
+        <label class='yotpo-label' for='yotpo_user_password'>Password</label>
+        <input type='password' class='yotpo-input' id='yotpo_user_password' name='yotpo_user_password' />
+      </div>
+      <div class='yotpo-field'>
+        <label class='yotpo-label' for='yotpo_user_confirm_password'>Confirm password</label>
+        <input type='password' class='yotpo-input' id='yotpo_user_confirm_password' name='yotpo_user_confirm_password' />
+      </div>
+      <div class='yotpo-field'>
+        <input type='submit' name='yotpo_register' value='Register' class='yotpo-btn yotpo-btn--primary' />
+      </div>
+      <p class='yotpo-terms'>By registering I accept the <a href='https://www.yotpo.com/terms-of-service' target='_blank' rel='noopener'>Terms of Use</a> and recognize that a 'Powered by Yotpo' link will appear on the bottom of my Yotpo widget.</p>";
+  $register_html = "<div class='wrap yotpo-admin'>"
+    . yotpo_page_header('Collect and show product reviews, ratings and Q&amp;A from Yotpo.') . "
+    <form method='post'>" . wp_nonce_field('yotpo_registration_form', '_wpnonce', true, false)
+      . yotpo_card('Create your Yotpo account', 'Fill out the form below and click Register to get started with Yotpo.', $fields) . "
+    </form>
+    <form method='post'>"
+      . yotpo_card(
+        'Already have a Yotpo account?',
+        'Enter your app key and secret token to connect this store.',
+        "<div class='yotpo-field'><input type='submit' name='log_in_button' value='Enter your keys' class='yotpo-btn yotpo-btn--outline' /></div>
+        <p class='yotpo-help'>Learn <a href='http://support.yotpo.com/entries/24454261-Exporting-reviews-for-Woocommerce' target='_blank' rel='noopener'>how to export your existing reviews</a> into Yotpo.</p>"
+      ) . "
+    </form>
+  </div>";
   echo wp_kses($register_html, yotpo_allowed_register_html());
 }
