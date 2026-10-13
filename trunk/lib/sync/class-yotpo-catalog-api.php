@@ -19,7 +19,6 @@ class Yotpo_Catalog_Api {
 	const META_VARIANT_HASH = '_yotpo_v3_variant_hash'; // The same for a variant.
 	const META_BLOCKLISTED  = '_yotpo_v3_blocklisted'; // Set ('1') once Yotpo has been told, or found to be without the product, until it is published again.
 	const LOOKUP_MAX        = 100; // External IDs per lookup request: Yotpo's maximum.
-	const LOOKUP_MAX_PAGES  = 10; // Pages one lookup follows before giving up.
 
 	public static function upsert_product( $client, $product, $force = false ) {
 		return self::upsert( $client, self::product_spec(), $product->get_id(), Yotpo_Product_Payload::product( $product ), $force );
@@ -278,44 +277,28 @@ class Yotpo_Catalog_Api {
 	}
 
 	/**
-	 * Looks up these external IDs in Yotpo with an explicit page size (one page holds them all
-	 * unless Yotpo caps it lower) and follows the answer's pagination, so an ID is only missing from
-	 * the result when Yotpo has no such object.
+	 * Looks up these external IDs in Yotpo in one request. Yotpo's reference for external_ids:
+	 * "Max 100 IDs. Can't come with page_info or limit." So the request carries nothing else, and one
+	 * answer holds every match. An answer that still says there is more is not trusted (an ID missing
+	 * from it may be on a page that can't be asked for): it is an error, and the caller sends in full.
 	 *
 	 * @param int[] $external_ids At most LOOKUP_MAX.
-	 * @return array|WP_Error The items of every page.
+	 * @return array|WP_Error The items of the answer.
 	 */
 	private static function lookup_all( $client, $spec, array $external_ids ) {
-		$items     = array();
-		$page_info = '';
-		for ( $page = 0; $page < self::LOOKUP_MAX_PAGES; $page++ ) {
-			$query = array(
-				'external_ids' => implode( ',', $external_ids ),
-				'limit'        => count( $external_ids ),
-			);
-			if ( '' !== $page_info ) {
-				$query['page_info'] = $page_info;
-			}
-			$response = $client->request( 'GET', $spec['path'], null, $query );
-			$error    = self::response_error( $response );
-			if ( $error ) {
-				return $error;
-			}
-			if ( ! is_array( $response['body'] ) || ! isset( $response['body'][ $spec['list_key'] ] ) || ! is_array( $response['body'][ $spec['list_key'] ] ) ) {
-				// A 2xx that is not a lookup answer (a proxy's page, say) is not "Yotpo has none of these".
-				return new WP_Error( 'yotpo_bad_response', 'The lookup answer has no "' . $spec['list_key'] . '" list' );
-			}
-			$items = array_merge( $items, array_values( $response['body'][ $spec['list_key'] ] ) );
-			$next = isset( $response['body']['pagination']['next_page_info'] ) ? (string) $response['body']['pagination']['next_page_info'] : '';
-			if ( '' === $next ) {
-				return $items;
-			}
-			if ( $next === $page_info ) {
-				break; // The same cursor again: Yotpo would never end.
-			}
-			$page_info = $next;
+		$response = $client->request( 'GET', $spec['path'], null, array( 'external_ids' => implode( ',', $external_ids ) ) );
+		$error    = self::response_error( $response );
+		if ( $error ) {
+			return $error;
 		}
-		return new WP_Error( 'yotpo_bad_response', 'The lookup of ' . count( $external_ids ) . ' external IDs did not reach its last page' );
+		if ( ! is_array( $response['body'] ) || ! isset( $response['body'][ $spec['list_key'] ] ) || ! is_array( $response['body'][ $spec['list_key'] ] ) ) {
+			// A 2xx that is not a lookup answer (a proxy's page, say) is not "Yotpo has none of these".
+			return new WP_Error( 'yotpo_bad_response', 'The lookup answer has no "' . $spec['list_key'] . '" list' );
+		}
+		if ( ! empty( $response['body']['pagination']['next_page_info'] ) ) {
+			return new WP_Error( 'yotpo_bad_response', 'The lookup of ' . count( $external_ids ) . ' external IDs answered with more pages' );
+		}
+		return array_values( $response['body'][ $spec['list_key'] ] );
 	}
 
 	/**

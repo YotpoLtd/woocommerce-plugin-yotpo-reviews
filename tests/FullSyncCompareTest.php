@@ -122,25 +122,37 @@ class FullSyncCompareTest extends Yotpo_Test_Case {
 		$this->assertSame( Yotpo_Sync_State::STATUS_COMPLETE, Yotpo_Product_Sync::state()['status'] );
 	}
 
-	public function test_paginated_lookups_are_followed_to_the_last_page() {
-		$products = array();
-		for ( $i = 1; $i <= 25; $i++ ) {
-			$products[] = $this->create_product( "Product $i", "SKU-$i", '10' );
-			$this->put_in_yotpo( $products[ $i - 1 ] );
-		}
-		$this->page_size = 10; // Yotpo answers 10 at a time, whatever limit was asked.
+	public function test_lookups_send_only_external_ids() {
+		$hoodie = $this->create_variable_product();
+		$this->put_in_yotpo( $hoodie );
 
 		$this->full_sync();
 
 		$lookups = array_values( array_filter( $this->requests, function ( $request ) {
-			return 'GET /products' === $request['method'] . ' ' . $request['path'];
+			return 'GET' === $request['method'];
 		} ) );
-		$this->assertCount( 3, $lookups, 'Three pages of the one lookup' );
-		$this->assertSame( array(), $this->sent(), 'Nothing is created or updated: every product was found' );
-		foreach ( $products as $product ) {
-			$this->assertSame( $this->yotpo_id( $product ), (int) get_post_meta( $product->get_id(), Yotpo_Catalog_Api::META_PRODUCT_ID, true ) );
+		$this->assertCount( 2, $lookups );
+		foreach ( $lookups as $lookup ) {
+			parse_str( (string) wp_parse_url( $lookup['url'], PHP_URL_QUERY ), $query );
+			$this->assertSame( array( 'external_ids' ), array_keys( $query ), "Yotpo: external_ids \"can't come with page_info or limit\"" );
 		}
-		$this->assertSame( 25, (int) Yotpo_Product_Sync::state()['synced'] );
+		$this->assertSame( array(), $this->sent() );
+	}
+
+	public function test_lookup_answer_that_says_there_is_more_is_not_trusted() {
+		$beanie = $this->create_product();
+		$belt   = $this->create_product( 'Leather Belt', 'YT-ACC-002', '25' );
+		$this->put_in_yotpo( $beanie );
+		$this->put_in_yotpo( $belt );
+		$this->full_sync(); // Stored IDs and fingerprints now match Yotpo.
+		$this->requests  = array();
+		$this->page_size = 1; // Yotpo answers one item and a next page, which external_ids can't ask for.
+
+		$this->full_sync();
+
+		$this->assertCount( 2, $this->sent(), 'Both sent by their stored IDs: the answer was incomplete' );
+		$this->assertSame( $this->yotpo_id( $belt ), (int) get_post_meta( $belt->get_id(), Yotpo_Catalog_Api::META_PRODUCT_ID, true ), 'Not taken for missing' );
+		$this->assertSame( Yotpo_Sync_State::STATUS_COMPLETE, Yotpo_Product_Sync::state()['status'] );
 	}
 
 	public function test_lookup_answer_without_a_list_keeps_stored_ids_and_sends_everything() {
@@ -341,11 +353,14 @@ class FullSyncCompareTest extends Yotpo_Test_Case {
 	}
 
 	/**
-	 * One page of a lookup answer. With $page_size set, a page holds at most that many items and
-	 * pagination.next_page_info (the offset of the next page) says where to continue.
+	 * One page of a lookup answer, or null for a query Yotpo rejects with a 400. With $page_size set,
+	 * a page holds at most that many items and pagination.next_page_info says there is more.
 	 */
 	private function page_of( $list_key, array $found, $url ) {
 		parse_str( (string) wp_parse_url( $url, PHP_URL_QUERY ), $query );
+		if ( isset( $query['external_ids'] ) && ( isset( $query['limit'] ) || isset( $query['page_info'] ) ) ) {
+			return null; // Yotpo: external_ids "can't come with page_info or limit".
+		}
 		$offset = isset( $query['page_info'] ) ? (int) $query['page_info'] : 0;
 		$size   = $this->page_size ? $this->page_size : max( 1, count( $found ) );
 		$next = $offset + $size < count( $found ) ? (string) ( $offset + $size ) : null;
@@ -370,7 +385,8 @@ class FullSyncCompareTest extends Yotpo_Test_Case {
 					$found[] = array_diff_key( $this->catalog[ $id ], array( 'variants' => 1 ) );
 				}
 			}
-			return $this->respond( 200, $this->page_of( 'products', $found, $request['url'] ) );
+			$page = $this->page_of( 'products', $found, $request['url'] );
+			return null === $page ? $this->respond( 400 ) : $this->respond( 200, $page );
 		} );
 		$this->route( 'POST', '#^/products$#', function ( $request ) {
 			$product = $request['body']['product'];
@@ -402,7 +418,8 @@ class FullSyncCompareTest extends Yotpo_Test_Case {
 					$found[] = $this->catalog[ $product ]['variants'][ $id ];
 				}
 			}
-			return $this->respond( 200, $this->page_of( 'variants', $found, $request['url'] ) );
+			$page = $this->page_of( 'variants', $found, $request['url'] );
+			return null === $page ? $this->respond( 400 ) : $this->respond( 200, $page );
 		} );
 		$this->route( 'POST', '#^/products/\d+/variants$#', function ( $request ) {
 			$product = $this->external_id_of( (int) explode( '/', $request['path'] )[2] );
