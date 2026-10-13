@@ -184,7 +184,26 @@ class FullSyncCompareTest extends Yotpo_Test_Case {
 		$this->assertEquals( 1.234, $this->catalog[ $beanie->get_id() ]['price'] );
 	}
 
+	public function test_rate_limited_variations_lookup_pauses_the_job_instead_of_sending() {
+		$hoodie = $this->create_variable_product();
+		$this->put_in_yotpo( $hoodie );
+		update_post_meta( $hoodie->get_id(), Yotpo_Catalog_Api::META_PRODUCT_ID, $this->yotpo_id( $hoodie ) );
+		as_unschedule_all_actions( '', array(), Yotpo_Sync_Jobs::GROUP );
+		$this->variants_limited = true;
+
+		Yotpo_Sync_Jobs::run_product_job( $hoodie->get_id(), 1, 1 );
+
+		$this->assertSame( array( 'POST /access_tokens', 'GET /products/' . $this->yotpo_id( $hoodie ) . '/variants' ), $this->calls(), 'Nothing is sent after the 429' );
+		$this->assertGreaterThan( time(), (int) get_transient( Yotpo_Sync_Jobs::PAUSE_TRANSIENT ), 'Every job waits' );
+		$jobs = $this->pending_jobs( Yotpo_Sync_Jobs::HOOK_PRODUCT );
+		$this->assertCount( 1, $jobs );
+		$this->assertSame( array( $hoodie->get_id(), 1, 1 ), array_values( reset( $jobs )->get_args() ), 'The same attempt, queued for after the pause' );
+	}
+
 	// -----------------------------------------------------------------------------------------
+
+	/** @var bool True makes variation lookups answer 429. */
+	private $variants_limited = false;
 
 	/** @var bool True makes product lookups answer 200 without a product list (a proxy's page, for example). */
 	private $lookup_malformed = false;
@@ -277,6 +296,9 @@ class FullSyncCompareTest extends Yotpo_Test_Case {
 			return $this->respond( 200 );
 		} );
 		$this->route( 'GET', '#^/products/\d+/variants$#', function ( $request ) {
+			if ( $this->variants_limited ) {
+				return $this->respond( 429, null, array( 'retry-after' => '9' ) );
+			}
 			$product = $this->external_id_of( (int) explode( '/', $request['path'] )[2] );
 			$found   = array();
 			foreach ( $this->external_ids( $request['url'] ) as $id ) {

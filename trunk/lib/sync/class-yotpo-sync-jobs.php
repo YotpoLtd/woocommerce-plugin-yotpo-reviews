@@ -258,6 +258,12 @@ class Yotpo_Sync_Jobs {
 		// request. A retry skips this: it resumes from what Yotpo already accepted.
 		if ( $full_sync && 1 === (int) $attempt ) {
 			self::compare_variants_with_yotpo( $product_id );
+			// That lookup may have got a 429, which pauses every job: wait, as above, instead of sending now.
+			$paused_for = self::paused_for();
+			if ( $paused_for > 0 ) {
+				self::queue_product( $product_id, $attempt, $paused_for, true );
+				return;
+			}
 		}
 		$result = Yotpo_Product_Sync::sync_product( $product_id );
 		self::pause_if_rate_limited( $result, $attempt );
