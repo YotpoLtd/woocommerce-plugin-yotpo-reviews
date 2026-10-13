@@ -143,7 +143,24 @@ class FullSyncCompareTest extends Yotpo_Test_Case {
 		$this->assertSame( 25, (int) Yotpo_Product_Sync::state()['synced'] );
 	}
 
+	public function test_lookup_answer_without_a_list_keeps_stored_ids_and_sends_everything() {
+		$beanie = $this->create_product();
+		$this->put_in_yotpo( $beanie );
+		$this->full_sync(); // Stored ID and fingerprint now match Yotpo.
+		$this->requests         = array();
+		$this->lookup_malformed = true;
+
+		$this->full_sync();
+
+		$this->assertSame( array( 'PATCH /products/' . $this->yotpo_id( $beanie ) ), $this->sent(), 'Updated by its stored ID, not created again' );
+		$this->assertSame( $this->yotpo_id( $beanie ), (int) get_post_meta( $beanie->get_id(), Yotpo_Catalog_Api::META_PRODUCT_ID, true ) );
+		$this->assertSame( Yotpo_Sync_State::STATUS_COMPLETE, Yotpo_Product_Sync::state()['status'] );
+	}
+
 	// -----------------------------------------------------------------------------------------
+
+	/** @var bool True makes product lookups answer 200 without a product list (a proxy's page, for example). */
+	private $lookup_malformed = false;
 
 	/** @var bool False makes product lookups fail with a 500. */
 	private $lookup_ok = true;
@@ -204,6 +221,9 @@ class FullSyncCompareTest extends Yotpo_Test_Case {
 		$this->route( 'GET', '#^/products$#', function ( $request ) {
 			if ( ! $this->lookup_ok ) {
 				return $this->respond( 500 );
+			}
+			if ( $this->lookup_malformed ) {
+				return $this->respond( 200, array( 'message' => 'OK' ) );
 			}
 			$found = array();
 			foreach ( $this->external_ids( $request['url'] ) as $id ) {

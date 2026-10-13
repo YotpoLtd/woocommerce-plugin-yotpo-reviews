@@ -257,9 +257,11 @@ class Yotpo_Catalog_Api {
 			if ( $error ) {
 				return $error;
 			}
-			if ( isset( $response['body'][ $spec['list_key'] ] ) ) {
-				$items = array_merge( $items, array_values( (array) $response['body'][ $spec['list_key'] ] ) );
+			if ( ! is_array( $response['body'] ) || ! isset( $response['body'][ $spec['list_key'] ] ) || ! is_array( $response['body'][ $spec['list_key'] ] ) ) {
+				// A 2xx that is not a lookup answer (a proxy's page, say) is not "Yotpo has none of these".
+				return new WP_Error( 'yotpo_bad_response', 'The lookup answer has no "' . $spec['list_key'] . '" list' );
 			}
+			$items = array_merge( $items, array_values( $response['body'][ $spec['list_key'] ] ) );
 			$next = isset( $response['body']['pagination']['next_page_info'] ) ? (string) $response['body']['pagination']['next_page_info'] : '';
 			if ( '' === $next ) {
 				return $items;
