@@ -15,8 +15,8 @@ class Yotpo_Catalog_Api {
 	// Also written out in uninstall.php, which runs without this class loaded: keep both in sync.
 	const META_PRODUCT_ID   = '_yotpo_v3_product_id';
 	const META_VARIANT_ID   = '_yotpo_v3_variant_id';
-	const META_PRODUCT_HASH = '_yotpo_v3_product_hash'; // Fingerprint of the product data Yotpo last accepted.
-	const META_VARIANT_HASH = '_yotpo_v3_variant_hash';
+	const META_PRODUCT_HASH = '_yotpo_v3_product_hash'; // Fingerprint of the product data Yotpo last accepted, or was found to have (compare() also sets it).
+	const META_VARIANT_HASH = '_yotpo_v3_variant_hash'; // The same for a variant.
 	const META_BLOCKLISTED  = '_yotpo_v3_blocklisted'; // Set ('1') once Yotpo has been told, or found to be without the product, until it is published again.
 	const LOOKUP_MAX        = 100; // External IDs per lookup request: Yotpo's maximum.
 	const LOOKUP_MAX_PAGES  = 10; // Pages one lookup follows before giving up.
@@ -65,6 +65,7 @@ class Yotpo_Catalog_Api {
 	/**
 	 * Creates or updates one product or variant in Yotpo (see product_spec() and variant_spec()).
 	 * A product or variant whose data is the same as the last accepted is not sent again, unless $force.
+	 * "Last accepted" includes what compare() found Yotpo to have: it sets the same ID and fingerprint post meta.
 	 *
 	 * @return int|WP_Error The Yotpo ID.
 	 */
@@ -190,8 +191,17 @@ class Yotpo_Catalog_Api {
 	 * sync sends them. Used instead of compare_products() when the comparison cannot run.
 	 */
 	public static function forget_fingerprints( array $post_ids, $variations = false ) {
+		self::forget_hashes( $post_ids, $variations ? self::META_VARIANT_HASH : self::META_PRODUCT_HASH );
+	}
+
+	/**
+	 * The one way fingerprints are dropped, for the public forget_fingerprints() and for compare().
+	 *
+	 * @param string $hash_key META_PRODUCT_HASH or META_VARIANT_HASH.
+	 */
+	private static function forget_hashes( array $post_ids, $hash_key ) {
 		foreach ( $post_ids as $post_id ) {
-			delete_post_meta( $post_id, $variations ? self::META_VARIANT_HASH : self::META_PRODUCT_HASH );
+			delete_post_meta( $post_id, $hash_key );
 		}
 	}
 
@@ -209,9 +219,7 @@ class Yotpo_Catalog_Api {
 		foreach ( array_chunk( $payloads, self::LOOKUP_MAX, true ) as $chunk ) {
 			$items = self::lookup_all( $client, $spec, array_keys( $chunk ) );
 			if ( is_wp_error( $items ) ) {
-				foreach ( $not_compared as $post_id ) {
-					delete_post_meta( $post_id, $spec['hash'] );
-				}
+				self::forget_hashes( $not_compared, $spec['hash'] );
 				return $items;
 			}
 			$in_yotpo = self::index_by_external_id( $items );
