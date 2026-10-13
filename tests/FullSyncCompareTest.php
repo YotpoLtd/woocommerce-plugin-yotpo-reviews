@@ -200,7 +200,72 @@ class FullSyncCompareTest extends Yotpo_Test_Case {
 		$this->assertSame( array( $hoodie->get_id(), 1, 1 ), array_values( reset( $jobs )->get_args() ), 'The same attempt, queued for after the pause' );
 	}
 
+	public function test_rate_limited_page_lookup_pauses_the_jobs_and_sends_the_page_in_full() {
+		$beanie = $this->create_product();
+		$this->put_in_yotpo( $beanie );
+		$this->full_sync(); // Stored ID and fingerprint now match Yotpo.
+		$this->assertNotSame( '', get_post_meta( $beanie->get_id(), Yotpo_Catalog_Api::META_PRODUCT_HASH, true ) );
+		$this->requests         = array();
+		$this->products_limited = true;
+		as_unschedule_all_actions( '', array(), Yotpo_Sync_Jobs::GROUP );
+		delete_option( Yotpo_Sync_State::STATE_OPTION );
+		$this->assertTrue( Yotpo_Product_Sync::start_full_sync() );
+		as_unschedule_all_actions( '', array(), Yotpo_Sync_Jobs::GROUP );
+
+		Yotpo_Sync_Jobs::run_batch_job( 1 );
+
+		$this->assertSame( array( 'GET /products' ), $this->calls(), 'One lookup, then nothing sent' );
+		$this->assertGreaterThan( time(), (int) get_transient( Yotpo_Sync_Jobs::PAUSE_TRANSIENT ), 'Every job waits' );
+		$this->assertSame( '', get_post_meta( $beanie->get_id(), Yotpo_Catalog_Api::META_PRODUCT_HASH, true ), 'The fingerprint is dropped, so the product is sent' );
+		$this->assertCount( 1, $this->pending_jobs( Yotpo_Sync_Jobs::HOOK_PRODUCT ) );
+
+		$this->products_limited = false;
+		delete_transient( Yotpo_Sync_Jobs::PAUSE_TRANSIENT );
+		$this->run_jobs();
+
+		$this->assertSame( array( 'PATCH /products/' . $this->yotpo_id( $beanie ) ), $this->sent(), 'Sent in full once the pause is over' );
+	}
+
+	public function test_failed_variations_lookup_sends_the_variations_in_full() {
+		$hoodie = $this->create_variable_product();
+		$this->put_in_yotpo( $hoodie );
+		$this->full_sync(); // Stored IDs and fingerprints now match Yotpo.
+		$this->requests        = array();
+		$this->variants_failed = true;
+
+		$this->full_sync();
+
+		$expected = array();
+		foreach ( $this->catalog[ $hoodie->get_id() ]['variants'] as $variant ) {
+			$expected[] = 'PATCH /products/' . $this->yotpo_id( $hoodie ) . '/variants/' . $variant['yotpo_id'];
+		}
+		$sent = $this->sent();
+		sort( $expected );
+		sort( $sent );
+		$this->assertSame( $expected, $sent, 'The product matched, its variations could not be compared' );
+		$this->assertSame( Yotpo_Sync_State::STATUS_COMPLETE, Yotpo_Product_Sync::state()['status'] );
+	}
+
+	public function test_republished_product_that_yotpo_has_blocklisted_is_updated() {
+		$beanie = $this->create_product();
+		$this->put_in_yotpo( $beanie );
+		$this->catalog[ $beanie->get_id() ]['custom_properties'] = array( 'is_blocklisted' => true );
+		update_post_meta( $beanie->get_id(), Yotpo_Catalog_Api::META_BLOCKLISTED, '1' );
+
+		$this->full_sync();
+
+		$this->assertSame( array( 'PATCH /products/' . $this->yotpo_id( $beanie ) ), $this->sent() );
+		$this->assertFalse( $this->catalog[ $beanie->get_id() ]['custom_properties']['is_blocklisted'] );
+		$this->assertSame( '', get_post_meta( $beanie->get_id(), Yotpo_Catalog_Api::META_BLOCKLISTED, true ) );
+	}
+
 	// -----------------------------------------------------------------------------------------
+
+	/** @var bool True makes product lookups answer 429. */
+	private $products_limited = false;
+
+	/** @var bool True makes variation lookups fail with a 500. */
+	private $variants_failed = false;
 
 	/** @var bool True makes variation lookups answer 429. */
 	private $variants_limited = false;
@@ -268,6 +333,9 @@ class FullSyncCompareTest extends Yotpo_Test_Case {
 			if ( ! $this->lookup_ok ) {
 				return $this->respond( 500 );
 			}
+			if ( $this->products_limited ) {
+				return $this->respond( 429, null, array( 'retry-after' => '9' ) );
+			}
 			if ( $this->lookup_malformed ) {
 				return $this->respond( 200, array( 'message' => 'OK' ) );
 			}
@@ -296,6 +364,9 @@ class FullSyncCompareTest extends Yotpo_Test_Case {
 			return $this->respond( 200 );
 		} );
 		$this->route( 'GET', '#^/products/\d+/variants$#', function ( $request ) {
+			if ( $this->variants_failed ) {
+				return $this->respond( 500 );
+			}
 			if ( $this->variants_limited ) {
 				return $this->respond( 429, null, array( 'retry-after' => '9' ) );
 			}
