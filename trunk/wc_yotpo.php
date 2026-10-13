@@ -3,14 +3,14 @@
 	Plugin Name: Yotpo Product Reviews
 	Description: Collect and display product reviews and ratings to showcase social proof and build trust.
 	Author: Yotpo
-	Version: 1.9.0
+	Version: 1.10.0
 	Author URI: http://www.yotpo.com?utm_source=yotpo_plugin_woocommerce&utm_medium=plugin_page_link&utm_campaign=woocommerce_plugin_page_link
 	Plugin URI: http://www.yotpo.com?utm_source=yotpo_plugin_woocommerce&utm_medium=plugin_page_link&utm_campaign=woocommerce_plugin_page_link
 	Requires at least: 6.0
 	Requires PHP: 7.4
 	Requires Plugins: woocommerce
 	WC requires at least: 3.0
-	WC tested up to: 11.1
+	WC tested up to: 11.2
 	License: GPLv2
 	License URI: http://www.gnu.org/licenses/gpl-2.0.html
  */

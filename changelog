@@ -230,3 +230,13 @@ Version 1.8.4
 Version 1.9.0
 1) Category widgets (star ratings, Reviews Carousel, Promoted Products, Reviews Tab) now also render on WooCommerce product category, tag and attribute pages, not only the Shop page.
 2) Home page widgets now also render on stores with a static front page.
+
+2026-10-13
+---
+Version 1.10.0
+1) Product catalog sync to Yotpo through the Core API (V3), including variations as variants, in background jobs (Action Scheduler) paced to 5 requests per second. Unpublished or deleted products are blocklisted; disabled or deleted variations are marked discontinued.
+2) New setting "Sync products to Yotpo" (on by default) with the sync status; a full sync runs after the update and when the setting is turned back on. WP-CLI: wp yotpo product-sync status | start | product <id>.
+3) The full sync compares each page of 100 products (and each product's variations) with Yotpo in one request and only sends what is missing or different: on a catalog Yotpo already has, about 25x fewer requests than creating everything.
+4) Redesigned settings page in the Yotpo design system; the secret token is masked once saved.
+5) Fixed: the settings page's CSS and JS kept the browser-cached copy after an update (they are now versioned by file time).
+6) Fixed: Export reviews and Send past orders buttons are disabled until the app key and secret token are saved.
