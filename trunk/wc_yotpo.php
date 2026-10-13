@@ -39,12 +39,24 @@ require plugin_dir_path( __FILE__ ) . 'lib/utils/wc-yotpo-defaults.php';
 require plugin_dir_path( __FILE__ ) . 'lib/utils/wc-yotpo-functions.php';
 require plugin_dir_path( __FILE__ ) . 'lib/utils/widgets-rendering-logic.php';
 require plugin_dir_path( __FILE__ ) . 'lib/utils/allowed-html-functions.php';
+require plugin_dir_path( __FILE__ ) . 'lib/yotpo-api/class-yotpo-v3-client.php';
+require plugin_dir_path( __FILE__ ) . 'lib/sync/class-yotpo-product-payload.php';
+require plugin_dir_path( __FILE__ ) . 'lib/sync/class-yotpo-catalog-api.php';
+require plugin_dir_path( __FILE__ ) . 'lib/sync/class-yotpo-sync-state.php';
+require plugin_dir_path( __FILE__ ) . 'lib/sync/class-yotpo-sync-jobs.php';
+require plugin_dir_path( __FILE__ ) . 'lib/sync/class-yotpo-product-sync.php';
 
 function wc_yotpo_init() {
 	// Everything below relies on WooCommerce; without it the storefront hooks fatal on is_product().
 	if (!wc_yotpo_is_woocommerce_active()) {
 		add_action('admin_notices', 'wc_yotpo_woocommerce_missing_notice');
 		return;
+	}
+	// Product catalog sync to Yotpo (Core API V3), in background jobs.
+	Yotpo_Product_Sync::init();
+	if (defined('WP_CLI') && WP_CLI) {
+		require_once plugin_dir_path( __FILE__ ) . 'lib/sync/class-yotpo-sync-cli.php';
+		WP_CLI::add_command('yotpo product-sync', 'Yotpo_Sync_CLI');
 	}
 	$is_admin = is_admin();
 	if($is_admin) {

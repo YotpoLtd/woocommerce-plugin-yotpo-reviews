@@ -229,6 +229,12 @@ For full installation guide, [please click here](https://support.yotpo.com/docs/
 * Category widgets (star ratings, Reviews Carousel, Promoted Products, Reviews Tab) now also show on WooCommerce product category, tag and attribute pages, not only on the Shop page
 * Home page widgets now also show on stores that use a static front page
 
+= 1.10.0 =
+* New: product catalog sync to Yotpo through the Yotpo Core API (V3), including variations as variants. Runs in the background (Action Scheduler), paced to Yotpo's rate limit
+* Deleted, trashed or unpublished products are blocklisted in Yotpo; disabled or deleted variations are marked discontinued
+* New setting "Sync products to Yotpo" (on by default) with the sync's status; turning it back on runs a full sync
+* New WP-CLI commands: wp yotpo product-sync status | start | product <id>
+
 == Upgrade Notice ==
 
 = 1.9.0 =
