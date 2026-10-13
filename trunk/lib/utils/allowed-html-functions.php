@@ -19,9 +19,9 @@ function yotpo_message_allowed_html() {
   );
 }
 
+// The markup of the settings page (templates/wc-yotpo-settings.php, templates/reusables/).
 function yotpo_settings_allowed_html() {
   return array(
-    'style' => array(),
     'form' => array(
       'method' => array(),
       'id' => array(),
@@ -29,9 +29,29 @@ function yotpo_settings_allowed_html() {
       'style' => array(),
       'target' => array()
     ),
-    'fieldset' => array(),
-    'table' => array(
+    'section' => array(
       'class' => array(),
+    ),
+    'h1' => array(
+      'class' => array(),
+    ),
+    'h2' => array(
+      'class' => array(),
+    ),
+    'h3' => array(),
+    'hr' => array(
+      'class' => array(),
+    ),
+    'img' => array(
+      'class' => array(),
+      'src' => array(),
+      'alt' => array(),
+      'width' => array(),
+      'height' => array(),
+    ),
+    'label' => array(
+      'class' => array(),
+      'for' => array(),
     ),
     'input' => array(
       'type' => array(),
@@ -42,26 +62,12 @@ function yotpo_settings_allowed_html() {
       'maxlength' => array(),
       'checked' => array(),
       'readonly' => array(),
+      'disabled' => array(),
+      'role' => array(),
+      'autocomplete' => array(),
     ),
-    'tbody' => array(
-      'id' => array(),
-      'style' => array(),
-    ),
-    'tr' => array(
-      'id' => array(),
-      'valign' => array(),
-      'style' => array(),
-      'class' => array(),
-    ),
-    'th' => array(
-      'scope' => array(),
-      'rowspan' => array(),
-      'colspan' => array(),
-    ),
-    'td' => array(),
     'p' => array(
       'class' => array(),
-      'style' => array(),
     ),
     'div' => array(
       'id' => array(),
@@ -72,6 +78,7 @@ function yotpo_settings_allowed_html() {
       'href' => array(),
       'class' => array(),
       'target' => array(),
+      'rel' => array(),
     ),
     'select' => array(
       'name' => array(),
@@ -86,60 +93,47 @@ function yotpo_settings_allowed_html() {
       'type' => array(),
       'id' => array(),
       'class' => array(),
+      'disabled' => array(),
     ),
-    'br' => array(),
     'code' => array(),
-    'span' => array(),
+    'span' => array(
+      'class' => array(),
+    ),
     'i' => array(),
-    'h2' => array(),
-    'h4' => array(),
     'iframe' => array(
       'name' => array(),
       'style' => array()
     ),
     'dialog' => array(
-      'id' => array()
+      'id' => array(),
+      'class' => array(),
     ),
   );
 }
 
+// The registration screen (wc_display_yotpo_register).
 function yotpo_allowed_register_html() {
+  $allowed = yotpo_settings_allowed_html();
   return array(
-    'div' => array(
-      'class' => array(),
-      'id' => array(),
-    ),
-    'h2' => array(),
+    'div' => $allowed['div'],
+    'section' => $allowed['section'],
+    'h1' => $allowed['h1'],
+    'h2' => $allowed['h2'],
+    'hr' => $allowed['hr'],
+    'img' => $allowed['img'],
     'form' => array(
       'method' => array(),
     ),
-    'table' => array(
-      'class' => array(),
-    ),
-    'fieldset' => array(),
-    'h2' => array(
-      'class' => array(),
-    ),
-    'tr' => array(
-      'valign' => array(),
-    ),
-    'th' => array(
-      'scope' => array(),
-    ),
-    'td' => array(),
+    'label' => $allowed['label'],
     'input' => array(
       'type' => array(),
+      'id' => array(),
       'name' => array(),
       'value' => array(),
       'class' => array(),
     ),
-    'a' => array(
-      'href' => array(),
-      'target' => array(),
-    ),
-    'p' => array(
-      'class' => array(),
-    ),
+    'a' => $allowed['a'],
+    'p' => $allowed['p'],
   );
 }
 

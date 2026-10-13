@@ -71,131 +71,207 @@ function wc_display_yotpo_settings($success_type = false) {
             wc_yotpo_display_message('Set your API key in order the Yotpo plugin to work correctly', false);
         }
     }
+    $logging_in = isset($_POST['log_in_button']) || $success_type == 'b2c';
+    $read_only = $logging_in ? '' : 'readonly';
+    $no_credentials = empty($app_key) || empty($secret);
+    $credentials_badge = $no_credentials
+        ? "<span class='yotpo-badge yotpo-tone--neutral'>Not set up</span>"
+        : "<span class='yotpo-badge yotpo-tone--success'>Keys saved</span>";
     // reviews.yotpo.com sends logged-out users to the Yotpo login screen. The old auto-login link put the
     // app secret in the URL (browser history, logs), and www.yotpo.com/?login=true now only opens the marketing site.
-    $dashboard_link = "<a href='https://reviews.yotpo.com/' target='_blank'>Yotpo Dashboard.</a></div>";
-    $read_only = isset($_POST['log_in_button']) || $success_type == 'b2c' ? '' : 'readonly';
-    $cradentials_location_explanation = isset($_POST['log_in_button'])
-        ? "<tr valign='top'>
-                <th scope='row'><p class='description'>To get your api key and secret token <a href='https://reviews.yotpo.com/' target='_blank'>log in here</a> and go to your account settings.</p></th>
-            </tr>"
+    $credentials_help = isset($_POST['log_in_button'])
+        ? "<div class='yotpo-callout'>To get your app key and secret token, <a href='https://reviews.yotpo.com/' target='_blank' rel='noopener'>log in to Yotpo</a> and go to your account settings.</div>"
         : '';
-    $submit_past_orders_button = $yotpo_settings['show_submit_past_orders'] ? "<input type='submit' name='yotpo_past_orders' value='Submit past orders' class='button-secondary past-orders-btn' " . disabled(true, empty($app_key) || empty($secret), false) . "/>" : '';
     if (isset($yotpo_settings['debug_mode']) && $yotpo_settings['debug_mode']) {
         $settings_dump = wp_json_encode($yotpo_settings);
         $debug_log = wc_yotpo_read_debug_log();
     }
-    $settings_html = styles() . "
-    <div class='wrap'><h2>Yotpo Settings</h2>
-        <h4>To customize the look and feel of the widget, and to edit your Mail After Purchase settings, just head to the " . $dashboard_link . "</h4>
-        <form  method='post' id='yotpo_settings_form'>
-            <table class='form-table'>" . wp_nonce_field('yotpo_settings_form', '_wpnonce', true, false) . "
-                <fieldset>
-                    <tr id='yotpodbg' valign='top' style='display: none;'>
-                        <th scope='row'>Enable debug mode</th>
-                        <td><input type='checkbox' name='debug_mode' value='1' " . checked(1, $yotpo_settings['debug_mode'], false) . " /></td>
-                        <td>
-                            <p class='description'>Enabling debug mode will output all plugin actions into a private log file under <i>wp-content/uploads/yotpo-social-reviews-for-woocommerce/</i>, output the log here and show all the settings.</p>
-                        </td>
-                    </tr>
-                    <tr valign='top'>
-                        <th scope='row'>
-                            <div>If you would like to choose a set language, please type the 2-letter language code here. You can find the supported langauge codes <a class='y-href' href='http://support.yotpo.com/entries/21861473-Languages-Customization-' target='_blank'>here.</a></div>
-                        </th>
-                        <td>
-                            <div><input type='text' class='yotpo_language_code_text' name='yotpo_widget_language_code' maxlength='5' value='$language_code' /></div>
-                        </td>
-                    </tr>
-                    <tr valign='top'>
-                        <th scope='row'><div>For multiple-language sites, mark this check box. This will choose the language according to the user's site language.</div></th>
-                        <td><input type='checkbox' name='yotpo_language_as_site' value='1' " . checked(1, $yotpo_settings['yotpo_language_as_site'], false) . "/></td>
-                    </tr>
-                    <tr valign='top'>
-                        <th scope='row'><div>Disable native reviews system:</div></th>
-                        <td><input type='checkbox' name='disable_native_review_system' value='1' " . checked(1, $yotpo_settings['disable_native_review_system'], false) . " /></td>
-                    </tr>
-                    <tr valign='top'>
-                        <th scope='row'><div>Sync products to Yotpo:</div>
-                            <p class='description'>Keeps your product catalog, including variations, up to date in Yotpo. Runs in the background.</p></th>
-                        <td><input type='checkbox' name='product_sync_enabled' value='1' " . checked(true, Yotpo_Product_Sync::setting_on(), false) . " />
-                            <p class='description'>" . esc_html(Yotpo_Product_Sync::status_summary()) . "</p></td>
-                    </tr>
-                    <tr valign='top' class='yotpo-widget-tab-name yotpo-qna-widget-tab-name'>
-                        <th scope='row'><div>Select tab name of Q&A widget:</div></th>
-                        <td><div><input type='text' name='yotpo_qna_widget_tab_name' value='$qna_widget_tab_name' /></div></td>
-                    </tr>
-                    $cradentials_location_explanation
-                    <tr valign='top'>
-                        <th scope='row'><div>App key:</div></th>
-                        <td><div class='y-input'><input id='app_key' type='text' name='yotpo_app_key' value='$app_key' $read_only /></div></td>
-                    </tr>
-                    <tr valign='top'>
-                        <th scope='row'><div>Secret token:</div></th>
-                        <td><div class='y-input'><input id='secret' type='text'  name='yotpo_oauth_token' value='$secret' $read_only /></div></td>
-                    </tr>
-                    <input id='reviews_widget' type='hidden' name='yotpo_reviews_widget_id' value='$reviews_widget_id' />
-                    <input id='qna_widget' type='hidden' name='yotpo_qna_widget_id' value='$qna_widget_id' />
-                    <input id='star_ratings_widget' type='hidden' name='yotpo_star_ratings_widget_id' value='$star_ratings_widget_id' />
-                    <input id='reviews_carousel_widget' type='hidden' name='yotpo_reviews_carousel_widget_id' value='$reviews_carousel_widget_id' />
-                    <input id='promoted_products_widget' type='hidden' name='yotpo_promoted_products_widget_id' value='$promoted_products_widget_id' />
-                    <input id='reviews_carousel_widget' type='hidden' name='yotpo_tab_widget_id' value='$reviews_tab_widget_id' />
-                    " .
-                    version_selector($yotpo_settings) .
-                    v2_locations($yotpo_settings, $main_widget_tab_name) .
-                    v3_locations($yotpo_settings)
-                    . "
-                    <tr valign='top' id='yotpo-sync-widget-ids-row' style='display:none'>
-                        <th scope='row'><div>Synchronise the widgets' codes:</div></th>
-                        <td><input type='submit' name='yotpo_sync_ids' value='Sync' class='button-primary' id='yotpo_sync_ids' /></td>
-                    </tr>" .
-                    v3_enablers($yotpo_settings) .
-                    v2_enablers($yotpo_settings) .
-                    yotpo_order_status_option($yotpo_settings) . "
-                </fieldset>
-            </table></br>
-            <div class='buttons-container'>
-                <button type='button' id='yotpo-export-reviews' class='button-secondary' " . disabled(true, empty($app_key) || empty($secret), false) . ">Export Reviews</button>
-                <input type='submit' name='yotpo_settings' value='Update' class='button-primary' id='save_yotpo_settings' />$submit_past_orders_button
-                </br></br><p class='description'>*Learn <a href='https://support.yotpo.com/docs/woocommerce-installing-yotpo#4-importing-your-reviews-to-yotpo' target='_blank'>how to export your existing reviews</a> into Yotpo.</p>
+
+    $connection = yotpo_card(
+        'Connection',
+        'The app key and secret token connect this store to your Yotpo account.',
+        $credentials_help .
+        yotpo_text_field('app_key', 'yotpo_app_key', $app_key, 'App key', null, $read_only, '', 'yotpo-input--mono') .
+        // Masked once saved; shown while the merchant types it in. autocomplete=off keeps password managers out of it.
+        yotpo_text_field('secret', 'yotpo_oauth_token', $secret, 'Secret token', null, $read_only . " autocomplete='off'", '', 'yotpo-input--mono', $logging_in ? 'text' : 'password') . "
+        <input id='reviews_widget' type='hidden' name='yotpo_reviews_widget_id' value='" . esc_attr($reviews_widget_id) . "' />
+        <input id='qna_widget' type='hidden' name='yotpo_qna_widget_id' value='" . esc_attr($qna_widget_id) . "' />
+        <input id='star_ratings_widget' type='hidden' name='yotpo_star_ratings_widget_id' value='" . esc_attr($star_ratings_widget_id) . "' />
+        <input id='reviews_carousel_widget' type='hidden' name='yotpo_reviews_carousel_widget_id' value='" . esc_attr($reviews_carousel_widget_id) . "' />
+        <input id='promoted_products_widget' type='hidden' name='yotpo_promoted_products_widget_id' value='" . esc_attr($promoted_products_widget_id) . "' />
+        <input id='reviews_tab_widget' type='hidden' name='yotpo_tab_widget_id' value='" . esc_attr($reviews_tab_widget_id) . "' />",
+        '',
+        $credentials_badge
+    );
+
+    $catalog = yotpo_card(
+        'Product catalog',
+        '',
+        yotpo_switch_row(
+            'product_sync_enabled',
+            'product_sync_enabled',
+            checked(true, Yotpo_Product_Sync::setting_on(), false),
+            'Sync products to Yotpo',
+            'Keeps your product catalog, including variations, up to date in Yotpo. Runs in the background.',
+            '',
+            "<div class='yotpo-status yotpo-tone--" . wc_yotpo_sync_status_tone() . "'>" . esc_html(Yotpo_Product_Sync::status_summary()) . "</div>"
+        )
+    );
+
+    $widgets = yotpo_card(
+        'On-site widgets',
+        'Choose where Yotpo widgets appear in your store. Their design is set in the Yotpo dashboard.',
+        version_selector($yotpo_settings) .
+        v2_locations($yotpo_settings, $main_widget_tab_name) .
+        v3_locations($yotpo_settings) .
+        yotpo_text_field(
+            'yotpo_qna_widget_tab_name',
+            'yotpo_qna_widget_tab_name',
+            $qna_widget_tab_name,
+            'Q&A tab name',
+            null,
+            '',
+            'yotpo-widget-tab-name yotpo-qna-widget-tab-name'
+        ) .
+        v3_enablers($yotpo_settings) .
+        v2_enablers($yotpo_settings)
+    );
+
+    $language = yotpo_card(
+        'Language',
+        '',
+        yotpo_text_field(
+            'yotpo_widget_language_code',
+            'yotpo_widget_language_code',
+            $language_code,
+            'Widget language',
+            "The 2-letter language code for the widgets, such as en or fr. <a href='http://support.yotpo.com/entries/21861473-Languages-Customization-' target='_blank' rel='noopener'>Supported languages</a>",
+            "maxlength='5'",
+            '',
+            'yotpo-input--short'
+        ) .
+        yotpo_switch_row(
+            'yotpo_language_as_site',
+            'yotpo_language_as_site',
+            checked(1, $yotpo_settings['yotpo_language_as_site'], false),
+            'Match the site language',
+            'For multilingual sites: show the widgets in each visitor\'s site language.'
+        )
+    );
+
+    $reviews = yotpo_card(
+        'Reviews and orders',
+        '',
+        yotpo_switch_row(
+            'disable_native_review_system',
+            'disable_native_review_system',
+            checked(1, $yotpo_settings['disable_native_review_system'], false),
+            'Turn off WooCommerce reviews',
+            'Hides the WooCommerce review form and star ratings, so shoppers only see Yotpo reviews.'
+        ) .
+        yotpo_order_status_option($yotpo_settings)
+    );
+
+    $past_orders = $yotpo_settings['show_submit_past_orders']
+        ? "<div class='yotpo-row'>
+                <div class='yotpo-row__text'>
+                    <span class='yotpo-label'>Send past orders</span>
+                    <p class='yotpo-help'>Sends orders from the last 90 days with the order status above, so Yotpo can ask those customers for reviews. Available once.</p>
+                </div>
+                <div class='yotpo-row__control'>
+                    <form method='post'>" . wp_nonce_field('yotpo_settings_form', '_wpnonce', true, false) . "
+                        <input type='submit' name='yotpo_past_orders' value='Send past orders' class='yotpo-btn yotpo-btn--outline' " . disabled(true, $no_credentials, false) . " />
+                    </form>
+                </div>
+            </div>"
+        : '';
+    $tools = yotpo_card(
+        'Tools',
+        '',
+        "<div class='yotpo-row'>
+            <div class='yotpo-row__text'>
+                <span class='yotpo-label'>Export reviews</span>
+                <p class='yotpo-help'>Downloads your WooCommerce reviews as a CSV file to import into Yotpo. <a href='https://support.yotpo.com/docs/woocommerce-installing-yotpo#4-importing-your-reviews-to-yotpo' target='_blank' rel='noopener'>How to import them</a></p>
+            </div>
+            <div class='yotpo-row__control'>
+                <button type='button' id='yotpo-export-reviews' class='yotpo-btn yotpo-btn--outline' " . disabled(true, $no_credentials, false) . ">Export reviews</button>
+            </div>
+        </div>" . $past_orders
+    );
+
+    $settings_html = "
+    <div class='wrap yotpo-admin'>
+        " . yotpo_page_header('Customize how the widgets look, and your review request emails, in the <a href=\'https://reviews.yotpo.com/\' target=\'_blank\' rel=\'noopener\'>Yotpo dashboard</a>.') . "
+        <form method='post' id='yotpo_settings_form'>" . wp_nonce_field('yotpo_settings_form', '_wpnonce', true, false) .
+            $connection . $catalog . $widgets . $language . $reviews . "
+            <div id='yotpodbg' style='display: none;'>" .
+                yotpo_switch_row('debug_mode', 'debug_mode', checked(1, $yotpo_settings['debug_mode'], false), 'Debug mode', 'Writes all plugin actions to a private log file under <i>wp-content/uploads/yotpo-social-reviews-for-woocommerce/</i> and shows the log and all settings on this page.') . "
+            </div>
+            <div class='yotpo-actions'>
+                <p class='yotpo-actions__note'>Changes take effect once you save.</p>
+                <input type='submit' name='yotpo_settings' value='Save changes' class='yotpo-btn yotpo-btn--primary' id='save_yotpo_settings' />
+            </div>
+            <div id='yotpo-sync-widget-ids-row' style='display:none'>
+                <input type='submit' name='yotpo_sync_ids' value='Sync' class='yotpo-btn yotpo-btn--outline' id='yotpo_sync_ids' />
             </div>
         </form>
+        " . $tools . "
         <iframe name='yotpo_export_reviews_frame' style='display: none;'></iframe>
         <form action='' method='get' target='yotpo_export_reviews_frame' style='display: none;'>
             <input type='hidden' name='download_exported_reviews' value='true' />
             " . wp_nonce_field('yotpo_export_reviews', '_wpnonce', true, false) . "
-            <input type='submit' value='Export Reviews' class='button-primary' id='export_reviews_submit' />
+            <input type='submit' value='Export Reviews' id='export_reviews_submit' />
         </form>
-    </div>
-    <div class='featured-cars'></div>
-    " . info_dialog(
-        use_v3_widgets(),
-        dialog_error_info(
-            is_array($yotpo_settings['v3_widgets_enables']) ? $yotpo_settings['v3_widgets_enables'] : [],
-            $reviews_widget_id,
-            $qna_widget_id,
-            $star_ratings_widget_id,
-            $reviews_carousel_widget_id,
-            $promoted_products_widget_id,
-            $reviews_tab_widget_id
-        )
-    );
+        " . info_dialog(
+            use_v3_widgets(),
+            dialog_error_info(
+                is_array($yotpo_settings['v3_widgets_enables']) ? $yotpo_settings['v3_widgets_enables'] : [],
+                $reviews_widget_id,
+                $qna_widget_id,
+                $star_ratings_widget_id,
+                $reviews_carousel_widget_id,
+                $promoted_products_widget_id,
+                $reviews_tab_widget_id
+            )
+        );
     add_filter( 'safe_style_css', function( $styles ) {
         $styles[] = 'display';
         return $styles;
     } );
     echo wp_kses($settings_html, yotpo_settings_allowed_html());
     if (isset($yotpo_settings['debug_mode']) && $yotpo_settings['debug_mode']) {
-        echo '<h3>Settings</h3><pre>'.esc_html($settings_dump).'</pre>';
+        echo '<section class="yotpo-card yotpo-debug"><div class="yotpo-card__header"><div><h2 class="yotpo-card__title">Debug</h2></div></div><div class="yotpo-card__content">';
+        echo '<span class="yotpo-label">Settings</span><pre>' . esc_html($settings_dump) . '</pre><span class="yotpo-label">Log</span>';
         if (is_wp_error($debug_log)) {
-            echo '<h3>Yotpo Debug</h3>
-            <textarea cols=170 rows=15>'.esc_html($debug_log->get_error_message()).'</textarea>';
+            echo '<textarea class="yotpo-textarea" readonly>' . esc_html($debug_log->get_error_message()) . '</textarea>';
         } elseif ($debug_log === '') {
-            echo '<h3>Yotpo Debug</h3>
-            <textarea cols=170 rows=15>The debug log is empty.</textarea>';
+            echo '<textarea class="yotpo-textarea" readonly>The debug log is empty.</textarea>';
         } else {
-            echo '<h3>Yotpo Debug</h3><textarea cols=170 rows=15>'.esc_html($debug_log).'</textarea>
-            <form method="post" id="yotdbg-clear">' .wp_kses(wp_nonce_field('yotdbg-clear', '_wpnonce', true, false), yotpo_nonce_field_allowed_html()) .'<input type="submit" value="Clear" class="button-primary" name="yotdbg-clear" id="yotdbg-clear-submit"/></form>';
+            echo '<textarea class="yotpo-textarea" readonly>' . esc_html($debug_log) . '</textarea>
+            <form method="post" id="yotdbg-clear">' . wp_kses(wp_nonce_field('yotdbg-clear', '_wpnonce', true, false), yotpo_nonce_field_allowed_html()) . '<input type="submit" value="Clear log" class="yotpo-btn yotpo-btn--outline" name="yotdbg-clear" id="yotdbg-clear-submit"/></form>';
         }
+        echo '</div></section>';
+    }
+    echo '</div>';
+}
+
+/**
+ * Color of the product sync status line: what the merchant should make of it at a glance.
+ */
+function wc_yotpo_sync_status_tone() {
+    if (!Yotpo_Product_Sync::enabled()) {
+        return 'neutral';
+    }
+    $status = Yotpo_Product_Sync::state();
+    switch (isset($status['status']) ? $status['status'] : '') {
+        case Yotpo_Sync_State::STATUS_COMPLETE:
+            return empty($status['failed']) ? 'success' : 'warning';
+        case Yotpo_Sync_State::STATUS_STOPPED:
+            return 'warning';
+        case Yotpo_Sync_State::STATUS_STALLED:
+            return 'danger';
+        default:
+            return 'info';
     }
 }
 function wc_proccess_yotpo_widgets_ids_synchronisation() {
