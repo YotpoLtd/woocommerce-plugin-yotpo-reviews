@@ -8,3 +8,7 @@ nbproject/project.xml
 nbproject/project.properties
 # Dev tooling
 /vendor/
+
+# PHPUnit: WordPress and WooCommerce downloaded by bin/install-wp-tests.sh
+/.wp-tests/
+.phpunit.result.cache

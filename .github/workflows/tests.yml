@@ -1,0 +1,63 @@
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  phpunit:
+    name: PHP ${{ matrix.php }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The plugin's minimum (Requires PHP) and a current version.
+        php: ['7.4', '8.3']
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: yotpo_wp_tests
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mysqli, dom
+          coverage: none
+          tools: composer:v2
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Cache WordPress and WooCommerce
+        uses: actions/cache@v4
+        with:
+          path: .wp-tests
+          key: wp-tests-${{ hashFiles('bin/install-wp-tests.sh') }}
+
+      - name: Install WordPress and WooCommerce
+        run: bin/install-wp-tests.sh
+
+      - name: PHP lint
+        run: bin/php-lint.sh
+
+      - name: PHPUnit
+        run: vendor/bin/phpunit
+        env:
+          WP_TESTS_DB_HOST: 127.0.0.1
+          WP_TESTS_DB_USER: root
+          WP_TESTS_DB_PASSWORD: root
+          WP_TESTS_DB_NAME: yotpo_wp_tests
