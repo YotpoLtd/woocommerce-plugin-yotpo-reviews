@@ -308,8 +308,13 @@ class Yotpo_Catalog_Api {
 			$flag = null === $stored ? null : filter_var( $stored, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE );
 			return null !== $flag && $flag === $sent;
 		}
-		if ( is_int( $sent ) || is_float( $sent ) ) {
-			return is_numeric( $stored ) && abs( (float) $stored - (float) $sent ) < 0.005;
+		if ( is_int( $sent ) ) {
+			return is_numeric( $stored ) && (float) $stored === (float) $sent; // A count: any difference is a change.
+		}
+		if ( is_float( $sent ) ) {
+			// A price: equal at the precision the store shows prices with (its currency's decimals).
+			$decimals = function_exists( 'wc_get_price_decimals' ) ? wc_get_price_decimals() : 2;
+			return is_numeric( $stored ) && abs( round( (float) $stored, $decimals ) - round( $sent, $decimals ) ) < 0.5 * pow( 10, -$decimals );
 		}
 		return trim( (string) $stored ) === trim( (string) $sent );
 	}

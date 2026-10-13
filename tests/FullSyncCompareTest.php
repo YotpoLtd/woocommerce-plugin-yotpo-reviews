@@ -172,6 +172,18 @@ class FullSyncCompareTest extends Yotpo_Test_Case {
 		$this->assertFalse( $this->catalog[ $id ]['variants'][ $variants[1] ]['is_discontinued'] );
 	}
 
+	public function test_a_price_change_below_the_old_tolerance_is_sent_in_a_three_decimal_currency() {
+		update_option( 'woocommerce_price_num_decimals', 3 );
+		$beanie = $this->create_product( 'Wool Beanie', 'YT-ACC-001', '1.234' );
+		$this->put_in_yotpo( $beanie );
+		$this->catalog[ $beanie->get_id() ]['price'] = '1.230';
+
+		$this->full_sync();
+
+		$this->assertSame( array( 'PATCH /products/' . $this->yotpo_id( $beanie ) ), $this->sent() );
+		$this->assertEquals( 1.234, $this->catalog[ $beanie->get_id() ]['price'] );
+	}
+
 	// -----------------------------------------------------------------------------------------
 
 	/** @var bool True makes product lookups answer 200 without a product list (a proxy's page, for example). */
