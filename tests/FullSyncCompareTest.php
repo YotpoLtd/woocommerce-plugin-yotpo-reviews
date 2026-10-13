@@ -113,8 +113,8 @@ class FullSyncCompareTest extends Yotpo_Test_Case {
 		$beanie = $this->create_product();
 		$this->put_in_yotpo( $beanie );
 		$this->full_sync(); // Stored ID and fingerprint now match Yotpo.
-		$this->requests  = array();
-		$this->lookup_ok = false;
+		$this->requests        = array();
+		$this->products_failed = true;
 
 		$this->full_sync();
 
@@ -172,7 +172,7 @@ class FullSyncCompareTest extends Yotpo_Test_Case {
 		$this->assertFalse( $this->catalog[ $id ]['variants'][ $variants[1] ]['is_discontinued'] );
 	}
 
-	public function test_a_price_change_below_the_old_tolerance_is_sent_in_a_three_decimal_currency() {
+	public function test_a_price_difference_at_the_stores_decimals_is_sent() {
 		update_option( 'woocommerce_price_num_decimals', 3 );
 		$beanie = $this->create_product( 'Wool Beanie', 'YT-ACC-001', '1.234' );
 		$this->put_in_yotpo( $beanie );
@@ -285,8 +285,8 @@ class FullSyncCompareTest extends Yotpo_Test_Case {
 	/** @var bool True makes product lookups answer 200 without a product list (a proxy's page, for example). */
 	private $lookup_malformed = false;
 
-	/** @var bool False makes product lookups fail with a 500. */
-	private $lookup_ok = true;
+	/** @var bool True makes product lookups fail with a 500. */
+	private $products_failed = false;
 
 	/** @var int|null Items per page of a lookup answer; null answers everything on one page. */
 	private $page_size = null;
@@ -342,7 +342,7 @@ class FullSyncCompareTest extends Yotpo_Test_Case {
 	/** A minimal Yotpo catalog: lookups by external IDs, creates and updates of products and variants. */
 	private function route_fake_catalog() {
 		$this->route( 'GET', '#^/products$#', function ( $request ) {
-			if ( ! $this->lookup_ok ) {
+			if ( $this->products_failed ) {
 				return $this->respond( 500 );
 			}
 			if ( $this->products_limited ) {
