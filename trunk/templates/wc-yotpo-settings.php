@@ -114,6 +114,12 @@ function wc_display_yotpo_settings($success_type = false) {
                         <th scope='row'><div>Disable native reviews system:</div></th>
                         <td><input type='checkbox' name='disable_native_review_system' value='1' " . checked(1, $yotpo_settings['disable_native_review_system'], false) . " /></td>
                     </tr>
+                    <tr valign='top'>
+                        <th scope='row'><div>Sync products to Yotpo:</div>
+                            <p class='description'>Keeps your product catalog, including variations, up to date in Yotpo. Runs in the background.</p></th>
+                        <td><input type='checkbox' name='product_sync_enabled' value='1' " . checked(true, Yotpo_Product_Sync::setting_on(), false) . " />
+                            <p class='description'>" . esc_html(Yotpo_Product_Sync::status_summary()) . "</p></td>
+                    </tr>
                     <tr valign='top' class='yotpo-widget-tab-name yotpo-qna-widget-tab-name'>
                         <th scope='row'><div>Select tab name of Q&A widget:</div></th>
                         <td><div><input type='text' name='yotpo_qna_widget_tab_name' value='$qna_widget_tab_name' /></div></td>

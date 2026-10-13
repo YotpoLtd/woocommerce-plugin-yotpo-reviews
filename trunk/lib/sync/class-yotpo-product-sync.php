@@ -26,14 +26,37 @@ class Yotpo_Product_Sync {
 	}
 
 	/**
-	 * Sync runs when credentials are saved. Filterable as a kill switch (wc_yotpo_product_sync_enabled).
+	 * Sync runs when credentials are saved and the merchant left "Sync products to Yotpo" on in the
+	 * settings. Also filterable as a kill switch (wc_yotpo_product_sync_enabled).
 	 * Checked wherever a job is queued or run, and by start_full_sync(). The only way around it is
 	 * calling sync_product() directly, as `wp yotpo product-sync product` does on purpose.
 	 */
 	public static function enabled() {
 		// The client is the only reader of the saved credentials: no client means they are missing.
-		$ready = (bool) Yotpo_V3_Client::from_settings();
+		$ready = Yotpo_V3_Client::from_settings() && self::setting_on();
 		return (bool) apply_filters( 'wc_yotpo_product_sync_enabled', $ready );
+	}
+
+	/**
+	 * The merchant's "Sync products to Yotpo" setting. On by default, including for settings saved
+	 * before the setting existed.
+	 */
+	public static function setting_on() {
+		$settings = get_option( 'yotpo_settings', array() );
+		return ! is_array( $settings ) || ! array_key_exists( 'product_sync_enabled', $settings ) || (bool) $settings['product_sync_enabled'];
+	}
+
+	/**
+	 * Called after the settings are saved: turning the sync off cancels what is queued, turning it
+	 * back on starts a full sync to catch up with changes made while it was off.
+	 */
+	public static function setting_changed( $was_on, $is_on ) {
+		if ( $was_on && ! $is_on ) {
+			Yotpo_Sync_Jobs::cancel_all();
+			Yotpo_Sync_State::stop();
+		} elseif ( ! $was_on && $is_on ) {
+			Yotpo_Sync_Jobs::start_full_sync();
+		}
 	}
 
 	/**
@@ -129,5 +152,38 @@ class Yotpo_Product_Sync {
 
 	public static function state() {
 		return Yotpo_Sync_State::get();
+	}
+
+	/**
+	 * One line for the settings page: what the sync is doing or last did.
+	 */
+	public static function status_summary() {
+		if ( ! self::setting_on() ) {
+			return 'Off. Products are not sent to Yotpo.';
+		}
+		if ( ! Yotpo_V3_Client::from_settings() ) {
+			return 'Starts once the app key and secret token are saved.';
+		}
+		if ( ! self::enabled() ) {
+			return 'Turned off by the wc_yotpo_product_sync_enabled filter.';
+		}
+		$status = self::status();
+		$synced = isset( $status['synced'] ) ? (int) $status['synced'] : 0;
+		$failed = isset( $status['failed'] ) ? (int) $status['failed'] : 0;
+		switch ( isset( $status['status'] ) ? $status['status'] : '' ) {
+			case Yotpo_Sync_State::STATUS_RUNNING:
+				$done = $synced + $failed + ( isset( $status['skipped'] ) ? (int) $status['skipped'] : 0 );
+				return sprintf( 'Full sync running: %d of %d products done.', $done, isset( $status['total'] ) ? (int) $status['total'] : 0 );
+			case Yotpo_Sync_State::STATUS_COMPLETE:
+				$line = sprintf( 'Last full sync: %s. %d synced, %d failed.', wp_date( 'j M Y, H:i', (int) $status['finished'] ), $synced, $failed );
+				if ( $failed && ! empty( $status['last_error'] ) ) {
+					$line .= ' Last error: ' . $status['last_error'];
+				}
+				return $line;
+			case Yotpo_Sync_State::STATUS_STOPPED:
+				return 'Full sync stopped. It starts again on the next page load.';
+			default:
+				return 'Full sync starts on the next page load.';
+		}
 	}
 }

@@ -99,7 +99,7 @@ class Yotpo_Sync_Jobs {
 			return new WP_Error( 'yotpo_no_scheduler', 'Action Scheduler is not available.' );
 		}
 		if ( ! Yotpo_Product_Sync::enabled() ) {
-			return new WP_Error( 'yotpo_sync_disabled', 'Product sync is turned off (filter wc_yotpo_product_sync_enabled).' );
+			return new WP_Error( 'yotpo_sync_disabled', 'Product sync is turned off (Yotpo settings, or the wc_yotpo_product_sync_enabled filter).' );
 		}
 		// Restarting while jobs are queued would reset the counters under them and could finish the new sync early.
 		// That includes a sync stopped by the off switch: its product jobs stay queued until they run (and do nothing).
@@ -343,6 +343,15 @@ class Yotpo_Sync_Jobs {
 			);
 		}
 		return $counts;
+	}
+
+	/**
+	 * Cancels every queued sync job (used when the merchant turns the sync off).
+	 */
+	public static function cancel_all() {
+		if ( self::scheduler_ready() ) {
+			as_unschedule_all_actions( '', array(), self::GROUP );
+		}
 	}
 
 	private static function scheduler_ready() {

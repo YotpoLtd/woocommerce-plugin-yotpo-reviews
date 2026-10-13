@@ -42,6 +42,7 @@ function wc_yotpo_get_default_settings() {
     'show_submit_past_orders' => true,
     'yotpo_order_status' => 'wc-completed',
     'disable_native_review_system' => true,
+    'product_sync_enabled' => true,
     'native_star_ratings_enabled' => 'no',
     'debug_mode' => false
   );
