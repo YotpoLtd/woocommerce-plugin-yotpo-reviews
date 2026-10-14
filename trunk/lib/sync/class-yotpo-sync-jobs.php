@@ -46,7 +46,8 @@ class Yotpo_Sync_Jobs {
 		// Y-tags (see Yotpo_Product_Tags): tags set without a product save (an import, code), and a
 		// Y-tag renamed or deleted under Products > Tags, which changes every product that has it.
 		add_action( 'set_object_terms', array( __CLASS__, 'queue_retagged_product' ), 10, 4 );
-		add_action( 'edit_terms', array( __CLASS__, 'queue_tagged_products' ), 10, 3 );
+		add_action( 'edit_terms', array( __CLASS__, 'queue_tagged_products' ), 10, 2 );
+		add_action( 'edited_term', array( __CLASS__, 'queue_renamed_tagged_products' ), 10, 3 );
 		add_action( 'pre_delete_term', array( __CLASS__, 'queue_tagged_products' ), 10, 2 );
 		add_action( 'init', array( __CLASS__, 'maybe_start_initial_sync' ), 20 );
 	}
@@ -220,25 +221,32 @@ class Yotpo_Sync_Jobs {
 
 	/**
 	 * A product tag is about to be renamed (edit_terms) or deleted (pre_delete_term): if it is a
-	 * Y-tag before or after, every product that has it is synced again. The jobs run afterwards, so
-	 * they see the new name, or no tag.
-	 *
-	 * @param array $args For edit_terms (WordPress 6.1+): the new values, including the name.
+	 * Y-tag now, every product that has it is synced again. The jobs run afterwards, so they see the
+	 * new name, or no tag. A tag that becomes a Y-tag is caught after the rename
+	 * (queue_renamed_tagged_products()).
 	 */
-	public static function queue_tagged_products( $term_id, $taxonomy, $args = array() ) {
+	public static function queue_tagged_products( $term_id, $taxonomy ) {
 		if ( 'product_tag' !== $taxonomy || ! Yotpo_Product_Sync::tags_on() ) {
 			return;
 		}
-		$term     = get_term( $term_id, $taxonomy );
-		$old_name = $term && ! is_wp_error( $term ) ? html_entity_decode( $term->name, ENT_QUOTES, 'UTF-8' ) : '';
-		$new_name = is_array( $args ) && isset( $args['name'] ) ? wp_unslash( (string) $args['name'] ) : '';
-		if ( ! Yotpo_Product_Tags::is_y_tag( $old_name ) && ! Yotpo_Product_Tags::is_y_tag( $new_name ) ) {
+		$term = get_term( $term_id, $taxonomy );
+		if ( ! $term || is_wp_error( $term ) || ! Yotpo_Product_Tags::is_y_tag( html_entity_decode( $term->name, ENT_QUOTES, 'UTF-8' ) ) ) {
 			return;
 		}
 		$product_ids = get_objects_in_term( (int) $term_id, $taxonomy );
 		foreach ( is_array( $product_ids ) ? $product_ids : array() as $product_id ) {
 			self::queue_product( (int) $product_id );
 		}
+	}
+
+	/**
+	 * A product tag was renamed (edited_term): if it is a Y-tag now, every product that has it is
+	 * synced again. edit_terms only passes the new name from WordPress 6.1; edited_term sees the
+	 * saved name on every version. A Y-tag renamed into another Y-tag is queued twice, which
+	 * queue_product() drops as a duplicate.
+	 */
+	public static function queue_renamed_tagged_products( $term_id, $tt_id, $taxonomy ) {
+		self::queue_tagged_products( $term_id, $taxonomy );
 	}
 
 	/**
