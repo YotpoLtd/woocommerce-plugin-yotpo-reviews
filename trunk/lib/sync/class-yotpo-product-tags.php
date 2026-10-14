@@ -44,10 +44,10 @@ class Yotpo_Product_Tags {
 	public static function fields( $product_id ) {
 		$names = self::tag_names( $product_id );
 		return array(
-			'group_name'        => self::group( $names ),
+			'group_name'        => self::first_value( $names, self::GROUP_PREFIX, array( __CLASS__, 'group_name' ) ),
 			'custom_properties' => array(
 				'is_blocklisted'  => in_array( self::BLOCKLIST, $names, true ),
-				'review_form_tag' => self::form_tag( $names ),
+				'review_form_tag' => self::first_value( $names, self::FORM_PREFIX, array( __CLASS__, 'form_tag_name' ) ),
 			),
 		);
 	}
@@ -75,24 +75,21 @@ class Yotpo_Product_Tags {
 		return function_exists( 'mb_substr' ) ? mb_substr( $value, 0, self::FORM_MAX ) : substr( $value, 0, self::FORM_MAX );
 	}
 
-	private static function group( array $names ) {
+	/**
+	 * The value of the first tag (in the order given) that starts with the prefix: the rest of its
+	 * name, made valid by the normaliser. A tag whose value is empty after that is skipped. Empty
+	 * when no tag has one.
+	 *
+	 * @param string[] $names     Tag names.
+	 * @param string   $prefix    GROUP_PREFIX or FORM_PREFIX.
+	 * @param callable $normalise group_name() or form_tag_name().
+	 */
+	private static function first_value( array $names, $prefix, $normalise ) {
 		foreach ( $names as $name ) {
-			if ( 0 === strpos( $name, self::GROUP_PREFIX ) ) {
-				$group = self::group_name( substr( $name, strlen( self::GROUP_PREFIX ) ) );
-				if ( '' !== $group ) {
-					return $group;
-				}
-			}
-		}
-		return '';
-	}
-
-	private static function form_tag( array $names ) {
-		foreach ( $names as $name ) {
-			if ( 0 === strpos( $name, self::FORM_PREFIX ) ) {
-				$tag = self::form_tag_name( substr( $name, strlen( self::FORM_PREFIX ) ) );
-				if ( '' !== $tag ) {
-					return $tag;
+			if ( 0 === strpos( $name, $prefix ) ) {
+				$value = call_user_func( $normalise, substr( $name, strlen( $prefix ) ) );
+				if ( '' !== $value ) {
+					return $value;
 				}
 			}
 		}
