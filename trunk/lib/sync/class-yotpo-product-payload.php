@@ -119,20 +119,24 @@ class Yotpo_Product_Payload {
 	 * attributes named upc, isbn and ean. The same value is sent once.
 	 */
 	private static function gtins( $product ) {
-		$gtins = array();
-		$seen  = array();
-		$id    = method_exists( $product, 'get_global_unique_id' ) ? trim( (string) $product->get_global_unique_id() ) : '';
-		if ( '' !== $id ) {
-			$type   = self::gtin_type( $id );
-			$gtins[] = $type ? array( 'declared_type' => $type, 'value' => $id ) : array( 'value' => $id );
-			$seen[]  = self::gtin_digits( $id );
+		$candidates = array();
+		$global_id  = method_exists( $product, 'get_global_unique_id' ) ? trim( (string) $product->get_global_unique_id() ) : '';
+		if ( '' !== $global_id ) {
+			$candidates[] = array( self::gtin_type( $global_id ), $global_id );
 		}
 		foreach ( array( 'upc' => 'UPC', 'isbn' => 'ISBN', 'ean' => 'EAN' ) as $attribute => $type ) {
-			$value = trim( (string) $product->get_attribute( $attribute ) );
-			if ( '' !== $value && ! in_array( self::gtin_digits( $value ), $seen, true ) ) {
-				$gtins[] = array( 'declared_type' => $type, 'value' => $value );
-				$seen[]  = self::gtin_digits( $value );
+			$candidates[] = array( $type, trim( (string) $product->get_attribute( $attribute ) ) );
+		}
+		$gtins = array();
+		$seen  = array();
+		foreach ( $candidates as $candidate ) {
+			list( $type, $value ) = $candidate;
+			$key                  = self::gtin_digits( $value );
+			if ( '' === $value || in_array( $key, $seen, true ) ) {
+				continue;
 			}
+			$seen[]  = $key;
+			$gtins[] = $type ? array( 'declared_type' => $type, 'value' => $value ) : array( 'value' => $value );
 		}
 		return $gtins;
 	}
