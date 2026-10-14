@@ -242,6 +242,10 @@ For full installation guide, [please click here](https://support.yotpo.com/docs/
 = 1.10.1 - 14/10/2026 =
 * Fixed: the product sync in 1.10.0 took products off the Yotpo blocklist when they had been blocklisted in Yotpo (for example by catalog CSV). The sync now only undoes blocklisting it did itself, for a product that is published again
 
+= 1.11.0 =
+* New setting "Use product tags for the blocklist, groups and custom questions" (off by default): tag products with YBlocklist, YGroup_<group> or YCRF_<form tag> to set their Yotpo blocklist, review group and custom question form
+* The product sync sends the brand from WooCommerce Brands, and barcodes from WooCommerce's GTIN, UPC, EAN or ISBN field, before falling back to the brand, upc, isbn and ean attributes
+
 == Upgrade Notice ==
 
 = 1.10.1 =

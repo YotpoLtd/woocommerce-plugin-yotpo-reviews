@@ -43,6 +43,11 @@ class Yotpo_Sync_Jobs {
 		add_action( 'trashed_post', array( __CLASS__, 'queue_post' ) );
 		add_action( 'untrashed_post', array( __CLASS__, 'queue_post' ) );
 		add_action( 'before_delete_post', array( __CLASS__, 'queue_deleted_post' ) );
+		// Y-tags (see Yotpo_Product_Tags): tags set without a product save (an import, code), and a
+		// Y-tag renamed or deleted under Products > Tags, which changes every product that has it.
+		add_action( 'set_object_terms', array( __CLASS__, 'queue_retagged_product' ), 10, 4 );
+		add_action( 'edit_terms', array( __CLASS__, 'queue_tagged_products' ), 10, 3 );
+		add_action( 'pre_delete_term', array( __CLASS__, 'queue_tagged_products' ), 10, 2 );
 		add_action( 'init', array( __CLASS__, 'maybe_start_initial_sync' ), 20 );
 	}
 
@@ -68,6 +73,11 @@ class Yotpo_Sync_Jobs {
 		$state  = Yotpo_Sync_State::get();
 		$status = isset( $state['status'] ) ? $state['status'] : '';
 		if ( ! isset( $state['app_key'] ) || $state['app_key'] !== $client->app_key() ) {
+			self::start_full_sync();
+			return;
+		}
+		if ( Yotpo_Sync_State::STATUS_COMPLETE === $status && ! empty( $state['rerun'] ) ) {
+			// A full sync was asked for while this one ran (see request_full_sync()).
 			self::start_full_sync();
 			return;
 		}
@@ -127,6 +137,22 @@ class Yotpo_Sync_Jobs {
 		return true;
 	}
 
+	/**
+	 * Starts a full sync, or, while one is still running, has the next page load start one once it
+	 * is complete. For changes that every product must pick up, such as turning the Y-tags on: a
+	 * running full sync may already be past some products.
+	 *
+	 * @return true|WP_Error
+	 */
+	public static function request_full_sync() {
+		$result = self::start_full_sync();
+		if ( is_wp_error( $result ) && 'yotpo_sync_busy' === $result->get_error_code() ) {
+			Yotpo_Sync_State::request_rerun();
+			return true;
+		}
+		return $result;
+	}
+
 	// ---------------------------------------------------------------------------------------
 	// Queueing
 	// ---------------------------------------------------------------------------------------
@@ -179,6 +205,39 @@ class Yotpo_Sync_Jobs {
 			self::queue_product( $post_id );
 		} elseif ( 'product_variation' === $type ) {
 			self::queue_variation_parent( $post_id );
+		}
+	}
+
+	/**
+	 * A product's tags were set (set_object_terms): with the Y-tags on, its Yotpo fields may change.
+	 * Saving a product in the admin sets its tags too; the job is queued once (queue_product()).
+	 */
+	public static function queue_retagged_product( $object_id, $terms, $tt_ids, $taxonomy ) {
+		if ( 'product_tag' === $taxonomy && Yotpo_Product_Sync::tags_on() && 'product' === get_post_type( $object_id ) ) {
+			self::queue_product( $object_id );
+		}
+	}
+
+	/**
+	 * A product tag is about to be renamed (edit_terms) or deleted (pre_delete_term): if it is a
+	 * Y-tag before or after, every product that has it is synced again. The jobs run afterwards, so
+	 * they see the new name, or no tag.
+	 *
+	 * @param array $args For edit_terms (WordPress 6.1+): the new values, including the name.
+	 */
+	public static function queue_tagged_products( $term_id, $taxonomy, $args = array() ) {
+		if ( 'product_tag' !== $taxonomy || ! Yotpo_Product_Sync::tags_on() ) {
+			return;
+		}
+		$term     = get_term( $term_id, $taxonomy );
+		$old_name = $term && ! is_wp_error( $term ) ? html_entity_decode( $term->name, ENT_QUOTES, 'UTF-8' ) : '';
+		$new_name = is_array( $args ) && isset( $args['name'] ) ? wp_unslash( (string) $args['name'] ) : '';
+		if ( ! Yotpo_Product_Tags::is_y_tag( $old_name ) && ! Yotpo_Product_Tags::is_y_tag( $new_name ) ) {
+			return;
+		}
+		$product_ids = get_objects_in_term( (int) $term_id, $taxonomy );
+		foreach ( is_array( $product_ids ) ? $product_ids : array() as $product_id ) {
+			self::queue_product( (int) $product_id );
 		}
 	}
 

@@ -88,6 +88,7 @@ function get_v2_widgets_enables() {
 function wc_proccess_yotpo_settings() {
   $current_settings = get_option('yotpo_settings', wc_yotpo_get_default_settings());
   $product_sync_was_on = Yotpo_Product_Sync::setting_on();
+  $tags_were_on = Yotpo_Product_Sync::tags_on();
   $widgets_ids = get_widgets_instances();
   if (is_wp_error($widgets_ids)) {
     wc_yotpo_display_message(wc_yotpo_widget_instances_error_message($widgets_ids), true);
@@ -109,10 +110,15 @@ function wc_proccess_yotpo_settings() {
     'yotpo_language_as_site' => isset($_POST['yotpo_language_as_site']) ? true : false,
     'disable_native_review_system' => isset($_POST['disable_native_review_system']) ? true : false,
     'product_sync_enabled' => isset($_POST['product_sync_enabled']),
+    'product_sync_tags' => isset($_POST['product_sync_tags']),
     'show_submit_past_orders' => yotpo_get_arr_value($current_settings, 'show_submit_past_orders'),
     'debug_mode' => isset($_POST['debug_mode']) ? true : false);
   update_option('yotpo_settings', $new_settings);
   Yotpo_Product_Sync::setting_changed($product_sync_was_on, $new_settings['product_sync_enabled']);
+  // A sync just turned on already runs a full sync, with the tags as they are now.
+  if ($product_sync_was_on && $new_settings['product_sync_enabled']) {
+    Yotpo_Product_Sync::tags_setting_changed($tags_were_on, $new_settings['product_sync_tags']);
+  }
   if ($current_settings['disable_native_review_system'] != $new_settings['disable_native_review_system']) {
     if ($new_settings['disable_native_review_system'] == false) {
       update_option('woocommerce_enable_review_rating', get_option('native_star_ratings_enabled'));

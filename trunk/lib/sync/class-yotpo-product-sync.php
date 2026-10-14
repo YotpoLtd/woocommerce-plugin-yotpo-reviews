@@ -47,6 +47,26 @@ class Yotpo_Product_Sync {
 	}
 
 	/**
+	 * The merchant's "Use product tags for the blocklist, groups and custom questions" setting
+	 * (see Yotpo_Product_Tags). Off by default: stores manage these in Yotpo, by catalog CSV.
+	 */
+	public static function tags_on() {
+		$settings = get_option( 'yotpo_settings', array() );
+		return is_array( $settings ) && ! empty( $settings['product_sync_tags'] );
+	}
+
+	/**
+	 * Called after the settings are saved, while the sync stays on: turning the product tags on
+	 * starts a full sync so every product's Y-tags reach Yotpo (only what differs is sent). Turning
+	 * them off leaves Yotpo as it is.
+	 */
+	public static function tags_setting_changed( $were_on, $are_on ) {
+		if ( ! $were_on && $are_on ) {
+			Yotpo_Sync_Jobs::request_full_sync();
+		}
+	}
+
+	/**
 	 * Called after the settings are saved: turning the sync off cancels what is queued, turning it
 	 * back on starts a full sync to catch up with changes made while it was off.
 	 */

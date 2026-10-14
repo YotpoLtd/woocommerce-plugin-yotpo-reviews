@@ -48,7 +48,7 @@ class SettingsPageTest extends Yotpo_Test_Case {
 
 	public function test_saving_the_page_with_every_option_flipped_keeps_every_setting() {
 		$settings = get_option( 'yotpo_settings' );
-		foreach ( array( 'yotpo_language_as_site', 'disable_native_review_system', 'product_sync_enabled' ) as $key ) {
+		foreach ( array( 'yotpo_language_as_site', 'disable_native_review_system', 'product_sync_enabled', 'product_sync_tags' ) as $key ) {
 			$settings[ $key ] = empty( $settings[ $key ] );
 		}
 		foreach ( array( 'v3_widgets_enables', 'v2_widgets_enables' ) as $group ) {

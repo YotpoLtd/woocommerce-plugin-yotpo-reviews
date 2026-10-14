@@ -115,6 +115,13 @@ function wc_display_yotpo_settings($success_type = false) {
             'Keeps your product catalog, including variations, up to date in Yotpo. Runs in the background.',
             '',
             "<div class='yotpo-status yotpo-tone--" . wc_yotpo_sync_status_tone() . "'>" . esc_html(Yotpo_Product_Sync::status_summary()) . "</div>"
+        ) .
+        yotpo_switch_row(
+            'product_sync_tags',
+            'product_sync_tags',
+            checked(true, Yotpo_Product_Sync::tags_on(), false),
+            'Use product tags for the blocklist, groups and custom questions',
+            "Tag products with <code>YBlocklist</code>, <code>YGroup_</code><i>group</i> or <code>YCRF_</code><i>form tag</i> to set their Yotpo blocklist, review group and custom question form. When on, these tags replace the blocklist, groups and form tags set in Yotpo, for example by catalog CSV."
         )
     );
 

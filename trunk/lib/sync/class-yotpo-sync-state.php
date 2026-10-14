@@ -103,6 +103,22 @@ class Yotpo_Sync_State {
 	}
 
 	/**
+	 * Asks for another full sync once this one is complete (Yotpo_Sync_Jobs::request_full_sync()).
+	 * start() clears it, since the new state has no such flag.
+	 */
+	public static function request_rerun() {
+		self::update(
+			function ( $state ) {
+				if ( empty( $state ) ) {
+					return null;
+				}
+				$state['rerun'] = true;
+				return $state;
+			}
+		);
+	}
+
+	/**
 	 * A full sync that kept stalling is left for the merchant: turning the setting off and on starts it again.
 	 */
 	public static function mark_stalled( $restarts ) {
