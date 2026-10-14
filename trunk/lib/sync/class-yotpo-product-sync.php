@@ -18,6 +18,8 @@ defined( 'ABSPATH' ) || exit;
  * - Yotpo_Sync_State:      the full sync's state and counters.
  * - Yotpo_Catalog_Api:     products and variants in the Yotpo catalog (create, update, look up, blocklist).
  * - Yotpo_Product_Payload: the WooCommerce → Yotpo field mapping.
+ * - Yotpo_Product_Tags:    the Y-tag rules (YBlocklist, YGroup_, YCRF_) for the blocklist, group and form tag.
+ * - Yotpo_Product_Terms:   a product's terms (tags, brands) as plain text, shared by the payload, the Y-tags and the jobs.
  */
 class Yotpo_Product_Sync {
 
@@ -44,6 +46,33 @@ class Yotpo_Product_Sync {
 	public static function setting_on() {
 		$settings = get_option( 'yotpo_settings', array() );
 		return ! is_array( $settings ) || ! array_key_exists( 'product_sync_enabled', $settings ) || (bool) $settings['product_sync_enabled'];
+	}
+
+	/**
+	 * The merchant's "Use product tags for the blocklist, groups and custom questions" setting
+	 * (see Yotpo_Product_Tags). Off by default: stores manage these in Yotpo, by catalog CSV.
+	 */
+	public static function tags_on() {
+		$settings = get_option( 'yotpo_settings', array() );
+		return is_array( $settings ) && ! empty( $settings['product_sync_tags'] );
+	}
+
+	/**
+	 * Called after the settings are saved, with the product tags setting and the sync setting before
+	 * and after: turning the product tags on while the sync stays on starts a full sync so every
+	 * product's Y-tags reach Yotpo (only what differs is sent). Turning them off leaves Yotpo as it
+	 * is. A sync that was just turned on already runs a full sync (setting_changed()), with the tags
+	 * as they are now.
+	 *
+	 * @param bool $tags_were_on Whether the product tags setting was on before the save.
+	 * @param bool $tags_are_on  Whether the product tags setting is on after the save.
+	 * @param bool $sync_was_on  Whether "Sync products to Yotpo" was on before the save.
+	 * @param bool $sync_is_on   Whether "Sync products to Yotpo" is on after the save.
+	 */
+	public static function tags_setting_changed( $tags_were_on, $tags_are_on, $sync_was_on, $sync_is_on ) {
+		if ( ! $tags_were_on && $tags_are_on && $sync_was_on && $sync_is_on ) {
+			Yotpo_Sync_Jobs::request_full_sync();
+		}
 	}
 
 	/**

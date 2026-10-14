@@ -28,11 +28,13 @@ class Yotpo_Sync_Jobs {
 	const HOOK_PRODUCT      = 'wc_yotpo_sync_product';
 	const HOOK_BATCH        = 'wc_yotpo_sync_product_batch';
 	const HOOK_VARIANT_GONE = 'wc_yotpo_discontinue_variant';
+	const HOOK_TAGGED       = 'wc_yotpo_sync_tagged_products';
 
 	public static function register() {
 		add_action( self::HOOK_PRODUCT, array( __CLASS__, 'run_product_job' ), 10, 3 );
 		add_action( self::HOOK_BATCH, array( __CLASS__, 'run_batch_job' ), 10, 1 );
 		add_action( self::HOOK_VARIANT_GONE, array( __CLASS__, 'run_variant_gone_job' ), 10, 3 );
+		add_action( self::HOOK_TAGGED, array( __CLASS__, 'run_tagged_products_job' ), 10, 1 );
 
 		// The kill switch is checked where jobs are queued and run, not here: a filter added after
 		// plugins_loaded (theme, mu-plugin) must still take effect.
@@ -43,6 +45,13 @@ class Yotpo_Sync_Jobs {
 		add_action( 'trashed_post', array( __CLASS__, 'queue_post' ) );
 		add_action( 'untrashed_post', array( __CLASS__, 'queue_post' ) );
 		add_action( 'before_delete_post', array( __CLASS__, 'queue_deleted_post' ) );
+		// Y-tags (see Yotpo_Product_Tags): tags set without a product save (an import, code), and a
+		// Y-tag renamed or deleted under Products > Tags, which changes every product that has it.
+		// edit_terms and pre_delete_term see the tag's old name, edited_term its new one.
+		add_action( 'set_object_terms', array( __CLASS__, 'queue_retagged_product' ), 10, 4 );
+		add_action( 'edit_terms', array( __CLASS__, 'queue_tagged_products' ), 10, 2 );
+		add_action( 'edited_term', array( __CLASS__, 'queue_renamed_tagged_products' ), 10, 3 );
+		add_action( 'pre_delete_term', array( __CLASS__, 'queue_tagged_products' ), 10, 2 );
 		add_action( 'init', array( __CLASS__, 'maybe_start_initial_sync' ), 20 );
 	}
 
@@ -68,6 +77,11 @@ class Yotpo_Sync_Jobs {
 		$state  = Yotpo_Sync_State::get();
 		$status = isset( $state['status'] ) ? $state['status'] : '';
 		if ( ! isset( $state['app_key'] ) || $state['app_key'] !== $client->app_key() ) {
+			self::start_full_sync();
+			return;
+		}
+		if ( Yotpo_Sync_State::STATUS_COMPLETE === $status && ! empty( $state['rerun'] ) ) {
+			// A full sync was asked for while this one ran (see request_full_sync()).
 			self::start_full_sync();
 			return;
 		}
@@ -127,6 +141,22 @@ class Yotpo_Sync_Jobs {
 		return true;
 	}
 
+	/**
+	 * Starts a full sync, or, while one is still running, has the next page load start one once it
+	 * is complete. For changes that every product must pick up, such as turning the Y-tags on: a
+	 * running full sync may already be past some products.
+	 *
+	 * @return true|WP_Error
+	 */
+	public static function request_full_sync() {
+		$result = self::start_full_sync();
+		if ( is_wp_error( $result ) && 'yotpo_sync_busy' === $result->get_error_code() ) {
+			Yotpo_Sync_State::request_rerun();
+			return true;
+		}
+		return $result;
+	}
+
 	// ---------------------------------------------------------------------------------------
 	// Queueing
 	// ---------------------------------------------------------------------------------------
@@ -180,6 +210,65 @@ class Yotpo_Sync_Jobs {
 		} elseif ( 'product_variation' === $type ) {
 			self::queue_variation_parent( $post_id );
 		}
+	}
+
+	/**
+	 * A product's tags were set (set_object_terms): with the Y-tags on, its Yotpo fields may change.
+	 * Saving a product in the admin sets its tags too; the job is queued once (queue_product()).
+	 */
+	public static function queue_retagged_product( $object_id, $terms, $tt_ids, $taxonomy ) {
+		if ( 'product_tag' === $taxonomy && Yotpo_Product_Sync::tags_on() && 'product' === get_post_type( $object_id ) ) {
+			self::queue_product( $object_id );
+		}
+	}
+
+	/**
+	 * Runs on edit_terms and pre_delete_term, so it sees the tag's old name (via
+	 * queue_renamed_tagged_products() it also runs on edited_term, and sees the new name): if the
+	 * tag is a Y-tag, every product that has it is synced again. The jobs run afterwards, so they
+	 * see the new name, or no tag. A tag that becomes a Y-tag is therefore caught after the rename,
+	 * one that stops being a Y-tag before it.
+	 */
+	public static function queue_tagged_products( $term_id, $taxonomy ) {
+		if ( 'product_tag' !== $taxonomy || ! Yotpo_Product_Sync::tags_on() ) {
+			return;
+		}
+		$term = get_term( $term_id, $taxonomy );
+		if ( ! $term || is_wp_error( $term ) || ! Yotpo_Product_Tags::is_y_tag( Yotpo_Product_Terms::name( $term ) ) ) {
+			return;
+		}
+		if ( ! self::scheduler_ready() || ! Yotpo_Product_Sync::enabled() ) {
+			return;
+		}
+		// One job per page of products, not one per product: a Y-tag can be on thousands of products,
+		// and this runs inside the admin request. The jobs queue the product jobs (run_tagged_products_job()).
+		// The IDs are listed now: after a delete the tag no longer has any products.
+		$product_ids = get_objects_in_term( (int) $term_id, $taxonomy );
+		foreach ( array_chunk( is_array( $product_ids ) ? array_map( 'intval', $product_ids ) : array(), self::BATCH_SIZE ) as $page_ids ) {
+			as_enqueue_async_action( self::HOOK_TAGGED, array( $page_ids ), self::GROUP, true );
+		}
+	}
+
+	/**
+	 * Queues the product job of each product of a page of a renamed or deleted Y-tag's products.
+	 *
+	 * @param int[] $product_ids
+	 */
+	public static function run_tagged_products_job( $product_ids ) {
+		foreach ( (array) $product_ids as $product_id ) {
+			self::queue_product( (int) $product_id );
+		}
+	}
+
+	/**
+	 * A product tag was renamed (edited_term): if it is a Y-tag now, every product that has it is
+	 * synced again. edit_terms only passes the new name from WordPress 6.1; edited_term sees the
+	 * saved name on every version. A Y-tag renamed into another Y-tag is queued twice: the unique
+	 * async action in queue_tagged_products() drops the second page job, and queue_product() drops
+	 * any product job that is queued already.
+	 */
+	public static function queue_renamed_tagged_products( $term_id, $tt_id, $taxonomy ) {
+		self::queue_tagged_products( $term_id, $taxonomy );
 	}
 
 	/**

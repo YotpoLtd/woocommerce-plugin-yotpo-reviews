@@ -3,7 +3,7 @@
 	Plugin Name: Yotpo Product Reviews
 	Description: Collect and display product reviews and ratings to showcase social proof and build trust.
 	Author: Yotpo
-	Version: 1.10.1
+	Version: 1.11.0
 	Author URI: http://www.yotpo.com?utm_source=yotpo_plugin_woocommerce&utm_medium=plugin_page_link&utm_campaign=woocommerce_plugin_page_link
 	Plugin URI: http://www.yotpo.com?utm_source=yotpo_plugin_woocommerce&utm_medium=plugin_page_link&utm_campaign=woocommerce_plugin_page_link
 	Requires at least: 6.0
@@ -40,7 +40,9 @@ require plugin_dir_path( __FILE__ ) . 'lib/utils/wc-yotpo-functions.php';
 require plugin_dir_path( __FILE__ ) . 'lib/utils/widgets-rendering-logic.php';
 require plugin_dir_path( __FILE__ ) . 'lib/utils/allowed-html-functions.php';
 require plugin_dir_path( __FILE__ ) . 'lib/yotpo-api/class-yotpo-v3-client.php';
+require plugin_dir_path( __FILE__ ) . 'lib/sync/class-yotpo-product-terms.php';
 require plugin_dir_path( __FILE__ ) . 'lib/sync/class-yotpo-product-payload.php';
+require plugin_dir_path( __FILE__ ) . 'lib/sync/class-yotpo-product-tags.php';
 require plugin_dir_path( __FILE__ ) . 'lib/sync/class-yotpo-payload-compare.php';
 require plugin_dir_path( __FILE__ ) . 'lib/sync/class-yotpo-catalog-api.php';
 require plugin_dir_path( __FILE__ ) . 'lib/sync/class-yotpo-sync-state.php';

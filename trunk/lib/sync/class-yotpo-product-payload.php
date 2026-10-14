@@ -19,10 +19,14 @@ class Yotpo_Product_Payload {
 			'url'               => self::limit( get_permalink( $product->get_id() ), 2048 ),
 			'currency'          => get_woocommerce_currency(),
 		);
-		// The blocklist flag is only sent to undo the plugin's own blocklisting, of a product that was
-		// unpublished and is published again. A product the merchant blocklisted in Yotpo (catalog CSV,
-		// Yotpo admin) keeps that: 1.10.0 always sent false here, which took such products off the blocklist.
-		if ( get_post_meta( $product->get_id(), Yotpo_Catalog_Api::META_BLOCKLISTED, true ) ) {
+		if ( Yotpo_Product_Sync::tags_on() ) {
+			// The merchant manages the blocklist, groups and form tags with Y-tags: they are the truth.
+			$payload = array_merge( $payload, Yotpo_Product_Tags::fields( $product->get_id() ) );
+		} elseif ( get_post_meta( $product->get_id(), Yotpo_Catalog_Api::META_BLOCKLISTED, true ) ) {
+			// Otherwise the blocklist flag is only sent to undo the plugin's own blocklisting, of a product
+			// that was unpublished and is published again. A product the merchant blocklisted in Yotpo
+			// (catalog CSV, Yotpo admin) keeps that: 1.10.0 always sent false here, which took such
+			// products off the blocklist.
 			$payload['custom_properties'] = array( 'is_blocklisted' => false );
 		}
 		$image = wc_yotpo_get_product_image_url( $product->get_id() );
@@ -39,11 +43,13 @@ class Yotpo_Product_Payload {
 		if ( $sku ) {
 			$payload['sku'] = $sku;
 		}
-		foreach ( array( 'brand', 'mpn' ) as $field ) {
-			$value = trim( (string) $product->get_attribute( $field ) );
-			if ( '' !== $value ) {
-				$payload[ $field ] = self::limit( $value, 255 );
-			}
+		$brand = self::brand( $product );
+		if ( '' !== $brand ) {
+			$payload['brand'] = self::limit( $brand, 255 );
+		}
+		$mpn = trim( (string) $product->get_attribute( 'mpn' ) );
+		if ( '' !== $mpn ) {
+			$payload['mpn'] = self::limit( $mpn, 255 );
 		}
 		$gtins = self::gtins( $product );
 		if ( $gtins ) {
@@ -99,15 +105,63 @@ class Yotpo_Product_Payload {
 		return (array) apply_filters( 'wc_yotpo_product_sync_variant_payload', $payload, $variation, $parent );
 	}
 
+	/**
+	 * The brand: the product's brand in WooCommerce Brands (part of WooCommerce since 9.6; the first
+	 * in alphabetical order if it has several), else a product attribute named "brand".
+	 */
+	private static function brand( $product ) {
+		$names = Yotpo_Product_Terms::names( $product->get_id(), 'product_brand' );
+		return trim( $names ? $names[0] : (string) $product->get_attribute( 'brand' ) );
+	}
+
+	/**
+	 * Barcodes: WooCommerce's "GTIN, UPC, EAN or ISBN" field (since WooCommerce 9.1), then product
+	 * attributes named upc, isbn and ean. The same value is sent once.
+	 */
 	private static function gtins( $product ) {
-		$gtins = array();
+		$candidates = array();
+		$global_id  = method_exists( $product, 'get_global_unique_id' ) ? trim( (string) $product->get_global_unique_id() ) : '';
+		if ( '' !== $global_id ) {
+			$candidates[] = array( self::gtin_type( $global_id ), $global_id );
+		}
 		foreach ( array( 'upc' => 'UPC', 'isbn' => 'ISBN', 'ean' => 'EAN' ) as $attribute => $type ) {
-			$value = trim( (string) $product->get_attribute( $attribute ) );
-			if ( '' !== $value ) {
-				$gtins[] = array( 'declared_type' => $type, 'value' => $value );
+			$candidates[] = array( $type, trim( (string) $product->get_attribute( $attribute ) ) );
+		}
+		$gtins = array();
+		$seen  = array();
+		foreach ( $candidates as $candidate ) {
+			list( $type, $value ) = $candidate;
+			$key                  = self::gtin_digits( $value );
+			if ( '' === $value || in_array( $key, $seen, true ) ) {
+				continue;
 			}
+			$seen[]  = $key;
+			$gtins[] = $type ? array( 'declared_type' => $type, 'value' => $value ) : array( 'value' => $value );
 		}
 		return $gtins;
+	}
+
+	/**
+	 * The standard of a barcode, from its length: UPC (12 digits), ISBN (10, or 13 starting with
+	 * 978 or 979), EAN (8 or 13). Empty for anything else (a GTIN-14, say): Yotpo then gets the value
+	 * without a declared type.
+	 */
+	private static function gtin_type( $value ) {
+		$digits = self::gtin_digits( $value );
+		if ( preg_match( '/^\d{12}$/', $digits ) ) {
+			return 'UPC';
+		}
+		if ( preg_match( '/^97[89]\d{10}$/', $digits ) || preg_match( '/^\d{9}[\dX]$/', $digits ) ) {
+			return 'ISBN';
+		}
+		if ( preg_match( '/^(\d{8}|\d{13})$/', $digits ) ) {
+			return 'EAN';
+		}
+		return '';
+	}
+
+	private static function gtin_digits( $value ) {
+		return strtoupper( preg_replace( '/[\s-]/', '', (string) $value ) );
 	}
 
 	/**

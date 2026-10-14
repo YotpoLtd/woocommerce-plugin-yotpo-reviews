@@ -245,3 +245,9 @@ Version 1.10.0
 ---
 Version 1.10.1
 1) Fixed: the product sync sent is_blocklisted = false for every published product, so 1.10.0 took products off the Yotpo blocklist that merchants had blocklisted in Yotpo (catalog CSV, Yotpo admin). The flag is now only sent to undo the plugin's own blocklisting, when a product it blocklisted while unpublished is published again.
+
+2026-10-14
+---
+Version 1.11.0
+1) New setting "Use product tags for the blocklist, groups and custom questions" (off by default): tag products with YBlocklist, YGroup_<group> or YCRF_<form tag> to set their Yotpo blocklist, review group and custom question form. Turning it on runs a full sync; renaming or deleting a Y-tag under Products > Tags syncs the products that have it.
+2) The product sync sends the brand from WooCommerce Brands and barcodes from the WooCommerce GTIN, UPC, EAN or ISBN field, before falling back to the brand, upc, isbn and ean attributes.

@@ -294,6 +294,24 @@ class FullSyncCompareTest extends Yotpo_Test_Case {
 		$this->assertTrue( $this->catalog[ $sample->get_id() ]['custom_properties']['is_blocklisted'] );
 	}
 
+	public function test_with_y_tags_on_the_tags_replace_what_yotpo_has() {
+		$this->set_setting( 'product_sync_tags', true );
+		$shirt = $this->create_product( 'Shirt', 'SKU-SHIRT' );
+		$tee   = $this->create_product( 'Tee', 'SKU-TEE' );
+		wp_set_object_terms( $shirt->get_id(), array( 'YGroup_shirts', 'YCRF_fit' ), 'product_tag' );
+		wp_set_object_terms( $tee->get_id(), array( 'YGroup_shirts', 'YCRF_fit' ), 'product_tag' );
+		$this->put_in_yotpo( $shirt ); // Yotpo already has the tags' values.
+		$this->put_in_yotpo( $tee );
+		$this->catalog[ $tee->get_id() ]['group_name'] = 'old_group'; // Set by catalog CSV.
+		$this->catalog[ $tee->get_id() ]['custom_properties'] = array( 'is_blocklisted' => true, 'review_form_tag' => 'old' );
+
+		$this->full_sync();
+
+		$this->assertSame( array( 'PATCH /products/' . $this->yotpo_id( $tee ) ), $this->sent(), 'Only the product whose Yotpo values differ' );
+		$this->assertSame( 'shirts', $this->catalog[ $tee->get_id() ]['group_name'] );
+		$this->assertSame( array( 'is_blocklisted' => false, 'review_form_tag' => 'fit' ), $this->catalog[ $tee->get_id() ]['custom_properties'] );
+	}
+
 	public function test_republished_product_that_yotpo_has_blocklisted_is_updated() {
 		$beanie = $this->create_product();
 		$this->put_in_yotpo( $beanie );
