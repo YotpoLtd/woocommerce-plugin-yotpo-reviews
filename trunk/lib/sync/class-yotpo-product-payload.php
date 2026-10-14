@@ -110,7 +110,7 @@ class Yotpo_Product_Payload {
 	 * in alphabetical order if it has several), else a product attribute named "brand".
 	 */
 	private static function brand( $product ) {
-		$names = Yotpo_Product_Tags::term_names( $product->get_id(), 'product_brand' );
+		$names = Yotpo_Product_Terms::names( $product->get_id(), 'product_brand' );
 		return trim( $names ? $names[0] : (string) $product->get_attribute( 'brand' ) );
 	}
 

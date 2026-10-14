@@ -19,6 +19,7 @@ defined( 'ABSPATH' ) || exit;
  * - Yotpo_Catalog_Api:     products and variants in the Yotpo catalog (create, update, look up, blocklist).
  * - Yotpo_Product_Payload: the WooCommerce → Yotpo field mapping.
  * - Yotpo_Product_Tags:    the Y-tag rules (YBlocklist, YGroup_, YCRF_) for the blocklist, group and form tag.
+ * - Yotpo_Product_Terms:   a product's terms (tags, brands) as plain text, shared by the payload, the Y-tags and the jobs.
  */
 class Yotpo_Product_Sync {
 

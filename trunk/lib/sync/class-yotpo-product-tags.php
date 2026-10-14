@@ -12,7 +12,7 @@ defined( 'ABSPATH' ) || exit;
  *
  * Tag names are case-sensitive, the prefix is never part of the value sent (YGroup_shirts is the
  * group "shirts"), and a product with more than one group or form tag gets the first one in
- * alphabetical byte order (term_names() sorts them explicitly).
+ * alphabetical byte order (Yotpo_Product_Terms::names() sorts them explicitly).
  *
  * Only used when the merchant turned on "Use product tags for the blocklist, groups and custom
  * questions" (Yotpo_Product_Sync::tags_on()); then these tags are what Yotpo gets, tag or no tag.
@@ -42,7 +42,7 @@ class Yotpo_Product_Tags {
 	 * @return array{group_name:string, custom_properties:array{is_blocklisted:bool, review_form_tag:string}}
 	 */
 	public static function fields( $product_id ) {
-		$names = self::term_names( $product_id, 'product_tag' );
+		$names = Yotpo_Product_Terms::names( $product_id, 'product_tag' );
 		return array(
 			'group_name'        => self::first_value( $names, self::GROUP_PREFIX, array( __CLASS__, 'group_name' ) ),
 			'custom_properties' => array(
@@ -94,34 +94,5 @@ class Yotpo_Product_Tags {
 			}
 		}
 		return '';
-	}
-
-	/**
-	 * The names of the product's terms in a taxonomy, in alphabetical order (byte order, so
-	 * case-sensitive and stable whatever the database collation), as plain text.
-	 *
-	 * @return string[]
-	 */
-	public static function term_names( $product_id, $taxonomy ) {
-		if ( ! taxonomy_exists( $taxonomy ) ) {
-			return array();
-		}
-		$terms = get_the_terms( $product_id, $taxonomy );
-		if ( ! is_array( $terms ) ) {
-			return array();
-		}
-		$names = array();
-		foreach ( $terms as $term ) {
-			$names[] = self::term_name( $term );
-		}
-		sort( $names, SORT_STRING );
-		return $names;
-	}
-
-	/**
-	 * A term's name as plain text: WordPress stores it with HTML entities (Summer &amp; Sun).
-	 */
-	public static function term_name( $term ) {
-		return html_entity_decode( $term->name, ENT_QUOTES, 'UTF-8' );
 	}
 }
