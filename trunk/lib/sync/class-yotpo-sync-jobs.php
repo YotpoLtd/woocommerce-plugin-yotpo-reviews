@@ -47,6 +47,7 @@ class Yotpo_Sync_Jobs {
 		add_action( 'before_delete_post', array( __CLASS__, 'queue_deleted_post' ) );
 		// Y-tags (see Yotpo_Product_Tags): tags set without a product save (an import, code), and a
 		// Y-tag renamed or deleted under Products > Tags, which changes every product that has it.
+		// edit_terms and pre_delete_term see the tag's old name, edited_term its new one.
 		add_action( 'set_object_terms', array( __CLASS__, 'queue_retagged_product' ), 10, 4 );
 		add_action( 'edit_terms', array( __CLASS__, 'queue_tagged_products' ), 10, 2 );
 		add_action( 'edited_term', array( __CLASS__, 'queue_renamed_tagged_products' ), 10, 3 );
@@ -222,10 +223,11 @@ class Yotpo_Sync_Jobs {
 	}
 
 	/**
-	 * A product tag is about to be renamed (edit_terms) or deleted (pre_delete_term): if it is a
-	 * Y-tag now, every product that has it is synced again. The jobs run afterwards, so they see the
-	 * new name, or no tag. A tag that becomes a Y-tag is caught after the rename
-	 * (queue_renamed_tagged_products()).
+	 * Runs on edit_terms and pre_delete_term, so it sees the tag's old name (via
+	 * queue_renamed_tagged_products() it also runs on edited_term, and sees the new name): if the
+	 * tag is a Y-tag, every product that has it is synced again. The jobs run afterwards, so they
+	 * see the new name, or no tag. A tag that becomes a Y-tag is therefore caught after the rename,
+	 * one that stops being a Y-tag before it.
 	 */
 	public static function queue_tagged_products( $term_id, $taxonomy ) {
 		if ( 'product_tag' !== $taxonomy || ! Yotpo_Product_Sync::tags_on() ) {
@@ -261,8 +263,9 @@ class Yotpo_Sync_Jobs {
 	/**
 	 * A product tag was renamed (edited_term): if it is a Y-tag now, every product that has it is
 	 * synced again. edit_terms only passes the new name from WordPress 6.1; edited_term sees the
-	 * saved name on every version. A Y-tag renamed into another Y-tag is queued twice, which
-	 * queue_product() drops as a duplicate.
+	 * saved name on every version. A Y-tag renamed into another Y-tag is queued twice: the unique
+	 * async action in queue_tagged_products() drops the second page job, and queue_product() drops
+	 * any product job that is queued already.
 	 */
 	public static function queue_renamed_tagged_products( $term_id, $tt_id, $taxonomy ) {
 		self::queue_tagged_products( $term_id, $taxonomy );
