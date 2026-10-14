@@ -32,7 +32,7 @@ class CatalogSyncTest extends Yotpo_Test_Case {
 		$this->assertSame( array( array( 'declared_type' => 'UPC', 'value' => '725272730706' ) ), $sent['gtins'] );
 		$this->assertEquals( 18, $sent['price'] );
 		$this->assertSame( get_woocommerce_currency(), $sent['currency'] );
-		$this->assertFalse( $sent['custom_properties']['is_blocklisted'] );
+		$this->assertArrayNotHasKey( 'custom_properties', $sent, 'No blocklist flag: a blocklist set in Yotpo stays' );
 		$this->assertArrayNotHasKey( 'external_id', $this->requests[3]['body']['product'], 'An update does not resend the external ID' );
 	}
 
@@ -154,6 +154,28 @@ class CatalogSyncTest extends Yotpo_Test_Case {
 		$this->assertSame( 'price must be non-negative', $result->get_error_message() );
 		$this->assertFalse( Yotpo_Catalog_Api::is_retryable( $result ) );
 		$this->assertSame( 333, (int) get_post_meta( $beanie->get_id(), Yotpo_Catalog_Api::META_PRODUCT_ID, true ), 'ID kept' );
+	}
+
+	public function test_product_the_merchant_blocklisted_in_yotpo_is_updated_without_touching_the_blocklist() {
+		$beanie = $this->product_known_as( 333 );
+		$this->route( 'PATCH', '#^/products/333$#', function () {
+			return $this->respond( 200 );
+		} );
+
+		$this->assertSame( 333, Yotpo_Product_Sync::sync_product( $beanie->get_id(), true ) );
+		$this->assertArrayNotHasKey( 'custom_properties', end( $this->requests )['body']['product'] );
+	}
+
+	public function test_republished_product_the_plugin_blocklisted_is_taken_off_the_blocklist() {
+		$beanie = $this->product_known_as( 333 );
+		update_post_meta( $beanie->get_id(), Yotpo_Catalog_Api::META_BLOCKLISTED, '1' );
+		$this->route( 'PATCH', '#^/products/333$#', function () {
+			return $this->respond( 200 );
+		} );
+
+		$this->assertSame( 333, Yotpo_Product_Sync::sync_product( $beanie->get_id(), true ) );
+		$this->assertSame( array( 'is_blocklisted' => false ), end( $this->requests )['body']['product']['custom_properties'] );
+		$this->assertSame( '', get_post_meta( $beanie->get_id(), Yotpo_Catalog_Api::META_BLOCKLISTED, true ), 'Marker cleared: later syncs leave the flag alone' );
 	}
 
 	public function test_unpublished_product_is_blocklisted() {

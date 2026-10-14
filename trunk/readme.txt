@@ -4,7 +4,7 @@ Tags: reviews, social reviews, woocommerce, woocommerce reviews, woocommerce pro
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.10.0
+Stable tag: 1.10.1
 License: GPLv2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -239,7 +239,13 @@ For full installation guide, [please click here](https://support.yotpo.com/docs/
 * Fixed: after a plugin update, the settings page could keep the previous version's styles until the browser cache was cleared
 * Fixed: the Export reviews and Send past orders buttons are now disabled until the app key and secret token are saved
 
+= 1.10.1 - 14/10/2026 =
+* Fixed: the product sync in 1.10.0 took products off the Yotpo blocklist when they had been blocklisted in Yotpo (for example by catalog CSV). The sync now only undoes blocklisting it did itself, for a product that is published again
+
 == Upgrade Notice ==
+
+= 1.10.1 =
+Fixes 1.10.0 taking products off the Yotpo blocklist that were blocklisted in Yotpo. Recommended for every store on 1.10.0.
 
 = 1.10.0 =
 Syncs your product catalog, including variations, to Yotpo in the background. A full sync starts right after the update; you can turn it off with "Sync products to Yotpo" in the Yotpo settings. Also redesigns the settings page.

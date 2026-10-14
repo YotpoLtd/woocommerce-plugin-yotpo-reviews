@@ -283,6 +283,17 @@ class FullSyncCompareTest extends Yotpo_Test_Case {
 		$this->assertSame( Yotpo_Sync_State::STATUS_COMPLETE, Yotpo_Product_Sync::state()['status'] );
 	}
 
+	public function test_product_the_merchant_blocklisted_in_yotpo_stays_blocklisted() {
+		$sample = $this->create_product( 'Sample', 'YT-SAMPLE', '0' );
+		$this->put_in_yotpo( $sample );
+		$this->catalog[ $sample->get_id() ]['custom_properties'] = array( 'is_blocklisted' => true ); // Set by catalog CSV.
+
+		$this->full_sync();
+
+		$this->assertSame( array(), $this->sent(), 'Nothing to send: the blocklist is the merchant\'s' );
+		$this->assertTrue( $this->catalog[ $sample->get_id() ]['custom_properties']['is_blocklisted'] );
+	}
+
 	public function test_republished_product_that_yotpo_has_blocklisted_is_updated() {
 		$beanie = $this->create_product();
 		$this->put_in_yotpo( $beanie );
