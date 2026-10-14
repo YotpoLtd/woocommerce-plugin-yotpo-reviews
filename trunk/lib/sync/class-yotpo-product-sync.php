@@ -63,9 +63,14 @@ class Yotpo_Product_Sync {
 	 * product's Y-tags reach Yotpo (only what differs is sent). Turning them off leaves Yotpo as it
 	 * is. A sync that was just turned on already runs a full sync (setting_changed()), with the tags
 	 * as they are now.
+	 *
+	 * @param bool $tags_were_on Whether the product tags setting was on before the save.
+	 * @param bool $tags_are_on  Whether the product tags setting is on after the save.
+	 * @param bool $sync_was_on  Whether "Sync products to Yotpo" was on before the save.
+	 * @param bool $sync_is_on   Whether "Sync products to Yotpo" is on after the save.
 	 */
-	public static function tags_setting_changed( $was_on, $is_on, $sync_was_on, $sync_is_on ) {
-		if ( ! $was_on && $is_on && $sync_was_on && $sync_is_on ) {
+	public static function tags_setting_changed( $tags_were_on, $tags_are_on, $sync_was_on, $sync_is_on ) {
+		if ( ! $tags_were_on && $tags_are_on && $sync_was_on && $sync_is_on ) {
 			Yotpo_Sync_Jobs::request_full_sync();
 		}
 	}
