@@ -232,7 +232,7 @@ class Yotpo_Sync_Jobs {
 			return;
 		}
 		$term = get_term( $term_id, $taxonomy );
-		if ( ! $term || is_wp_error( $term ) || ! Yotpo_Product_Tags::is_y_tag( html_entity_decode( $term->name, ENT_QUOTES, 'UTF-8' ) ) ) {
+		if ( ! $term || is_wp_error( $term ) || ! Yotpo_Product_Tags::is_y_tag( Yotpo_Product_Tags::term_name( $term ) ) ) {
 			return;
 		}
 		if ( ! self::scheduler_ready() || ! Yotpo_Product_Sync::enabled() ) {

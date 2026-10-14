@@ -42,7 +42,7 @@ class Yotpo_Product_Tags {
 	 * @return array{group_name:string, custom_properties:array{is_blocklisted:bool, review_form_tag:string}}
 	 */
 	public static function fields( $product_id ) {
-		$names = self::tag_names( $product_id );
+		$names = self::term_names( $product_id, 'product_tag' );
 		return array(
 			'group_name'        => self::first_value( $names, self::GROUP_PREFIX, array( __CLASS__, 'group_name' ) ),
 			'custom_properties' => array(
@@ -97,21 +97,31 @@ class Yotpo_Product_Tags {
 	}
 
 	/**
-	 * The product's tag names, in alphabetical order (byte order, so case-sensitive and stable
-	 * whatever the database collation).
+	 * The names of the product's terms in a taxonomy, in alphabetical order (byte order, so
+	 * case-sensitive and stable whatever the database collation), as plain text.
 	 *
 	 * @return string[]
 	 */
-	private static function tag_names( $product_id ) {
-		$terms = get_the_terms( $product_id, 'product_tag' );
+	public static function term_names( $product_id, $taxonomy ) {
+		if ( ! taxonomy_exists( $taxonomy ) ) {
+			return array();
+		}
+		$terms = get_the_terms( $product_id, $taxonomy );
 		if ( ! is_array( $terms ) ) {
 			return array();
 		}
 		$names = array();
 		foreach ( $terms as $term ) {
-			$names[] = html_entity_decode( $term->name, ENT_QUOTES, 'UTF-8' );
+			$names[] = self::term_name( $term );
 		}
 		sort( $names, SORT_STRING );
 		return $names;
+	}
+
+	/**
+	 * A term's name as plain text: WordPress stores it with HTML entities (Summer &amp; Sun).
+	 */
+	public static function term_name( $term ) {
+		return html_entity_decode( $term->name, ENT_QUOTES, 'UTF-8' );
 	}
 }

@@ -110,20 +110,8 @@ class Yotpo_Product_Payload {
 	 * in alphabetical order if it has several), else a product attribute named "brand".
 	 */
 	private static function brand( $product ) {
-		if ( taxonomy_exists( 'product_brand' ) ) {
-			$terms = get_the_terms( $product->get_id(), 'product_brand' );
-			if ( is_array( $terms ) && $terms ) {
-				$names = array_map(
-					function ( $term ) {
-						return html_entity_decode( $term->name, ENT_QUOTES, 'UTF-8' );
-					},
-					$terms
-				);
-				sort( $names, SORT_STRING );
-				return trim( $names[0] );
-			}
-		}
-		return trim( (string) $product->get_attribute( 'brand' ) );
+		$names = Yotpo_Product_Tags::term_names( $product->get_id(), 'product_brand' );
+		return trim( $names ? $names[0] : (string) $product->get_attribute( 'brand' ) );
 	}
 
 	/**
