@@ -138,11 +138,14 @@ class ProductTagsTest extends Yotpo_Test_Case {
 		$this->assertSame( array(), $this->pending_jobs(), 'Not a Y-tag' );
 
 		wp_update_term( $term->term_id, 'product_tag', array( 'name' => 'YGroup_tops' ) );
+		$this->assertSame( array(), $this->queued_products(), 'Queued in the background, not in the request' );
+		$this->run_tagged_products_jobs();
 		$this->assertEqualsCanonicalizing( array( $shirt->get_id(), $tee->get_id() ), $this->queued_products() );
 		$this->assertSame( 'tops', Yotpo_Product_Sync::product_payload( wc_get_product( $shirt->get_id() ) )['group_name'] );
 
 		as_unschedule_all_actions( '', array(), Yotpo_Sync_Jobs::GROUP );
 		wp_delete_term( $term->term_id, 'product_tag' );
+		$this->run_tagged_products_jobs();
 		$this->assertEqualsCanonicalizing( array( $shirt->get_id(), $tee->get_id() ), $this->queued_products() );
 		$this->assertSame( '', Yotpo_Product_Sync::product_payload( wc_get_product( $shirt->get_id() ) )['group_name'] );
 	}
@@ -153,6 +156,7 @@ class ProductTagsTest extends Yotpo_Test_Case {
 		as_unschedule_all_actions( '', array(), Yotpo_Sync_Jobs::GROUP );
 
 		wp_update_term( get_term_by( 'name', 'blocked', 'product_tag' )->term_id, 'product_tag', array( 'name' => 'YBlocklist' ) );
+		$this->run_tagged_products_jobs();
 
 		$this->assertSame( array( $product->get_id() ), $this->queued_products() );
 	}
@@ -222,6 +226,13 @@ class ProductTagsTest extends Yotpo_Test_Case {
 	}
 
 	/** The product IDs of the queued product jobs. */
+	/** Runs the jobs that queue a renamed or deleted Y-tag's products, and nothing else. */
+	private function run_tagged_products_jobs() {
+		foreach ( array_keys( $this->pending_jobs( Yotpo_Sync_Jobs::HOOK_TAGGED ) ) as $action_id ) {
+			ActionScheduler_QueueRunner::instance()->process_action( $action_id, 'phpunit' );
+		}
+	}
+
 	private function queued_products() {
 		return array_values(
 			array_map(

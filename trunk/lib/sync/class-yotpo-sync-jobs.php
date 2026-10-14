@@ -28,11 +28,13 @@ class Yotpo_Sync_Jobs {
 	const HOOK_PRODUCT      = 'wc_yotpo_sync_product';
 	const HOOK_BATCH        = 'wc_yotpo_sync_product_batch';
 	const HOOK_VARIANT_GONE = 'wc_yotpo_discontinue_variant';
+	const HOOK_TAGGED       = 'wc_yotpo_sync_tagged_products';
 
 	public static function register() {
 		add_action( self::HOOK_PRODUCT, array( __CLASS__, 'run_product_job' ), 10, 3 );
 		add_action( self::HOOK_BATCH, array( __CLASS__, 'run_batch_job' ), 10, 1 );
 		add_action( self::HOOK_VARIANT_GONE, array( __CLASS__, 'run_variant_gone_job' ), 10, 3 );
+		add_action( self::HOOK_TAGGED, array( __CLASS__, 'run_tagged_products_job' ), 10, 1 );
 
 		// The kill switch is checked where jobs are queued and run, not here: a filter added after
 		// plugins_loaded (theme, mu-plugin) must still take effect.
@@ -233,8 +235,25 @@ class Yotpo_Sync_Jobs {
 		if ( ! $term || is_wp_error( $term ) || ! Yotpo_Product_Tags::is_y_tag( html_entity_decode( $term->name, ENT_QUOTES, 'UTF-8' ) ) ) {
 			return;
 		}
+		if ( ! self::scheduler_ready() || ! Yotpo_Product_Sync::enabled() ) {
+			return;
+		}
+		// One job per page of products, not one per product: a Y-tag can be on thousands of products,
+		// and this runs inside the admin request. The jobs queue the product jobs (run_tagged_products_job()).
+		// The IDs are listed now: after a delete the tag no longer has any products.
 		$product_ids = get_objects_in_term( (int) $term_id, $taxonomy );
-		foreach ( is_array( $product_ids ) ? $product_ids : array() as $product_id ) {
+		foreach ( array_chunk( is_array( $product_ids ) ? array_map( 'intval', $product_ids ) : array(), self::BATCH_SIZE ) as $page_ids ) {
+			as_enqueue_async_action( self::HOOK_TAGGED, array( $page_ids ), self::GROUP, true );
+		}
+	}
+
+	/**
+	 * Queues the product job of each product of a page of a renamed or deleted Y-tag's products.
+	 *
+	 * @param int[] $product_ids
+	 */
+	public static function run_tagged_products_job( $product_ids ) {
+		foreach ( (array) $product_ids as $product_id ) {
 			self::queue_product( (int) $product_id );
 		}
 	}
