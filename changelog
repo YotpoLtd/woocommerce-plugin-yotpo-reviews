@@ -240,3 +240,8 @@ Version 1.10.0
 4) Redesigned settings page in the Yotpo design system; the secret token is masked once saved.
 5) Fixed: the settings page's CSS and JS kept the browser-cached copy after an update (they are now versioned by file time).
 6) Fixed: Export reviews and Send past orders buttons are disabled until the app key and secret token are saved.
+
+2026-10-14
+---
+Version 1.10.1
+1) Fixed: the product sync sent is_blocklisted = false for every published product, so 1.10.0 took products off the Yotpo blocklist that merchants had blocklisted in Yotpo (catalog CSV, Yotpo admin). The flag is now only sent to undo the plugin's own blocklisting, when a product it blocklisted while unpublished is published again.

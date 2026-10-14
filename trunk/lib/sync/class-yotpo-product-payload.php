@@ -18,8 +18,13 @@ class Yotpo_Product_Payload {
 			'status'            => 'active',
 			'url'               => self::limit( get_permalink( $product->get_id() ), 2048 ),
 			'currency'          => get_woocommerce_currency(),
-			'custom_properties' => array( 'is_blocklisted' => false ),
 		);
+		// The blocklist flag is only sent to undo the plugin's own blocklisting, of a product that was
+		// unpublished and is published again. A product the merchant blocklisted in Yotpo (catalog CSV,
+		// Yotpo admin) keeps that: 1.10.0 always sent false here, which took such products off the blocklist.
+		if ( get_post_meta( $product->get_id(), Yotpo_Catalog_Api::META_BLOCKLISTED, true ) ) {
+			$payload['custom_properties'] = array( 'is_blocklisted' => false );
+		}
 		$image = wc_yotpo_get_product_image_url( $product->get_id() );
 		if ( $image ) {
 			$payload['image_url'] = self::limit( $image, 2048 );
