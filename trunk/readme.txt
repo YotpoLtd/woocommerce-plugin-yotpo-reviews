@@ -4,7 +4,7 @@ Tags: reviews, social reviews, woocommerce, woocommerce reviews, woocommerce pro
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.9.0
+Stable tag: 1.10.0
 License: GPLv2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -229,13 +229,20 @@ For full installation guide, [please click here](https://support.yotpo.com/docs/
 * Category widgets (star ratings, Reviews Carousel, Promoted Products, Reviews Tab) now also show on WooCommerce product category, tag and attribute pages, not only on the Shop page
 * Home page widgets now also show on stores that use a static front page
 
-= 1.10.0 =
+= 1.10.0 - 13/10/2026 =
 * New: product catalog sync to Yotpo through the Yotpo Core API (V3), including variations as variants. Runs in the background (Action Scheduler), paced to Yotpo's rate limit
 * Deleted, trashed or unpublished products are blocklisted in Yotpo; disabled or deleted variations are marked discontinued
 * New setting "Sync products to Yotpo" (on by default) with the sync's status; turning it back on runs a full sync
+* The full sync first compares the catalog with Yotpo, 100 products per request, and only sends products and variations that are missing or different
 * New WP-CLI commands: wp yotpo product-sync status | start | product <id>
+* Redesigned settings page. The secret token is now masked once saved
+* Fixed: after a plugin update, the settings page could keep the previous version's styles until the browser cache was cleared
+* Fixed: the Export reviews and Send past orders buttons are now disabled until the app key and secret token are saved
 
 == Upgrade Notice ==
+
+= 1.10.0 =
+Syncs your product catalog, including variations, to Yotpo in the background. A full sync starts right after the update; you can turn it off with "Sync products to Yotpo" in the Yotpo settings. Also redesigns the settings page.
 
 = 1.9.0 =
 Star ratings, Reviews Carousel, Promoted Products and the Reviews Tab now also show on product category pages and static home pages. To keep them off those pages, turn off the matching toggles in the Yotpo settings before updating.
