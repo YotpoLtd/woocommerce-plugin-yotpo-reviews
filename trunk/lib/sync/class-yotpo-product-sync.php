@@ -18,6 +18,7 @@ defined( 'ABSPATH' ) || exit;
  * - Yotpo_Sync_State:      the full sync's state and counters.
  * - Yotpo_Catalog_Api:     products and variants in the Yotpo catalog (create, update, look up, blocklist).
  * - Yotpo_Product_Payload: the WooCommerce → Yotpo field mapping.
+ * - Yotpo_Product_Tags:    the Y-tag rules (YBlocklist, YGroup_, YCRF_) for the blocklist, group and form tag.
  */
 class Yotpo_Product_Sync {
 
