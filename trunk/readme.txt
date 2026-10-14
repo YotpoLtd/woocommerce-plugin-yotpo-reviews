@@ -4,7 +4,7 @@ Tags: reviews, social reviews, woocommerce, woocommerce reviews, woocommerce pro
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.10.1
+Stable tag: 1.11.0
 License: GPLv2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -242,11 +242,14 @@ For full installation guide, [please click here](https://support.yotpo.com/docs/
 = 1.10.1 - 14/10/2026 =
 * Fixed: the product sync in 1.10.0 took products off the Yotpo blocklist when they had been blocklisted in Yotpo (for example by catalog CSV). The sync now only undoes blocklisting it did itself, for a product that is published again
 
-= 1.11.0 =
+= 1.11.0 - 14/10/2026 =
 * New setting "Use product tags for the blocklist, groups and custom questions" (off by default): tag products with YBlocklist, YGroup_<group> or YCRF_<form tag> to set their Yotpo blocklist, review group and custom question form
 * The product sync sends the brand from WooCommerce Brands, and barcodes from WooCommerce's GTIN, UPC, EAN or ISBN field, before falling back to the brand, upc, isbn and ean attributes
 
 == Upgrade Notice ==
+
+= 1.11.0 =
+Adds an optional setting to manage the Yotpo blocklist, review groups and custom question forms with product tags (off by default, nothing changes until you turn it on). Also sends the brand from WooCommerce Brands and barcodes from WooCommerce's GTIN field.
 
 = 1.10.1 =
 Fixes 1.10.0 taking products off the Yotpo blocklist that were blocklisted in Yotpo. Recommended for every store on 1.10.0.
