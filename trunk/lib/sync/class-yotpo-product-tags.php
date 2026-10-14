@@ -12,7 +12,7 @@ defined( 'ABSPATH' ) || exit;
  *
  * Tag names are case-sensitive, the prefix is never part of the value sent (YGroup_shirts is the
  * group "shirts"), and a product with more than one group or form tag gets the first one in
- * alphabetical byte order (tag_names() sorts them explicitly).
+ * alphabetical byte order (term_names() sorts them explicitly).
  *
  * Only used when the merchant turned on "Use product tags for the blocklist, groups and custom
  * questions" (Yotpo_Product_Sync::tags_on()); then these tags are what Yotpo gets, tag or no tag.
