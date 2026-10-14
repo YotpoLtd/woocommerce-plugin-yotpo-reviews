@@ -115,10 +115,7 @@ function wc_proccess_yotpo_settings() {
     'debug_mode' => isset($_POST['debug_mode']) ? true : false);
   update_option('yotpo_settings', $new_settings);
   Yotpo_Product_Sync::setting_changed($product_sync_was_on, $new_settings['product_sync_enabled']);
-  // A sync just turned on already runs a full sync, with the tags as they are now.
-  if ($product_sync_was_on && $new_settings['product_sync_enabled']) {
-    Yotpo_Product_Sync::tags_setting_changed($tags_were_on, $new_settings['product_sync_tags']);
-  }
+  Yotpo_Product_Sync::tags_setting_changed($tags_were_on, $new_settings['product_sync_tags'], $product_sync_was_on, $new_settings['product_sync_enabled']);
   if ($current_settings['disable_native_review_system'] != $new_settings['disable_native_review_system']) {
     if ($new_settings['disable_native_review_system'] == false) {
       update_option('woocommerce_enable_review_rating', get_option('native_star_ratings_enabled'));

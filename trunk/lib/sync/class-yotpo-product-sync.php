@@ -56,12 +56,14 @@ class Yotpo_Product_Sync {
 	}
 
 	/**
-	 * Called after the settings are saved, while the sync stays on: turning the product tags on
-	 * starts a full sync so every product's Y-tags reach Yotpo (only what differs is sent). Turning
-	 * them off leaves Yotpo as it is.
+	 * Called after the settings are saved, with the product tags setting and the sync setting before
+	 * and after: turning the product tags on while the sync stays on starts a full sync so every
+	 * product's Y-tags reach Yotpo (only what differs is sent). Turning them off leaves Yotpo as it
+	 * is. A sync that was just turned on already runs a full sync (setting_changed()), with the tags
+	 * as they are now.
 	 */
-	public static function tags_setting_changed( $were_on, $are_on ) {
-		if ( ! $were_on && $are_on ) {
+	public static function tags_setting_changed( $was_on, $is_on, $sync_was_on, $sync_is_on ) {
+		if ( ! $was_on && $is_on && $sync_was_on && $sync_is_on ) {
 			Yotpo_Sync_Jobs::request_full_sync();
 		}
 	}

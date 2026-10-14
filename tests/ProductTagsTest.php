@@ -76,15 +76,24 @@ class ProductTagsTest extends Yotpo_Test_Case {
 
 	public function test_turning_the_tags_on_starts_a_full_sync() {
 		$this->set_setting( 'product_sync_tags', true );
-		Yotpo_Product_Sync::tags_setting_changed( false, true );
+		Yotpo_Product_Sync::tags_setting_changed( false, true, true, true );
 
 		$this->assertCount( 1, $this->pending_jobs( Yotpo_Sync_Jobs::HOOK_BATCH ) );
 		$this->assertSame( Yotpo_Sync_State::STATUS_RUNNING, Yotpo_Product_Sync::state()['status'] );
 	}
 
 	public function test_turning_the_tags_off_leaves_yotpo_as_it_is() {
-		Yotpo_Product_Sync::tags_setting_changed( true, false );
+		Yotpo_Product_Sync::tags_setting_changed( true, false, true, true );
 		$this->assertSame( array(), $this->pending_jobs() );
+	}
+
+	public function test_turning_the_tags_on_with_the_sync_does_not_start_a_second_full_sync() {
+		$this->set_setting( 'product_sync_tags', true );
+		Yotpo_Product_Sync::tags_setting_changed( false, true, false, true );
+		$this->assertSame( array(), $this->pending_jobs(), 'The sync turned on starts the full sync, setting_changed()' );
+
+		Yotpo_Product_Sync::tags_setting_changed( false, true, true, false );
+		$this->assertSame( array(), $this->pending_jobs(), 'The sync is off' );
 	}
 
 	public function test_turning_the_tags_on_during_a_full_sync_runs_another_once_it_is_done() {
