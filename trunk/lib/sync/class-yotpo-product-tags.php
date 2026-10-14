@@ -57,7 +57,8 @@ class Yotpo_Product_Tags {
 	 * accept as "-", at most GROUP_MAX characters. Empty when nothing usable is left.
 	 */
 	public static function group_name( $value ) {
-		// By character, not by byte: "Café" is "caf-", not "caf--". (A name that isn't valid UTF-8 is left empty.)
+		// By character, not by byte: "Café" is "caf-", not "caf--". (Without mbstring, a name that isn't
+		// valid UTF-8 is left empty; with it, an invalid byte becomes "-".)
 		$value = trim( (string) $value );
 		$value = function_exists( 'mb_strtolower' ) ? mb_strtolower( $value, 'UTF-8' ) : strtolower( $value );
 		$value = (string) preg_replace( '/\s+/u', '_', $value );
