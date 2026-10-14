@@ -237,7 +237,6 @@ class ProductTagsTest extends Yotpo_Test_Case {
 		return wc_get_product( $product->get_id() );
 	}
 
-	/** The product IDs of the queued product jobs. */
 	/** Runs the jobs that queue a renamed or deleted Y-tag's products, and nothing else. */
 	private function run_tagged_products_jobs() {
 		foreach ( array_keys( $this->pending_jobs( Yotpo_Sync_Jobs::HOOK_TAGGED ) ) as $action_id ) {
@@ -245,6 +244,7 @@ class ProductTagsTest extends Yotpo_Test_Case {
 		}
 	}
 
+	/** The product IDs of the queued product jobs. */
 	private function queued_products() {
 		return array_values(
 			array_map(
