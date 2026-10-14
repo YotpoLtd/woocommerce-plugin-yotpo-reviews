@@ -57,10 +57,12 @@ class Yotpo_Product_Tags {
 	 * accept as "-", at most GROUP_MAX characters. Empty when nothing usable is left.
 	 */
 	public static function group_name( $value ) {
-		$value = strtolower( trim( (string) $value ) );
-		$value = preg_replace( '/\s+/', '_', $value );
-		$value = preg_replace( '/[^a-z0-9_-]/', '-', $value );
-		$value = substr( $value, 0, self::GROUP_MAX );
+		// By character, not by byte: "Café" is "caf-", not "caf--". (A name that isn't valid UTF-8 is left empty.)
+		$value = trim( (string) $value );
+		$value = function_exists( 'mb_strtolower' ) ? mb_strtolower( $value, 'UTF-8' ) : strtolower( $value );
+		$value = (string) preg_replace( '/\s+/u', '_', $value );
+		$value = (string) preg_replace( '/[^a-z0-9_-]/u', '-', $value );
+		$value = substr( $value, 0, self::GROUP_MAX ); // Only ASCII is left.
 		return '' === trim( $value, '_-' ) ? '' : $value;
 	}
 

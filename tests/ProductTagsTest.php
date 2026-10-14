@@ -58,6 +58,9 @@ class ProductTagsTest extends Yotpo_Test_Case {
 		$this->assertSame( 'summer_shirts', Yotpo_Product_Tags::group_name( 'Summer Shirts' ) );
 		$this->assertSame( 'kids-tops', Yotpo_Product_Tags::group_name( "kids'tops" ) );
 		$this->assertSame( 'a-b', Yotpo_Product_Tags::group_name( 'a&b' ) );
+		$this->assertSame( 'caf-', Yotpo_Product_Tags::group_name( 'Café' ), 'One dash per character, not per byte' );
+		$this->assertSame( 'z-rich', Yotpo_Product_Tags::group_name( 'Zürich' ) );
+		$this->assertSame( 'a_b', Yotpo_Product_Tags::group_name( "a\xC2\xA0b" ), 'A non-breaking space is a space' );
 		$this->assertSame( 100, strlen( Yotpo_Product_Tags::group_name( str_repeat( 'x', 150 ) ) ) );
 		$this->assertSame( '', Yotpo_Product_Tags::group_name( '!!' ), 'Nothing usable left' );
 
