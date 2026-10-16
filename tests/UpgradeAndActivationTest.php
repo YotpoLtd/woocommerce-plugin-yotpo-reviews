@@ -29,6 +29,38 @@ class UpgradeAndActivationTest extends Yotpo_Test_Case {
 		$this->assertSame( 'wc-processing', $settings['yotpo_order_status'] );
 	}
 
+	public function test_missing_keys_keep_the_behaviour_they_had_before_they_existed() {
+		update_option( 'yotpo_settings', $this->old_settings() );
+
+		$settings = get_option( 'yotpo_settings' );
+
+		$this->assertSame( 'v2', $settings['widget_version'] );
+		$this->assertFalse( use_v3_widgets(), 'Still on the v2 widgets' );
+		$this->assertFalse( $settings['yotpo_language_as_site'], 'The saved language_code is used' );
+		$this->assertFalse( $settings['disable_native_review_system'], 'Native reviews are kept' );
+		$this->assertFalse( $settings['show_submit_past_orders'] );
+	}
+
+	public function test_saved_values_win_over_the_legacy_behaviour() {
+		update_option(
+			'yotpo_settings',
+			array_merge(
+				$this->old_settings(),
+				array(
+					'widget_version'               => 'v3',
+					'yotpo_language_as_site'       => true,
+					'disable_native_review_system' => true,
+				)
+			)
+		);
+
+		$settings = get_option( 'yotpo_settings' );
+
+		$this->assertTrue( use_v3_widgets() );
+		$this->assertTrue( $settings['yotpo_language_as_site'] );
+		$this->assertTrue( $settings['disable_native_review_system'] );
+	}
+
 	public function test_saved_nested_values_win_over_the_defaults() {
 		$settings                                         = $this->old_settings();
 		$settings['v3_widgets_enables']                   = array( 'reviews_widget_product' => false );
