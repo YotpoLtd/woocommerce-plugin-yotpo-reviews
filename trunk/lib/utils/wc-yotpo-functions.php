@@ -27,9 +27,7 @@ function wc_yotpo_is_woocommerce_active() {
 	return class_exists( 'WooCommerce' );
 }
 
-// After activation, an admin's next wp-admin page opens the Yotpo settings, once. It used to run on
-// every request (init), so the first request after activation, a shopper's or an AJAX call's, could
-// be the one redirected (GitHub issue #26).
+// After activation, an admin's next wp-admin page opens the Yotpo settings, once.
 function wc_yotpo_redirect() {
 	if ( ! get_option( 'wc_yotpo_just_installed', false ) || ! wc_yotpo_can_redirect_after_activation() ) {
 		return;
