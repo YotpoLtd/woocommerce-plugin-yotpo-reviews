@@ -47,7 +47,7 @@ function wc_yotpo_redirect() {
 	exit;
 }
 
-// Only a wp-admin page an admin opens: not a shopper, not AJAX, cron or WP-CLI.
+// Registered on admin_init, which also fires for admin-ajax.php: only an admin's page load redirects.
 function wc_yotpo_can_redirect_after_activation() {
-	return is_admin() && ! wp_doing_ajax() && ! wp_doing_cron() && ! ( defined( 'WP_CLI' ) && WP_CLI ) && current_user_can( 'manage_options' );
+	return ! wp_doing_ajax() && current_user_can( 'manage_options' );
 }
