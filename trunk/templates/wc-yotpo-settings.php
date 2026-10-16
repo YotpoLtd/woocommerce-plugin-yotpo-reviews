@@ -152,7 +152,7 @@ function wc_display_yotpo_settings($success_type = false) {
             'yotpo_widget_language_code',
             $language_code,
             'Widget language',
-            "The 2-letter language code for the widgets, such as en or fr. <a href='http://support.yotpo.com/entries/21861473-Languages-Customization-' target='_blank' rel='noopener'>Supported languages</a>",
+            "The 2-letter language code for the widgets, such as en or fr. <a href='https://support.yotpo.com/docs/languages-yotpo-supports-for-widgets' target='_blank' rel='noopener'>Supported languages</a>",
             "maxlength='5'",
             '',
             'yotpo-input--short'
@@ -198,7 +198,7 @@ function wc_display_yotpo_settings($success_type = false) {
         "<div class='yotpo-row'>
             <div class='yotpo-row__text'>
                 <span class='yotpo-label'>Export reviews</span>
-                <p class='yotpo-help'>Downloads your WooCommerce reviews as a CSV file to import into Yotpo. <a href='https://support.yotpo.com/docs/woocommerce-installing-yotpo#4-importing-your-reviews-to-yotpo' target='_blank' rel='noopener'>How to import them</a></p>
+                <p class='yotpo-help'>Downloads your WooCommerce reviews as a CSV file to import into Yotpo. <a href='https://support.yotpo.com/docs/woocommerce-installing-yotpo#step-4-import-your-existing-reviews' target='_blank' rel='noopener'>How to import them</a></p>
             </div>
             <div class='yotpo-row__control'>
                 <button type='button' id='yotpo-export-reviews' class='yotpo-btn yotpo-btn--outline' " . disabled(true, $no_credentials, false) . ">Export reviews</button>

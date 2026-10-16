@@ -24,7 +24,9 @@ register_activation_hook(   __FILE__, 'wc_yotpo_activation' );
 register_uninstall_hook( __FILE__, 'wc_yotpo_uninstall' );
 register_deactivation_hook( __FILE__, 'wc_yotpo_deactivate' );
 add_action('plugins_loaded', 'wc_yotpo_init');
-add_action('init', 'wc_yotpo_redirect');
+add_action('admin_init', 'wc_yotpo_redirect');
+// Settings saved by an older version lack the keys added since: fill them in on every read.
+add_filter('option_yotpo_settings', 'wc_yotpo_fill_missing_settings');
 add_action( 'woocommerce_order_status_changed', 'wc_yotpo_map');
 add_action( 'before_woocommerce_init', 'wc_declare_hops_support' );
 require plugin_dir_path( __FILE__ ) . 'lib/widgets/qna-widget.php';

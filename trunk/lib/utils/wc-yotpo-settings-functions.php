@@ -159,7 +159,7 @@ function wc_display_yotpo_register() {
         'Already have a Yotpo account?',
         'Enter your app key and secret token to connect this store.',
         "<div class='yotpo-field'><input type='submit' name='log_in_button' value='Enter your keys' class='yotpo-btn yotpo-btn--outline' /></div>
-        <p class='yotpo-help'>Learn <a href='http://support.yotpo.com/entries/24454261-Exporting-reviews-for-Woocommerce' target='_blank' rel='noopener'>how to export your existing reviews</a> into Yotpo.</p>"
+        <p class='yotpo-help'>Learn <a href='https://support.yotpo.com/docs/woocommerce-installing-yotpo#step-4-import-your-existing-reviews' target='_blank' rel='noopener'>how to export your existing reviews</a> into Yotpo.</p>"
       ) . "
     </form>
   </div>";

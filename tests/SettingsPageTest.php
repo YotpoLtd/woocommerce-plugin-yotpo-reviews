@@ -115,7 +115,7 @@ class SettingsPageTest extends Yotpo_Test_Case {
 	 * the settings the page showed.
 	 */
 	private function assert_save_keeps_settings() {
-		$before = get_option( 'yotpo_settings' );
+		$before = $this->stored_settings();
 		$_POST  = $this->submission( $this->render() ) + array( 'yotpo_settings' => 'Save changes' );
 
 		ob_start();
@@ -124,11 +124,19 @@ class SettingsPageTest extends Yotpo_Test_Case {
 
 		// The save handler writes the settings it manages; native_star_ratings_enabled, a key only the
 		// defaults have, was never among them (the plugin reads a separate option of that name).
-		$after = get_option( 'yotpo_settings' );
+		$after = $this->stored_settings();
 		$this->assertSame( array( 'native_star_ratings_enabled' ), array_values( array_diff( array_keys( $before ), array_keys( $after ) ) ) );
 		foreach ( $after as $key => $value ) {
 			$this->assertEquals( $before[ $key ], $value, "Setting $key changed" );
 		}
+	}
+
+	/** The settings as stored, without the keys wc_yotpo_fill_missing_settings() adds on every read. */
+	private function stored_settings() {
+		remove_filter( 'option_yotpo_settings', 'wc_yotpo_fill_missing_settings' );
+		$settings = get_option( 'yotpo_settings' );
+		add_filter( 'option_yotpo_settings', 'wc_yotpo_fill_missing_settings' );
+		return $settings;
 	}
 
 	private function render() {
