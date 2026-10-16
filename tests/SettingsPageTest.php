@@ -122,10 +122,10 @@ class SettingsPageTest extends Yotpo_Test_Case {
 		wc_proccess_yotpo_settings();
 		ob_end_clean();
 
-		// The save handler writes the settings it manages; native_star_ratings_enabled, a key only the
-		// defaults have, was never among them (the plugin reads a separate option of that name).
+		// Missing keys are filled in from the defaults on every read (wc_yotpo_fill_missing_settings()),
+		// so before and after have the same keys.
 		$after = get_option( 'yotpo_settings' );
-		$this->assertSame( array( 'native_star_ratings_enabled' ), array_values( array_diff( array_keys( $before ), array_keys( $after ) ) ) );
+		$this->assertEqualsCanonicalizing( array_keys( $before ), array_keys( $after ) );
 		foreach ( $after as $key => $value ) {
 			$this->assertEquals( $before[ $key ], $value, "Setting $key changed" );
 		}

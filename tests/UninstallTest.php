@@ -11,6 +11,8 @@ class UninstallTest extends Yotpo_Test_Case {
 			update_post_meta( $product->get_id(), $key, '1' );
 		}
 		update_option( 'wc_yotpo_v3_token', array( 'token' => 'x' ) );
+		update_option( 'wc_yotpo_just_installed', true );
+		update_option( 'native_star_ratings_enabled', 'yes' );
 		update_option( Yotpo_Sync_State::STATE_OPTION, array( 'status' => 'complete' ) );
 		update_option( Yotpo_Sync_State::LOCK_OPTION, '1:x' );
 		set_transient( Yotpo_Sync_Jobs::PAUSE_TRANSIENT, time() + 60, 60 );
@@ -23,7 +25,7 @@ class UninstallTest extends Yotpo_Test_Case {
 		}
 		include dirname( __DIR__ ) . '/trunk/uninstall.php';
 
-		foreach ( array( 'yotpo_settings', 'wc_yotpo_v3_token', Yotpo_Sync_State::STATE_OPTION, Yotpo_Sync_State::LOCK_OPTION ) as $option ) {
+		foreach ( array( 'yotpo_settings', 'wc_yotpo_v3_token', 'wc_yotpo_just_installed', 'native_star_ratings_enabled', Yotpo_Sync_State::STATE_OPTION, Yotpo_Sync_State::LOCK_OPTION ) as $option ) {
 			$this->assertFalse( get_option( $option ), "Option $option left behind" );
 		}
 		foreach ( array( Yotpo_Sync_Jobs::PAUSE_TRANSIENT, Yotpo_Sync_Jobs::RECHECK_TRANSIENT ) as $transient ) {

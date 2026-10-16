@@ -1,6 +1,10 @@
 <?php
 if( !defined('WP_UNINSTALL_PLUGIN') ) exit();
 delete_option('yotpo_settings');
+// Set on activation: the one-time redirect to the settings, and WooCommerce's star rating setting
+// from before (restored on deactivation, which runs before uninstall).
+delete_option('wc_yotpo_just_installed');
+delete_option('native_star_ratings_enabled');
 
 // Product sync (Core API V3): access token, sync state, throttle flags, stored Yotpo IDs and queued jobs.
 // These names must match the constants in Yotpo_V3_Client (TOKEN_OPTION), Yotpo_Sync_State (STATE_OPTION,

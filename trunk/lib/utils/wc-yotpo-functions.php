@@ -27,16 +27,27 @@ function wc_yotpo_is_woocommerce_active() {
 	return class_exists( 'WooCommerce' );
 }
 
+// After activation, an admin's next wp-admin page opens the Yotpo settings, once. It used to run on
+// every request (init), so the first request after activation, a shopper's or an AJAX call's, could
+// be the one redirected (GitHub issue #26).
 function wc_yotpo_redirect() {
-	if ( get_option('wc_yotpo_just_installed', false)) {
-		delete_option('wc_yotpo_just_installed');
-		// wc_yotpo_init() never registers the settings page (admin_menu -> wc_yotpo_admin_settings)
-		// when WooCommerce is inactive, so redirecting there would land on an unregistered
-		// menu slug and produce an access-denied error instead of a no-op.
-		if ( ! wc_yotpo_is_woocommerce_active() ) {
-			return;
-		}
-		wp_redirect( ( ( is_ssl() || force_ssl_admin() ) ? str_replace( 'http:', 'https:', admin_url( 'admin.php?page=woocommerce-yotpo-settings-page' ) ) : str_replace( 'https:', 'http:', admin_url( 'admin.php?page=woocommerce-yotpo-settings-page' ) ) ) );
-		exit;
-	}	
+	if ( ! get_option( 'wc_yotpo_just_installed', false ) || ! wc_yotpo_can_redirect_after_activation() ) {
+		return;
+	}
+	delete_option( 'wc_yotpo_just_installed' );
+	// wc_yotpo_init() never registers the settings page (admin_menu -> wc_yotpo_admin_settings)
+	// when WooCommerce is inactive, so redirecting there would land on an unregistered
+	// menu slug and produce an access-denied error instead of a no-op. After a bulk activation,
+	// WordPress shows the plugins list, as for other plugins.
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- WordPress's own flag after a bulk activation, only checked for presence.
+	if ( ! wc_yotpo_is_woocommerce_active() || isset( $_GET['activate-multi'] ) ) {
+		return;
+	}
+	wp_safe_redirect( admin_url( 'admin.php?page=woocommerce-yotpo-settings-page' ) );
+	exit;
+}
+
+// Only a wp-admin page an admin opens: not a shopper, not AJAX, cron or WP-CLI.
+function wc_yotpo_can_redirect_after_activation() {
+	return is_admin() && ! wp_doing_ajax() && ! wp_doing_cron() && ! ( defined( 'WP_CLI' ) && WP_CLI ) && current_user_can( 'manage_options' );
 }
