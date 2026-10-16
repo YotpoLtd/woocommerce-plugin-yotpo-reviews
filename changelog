@@ -251,3 +251,10 @@ Version 1.10.1
 Version 1.11.0
 1) New setting "Use product tags for the blocklist, groups and custom questions" (off by default): tag products with YBlocklist, YGroup_<group> or YCRF_<form tag> to set their Yotpo blocklist, review group and custom question form. Turning it on runs a full sync; renaming or deleting a Y-tag under Products > Tags syncs the products that have it.
 2) The product sync sends the brand from WooCommerce Brands and barcodes from the WooCommerce GTIN, UPC, EAN or ISBN field, before falling back to the brand, upc, isbn and ean attributes.
+
+2026-10-16
+---
+Version 1.11.1
+1) Fixed (GitHub #69): settings saved by an older version lack the keys added since, and reading a missing key failed after updating. Every read of yotpo_settings now fills missing keys, nested ones too: every switch off (so no widget appears by itself), v2 widgets, the product sync on. Saved values win.
+2) Fixed (GitHub #26): the one-time redirect to the settings after activation ran on every request, so a shopper's or a background request could be redirected. It now happens once, for an admin in wp-admin; a bulk activation uses it up. Uninstall also deletes wc_yotpo_just_installed and native_star_ratings_enabled.
+3) Fixed (GitHub #76, #37): the links to the supported widget languages and to importing reviews.

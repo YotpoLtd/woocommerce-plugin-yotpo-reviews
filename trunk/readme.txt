@@ -4,7 +4,7 @@ Tags: reviews, social reviews, woocommerce, woocommerce reviews, woocommerce pro
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.11.0
+Stable tag: 1.11.1
 License: GPLv2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -246,13 +246,16 @@ For full installation guide, [please click here](https://support.yotpo.com/docs/
 * New setting "Use product tags for the blocklist, groups and custom questions" (off by default): tag products with YBlocklist, YGroup_<group> or YCRF_<form tag> to set their Yotpo blocklist, review group and custom question form
 * The product sync sends the brand from WooCommerce Brands, and barcodes from WooCommerce's GTIN, UPC, EAN or ISBN field, before falling back to the brand, upc, isbn and ean attributes
 
-= 1.11.1 =
-* Fixed: settings saved by an older version of the plugin caused errors after updating; missing settings now get their default values
+= 1.11.1 - 16/10/2026 =
+* Fixed: settings saved by an older version of the plugin caused errors after updating. Settings that didn't exist yet now read as they did before, so no widget or setting turns on by itself
 * Fixed: after activation, only an admin opening wp-admin is taken to the Yotpo settings, once; shoppers and background requests are never redirected
 * Fixed: the settings page's links to the supported widget languages and to importing reviews
 * Uninstalling also removes the plugin's activation options
 
 == Upgrade Notice ==
+
+= 1.11.1 =
+Fixes errors after updating from an old version of the plugin, and a redirect to the Yotpo settings that could reach shoppers right after activation. Also fixes two help links.
 
 = 1.11.0 =
 Adds an optional setting to manage the Yotpo blocklist, review groups and custom question forms with product tags (off by default, nothing changes until you turn it on). Also sends the brand from WooCommerce Brands and barcodes from WooCommerce's GTIN field.
