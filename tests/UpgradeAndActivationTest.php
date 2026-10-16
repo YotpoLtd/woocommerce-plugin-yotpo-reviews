@@ -24,7 +24,7 @@ class UpgradeAndActivationTest extends Yotpo_Test_Case {
 		foreach ( array_keys( wc_yotpo_get_default_settings() ) as $key ) {
 			$this->assertArrayHasKey( $key, $settings );
 		}
-		$this->assertSame( wc_yotpo_get_default_settings()['v3_widgets_enables'], $settings['v3_widgets_enables'], 'Nested keys too' );
+		$this->assertSame( array_fill_keys( array_keys( wc_yotpo_get_default_settings()['v3_widgets_enables'] ), false ), $settings['v3_widgets_enables'], 'Nested keys too, every widget off' );
 		$this->assertSame( 'es', $settings['language_code'], 'Saved values win' );
 		$this->assertSame( 'wc-processing', $settings['yotpo_order_status'] );
 	}
@@ -59,6 +59,23 @@ class UpgradeAndActivationTest extends Yotpo_Test_Case {
 		$this->assertTrue( use_v3_widgets() );
 		$this->assertTrue( $settings['yotpo_language_as_site'] );
 		$this->assertTrue( $settings['disable_native_review_system'] );
+	}
+
+	public function test_widgets_added_after_the_settings_were_saved_stay_hidden() {
+		// Saved on an early v3 version: the widgets of that time, before Reviews Tab and Promoted Products existed.
+		$settings                       = $this->old_settings();
+		$settings['widget_version']     = 'v3';
+		$settings['v3_widgets_enables'] = array( 'reviews_widget_product' => true, 'star_rating_product' => true );
+		update_option( 'yotpo_settings', $settings );
+
+		$read = get_option( 'yotpo_settings' );
+
+		$this->assertSame( 'v3', $read['widget_version'] );
+		$this->assertTrue( $read['v3_widgets_enables']['reviews_widget_product'], 'Saved on stays on' );
+		foreach ( array( 'reviews_tab_product', 'reviews_tab_category', 'promoted_products_product', 'promoted_products_home', 'reviews_carousel_home' ) as $widget ) {
+			$this->assertFalse( $read['v3_widgets_enables'][ $widget ], "$widget does not appear on its own" );
+		}
+		$this->assertTrue( Yotpo_Product_Sync::setting_on(), 'The product sync stays on for existing stores' );
 	}
 
 	public function test_saved_nested_values_win_over_the_defaults() {
