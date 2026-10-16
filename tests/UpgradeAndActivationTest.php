@@ -88,18 +88,40 @@ class UpgradeAndActivationTest extends Yotpo_Test_Case {
 		$this->assertArrayHasKey( 'name', Yotpo_Product_Sync::product_payload( $this->create_product() ) );
 	}
 
-	public function test_activation_redirect_is_left_for_an_admin_in_wp_admin() {
+	public function test_activation_redirect_is_kept_for_a_shopper() {
 		update_option( 'wc_yotpo_just_installed', true );
 
 		// A shopper's request (the front end) right after activation.
 		wc_yotpo_redirect();
-		$this->assertTrue( (bool) get_option( 'wc_yotpo_just_installed' ), 'Not redirected, not used up' );
 
-		// wp-admin, but not an admin.
+		$this->assertTrue( (bool) get_option( 'wc_yotpo_just_installed' ), 'Not redirected, not used up' );
+	}
+
+	public function test_activation_redirect_is_kept_for_a_non_admin_in_wp_admin() {
+		update_option( 'wc_yotpo_just_installed', true );
 		set_current_screen( 'dashboard' );
 		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+
 		wc_yotpo_redirect();
-		$this->assertTrue( (bool) get_option( 'wc_yotpo_just_installed' ) );
+
+		$this->assertTrue( (bool) get_option( 'wc_yotpo_just_installed' ), 'Not redirected, not used up' );
+	}
+
+	public function test_activation_redirect_is_kept_for_an_admin_ajax_request() {
+		update_option( 'wc_yotpo_just_installed', true );
+		set_current_screen( 'dashboard' );
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		add_filter( 'wp_doing_ajax', '__return_true' );
+		add_filter(
+			'wp_redirect',
+			function () {
+				throw new RuntimeException( 'unexpected redirect' );
+			}
+		);
+
+		wc_yotpo_redirect();
+
+		$this->assertTrue( (bool) get_option( 'wc_yotpo_just_installed' ), 'Not redirected, not used up' );
 	}
 
 	public function test_activation_redirect_takes_an_admin_to_the_settings_once() {
