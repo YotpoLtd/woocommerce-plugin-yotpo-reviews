@@ -84,7 +84,10 @@ class Yotpo_Catalog_Api {
 		return $result;
 	}
 
-	private static function send_upsert( $client, $spec, $post_id, $payload ) {
+	/**
+	 * @param bool $create_only Leave a product or variant Yotpo turns out to have as it is (create_product()).
+	 */
+	private static function send_upsert( $client, $spec, $post_id, $payload, $create_only = false ) {
 		$yotpo_id = (int) get_post_meta( $post_id, $spec['meta'], true );
 
 		if ( $yotpo_id ) {
@@ -133,12 +136,31 @@ class Yotpo_Catalog_Api {
 		if ( ! $yotpo_id ) {
 			return new WP_Error( 'yotpo_not_found', 'Create ' . $spec['key'] . ' answered "already exists" but the lookup found nothing' );
 		}
+		if ( $create_only ) {
+			return $yotpo_id;
+		}
 		$error = self::patch( $client, $spec, $yotpo_id, $payload );
 		return $error ? $error : $yotpo_id;
 	}
 
 	private static function fingerprint( $spec, $payload ) {
 		return md5( $spec['salt'] . wp_json_encode( $payload ) );
+	}
+
+	/**
+	 * Creates a product Yotpo lacks, and changes nothing Yotpo has: one created in Yotpo since the
+	 * caller's lookup (the create answers 409) is found and its ID stored, not updated. Does not
+	 * store the data's fingerprint, so the product sync still compares the product with Yotpo.
+	 *
+	 * @param WC_Product $product
+	 * @return int|WP_Error The Yotpo ID.
+	 */
+	public static function create_product( $client, $product ) {
+		$stored = (int) get_post_meta( $product->get_id(), self::META_PRODUCT_ID, true );
+		if ( $stored ) {
+			return $stored;
+		}
+		return self::send_upsert( $client, self::product_spec(), $product->get_id(), Yotpo_Product_Payload::product( $product ), true );
 	}
 
 	/**
@@ -204,7 +226,7 @@ class Yotpo_Catalog_Api {
 		if ( ! $product || 'trash' === $product->get_status() ) {
 			return false;
 		}
-		$yotpo_id = self::upsert_product( $client, $product, true );
+		$yotpo_id = self::create_product( $client, $product );
 		if ( is_wp_error( $yotpo_id ) ) {
 			return $yotpo_id;
 		}

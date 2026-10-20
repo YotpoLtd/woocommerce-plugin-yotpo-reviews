@@ -20,12 +20,16 @@ class OrderApiTest extends Yotpo_Test_Case {
 	/** @var int|null When set, POST /products answers this code. */
 	private $product_create_fails = null;
 
+	/** @var bool When set, Yotpo gets the product from elsewhere (a CSV, say) just before POST /products. */
+	private $product_appears_on_create = false;
+
 	public function set_up() {
 		parent::set_up();
-		$this->catalog              = array();
-		$this->orders               = array();
-		$this->create_fails         = null;
-		$this->product_create_fails = null;
+		$this->catalog                   = array();
+		$this->orders                    = array();
+		$this->create_fails              = null;
+		$this->product_create_fails      = null;
+		$this->product_appears_on_create = false;
 		$this->route_tokens();
 		$this->route_fake_yotpo();
 	}
@@ -94,6 +98,20 @@ class OrderApiTest extends Yotpo_Test_Case {
 		$this->assertSame( 42, (int) get_post_meta( $beanie->get_id(), Yotpo_Catalog_Api::META_PRODUCT_ID, true ) );
 	}
 
+	public function test_product_yotpo_got_meanwhile_is_not_changed() {
+		$beanie = $this->create_product();
+		$order  = $this->create_order( array( array( $beanie, 1 ) ) );
+
+		$this->product_appears_on_create = true; // Between the lookup and the create.
+
+		$result = Yotpo_Order_Api::send_fulfilled( $this->client(), $order, time() );
+
+		$this->assertSame( $this->orders[ $order->get_id() ]['yotpo_id'], $result );
+		$this->assertSame( array(), preg_grep( '#^PATCH /products#', $this->calls() ), 'Found, not updated' );
+		$this->assertSame( 'Set by CSV', $this->catalog[ $beanie->get_id() ]['name'] );
+		$this->assertSame( $this->catalog[ $beanie->get_id() ]['yotpo_id'], (int) get_post_meta( $beanie->get_id(), Yotpo_Catalog_Api::META_PRODUCT_ID, true ) );
+	}
+
 	public function test_line_of_a_deleted_product_yotpo_never_had_is_dropped() {
 		$beanie = $this->in_yotpo( $this->create_product() );
 		$gone   = $this->create_product( 'Discontinued Scarf', 'YT-ACC-009', '30' );
@@ -111,6 +129,7 @@ class OrderApiTest extends Yotpo_Test_Case {
 		$beanie = $this->in_yotpo( $this->create_product() );
 		$scarf  = $this->create_product( 'Silk Scarf', 'YT-ACC-010', '30' );
 		$order  = $this->create_order( array( array( $beanie, 1 ), array( $scarf, 1 ) ) );
+
 		$this->product_create_fails = 400;
 
 		$result = Yotpo_Order_Api::send_fulfilled( $this->client(), $order, time() );
@@ -323,6 +342,9 @@ class OrderApiTest extends Yotpo_Test_Case {
 		} );
 		$this->route( 'POST', '#^/products$#', function ( $request ) {
 			$product = $request['body']['product'];
+			if ( $this->product_appears_on_create ) {
+				$this->catalog[ $product['external_id'] ] = array( 'yotpo_id' => ++$this->next_id, 'external_id' => $product['external_id'], 'name' => 'Set by CSV', 'variants' => array() );
+			}
 			if ( $this->product_create_fails ) {
 				return $this->respond( $this->product_create_fails, array( 'errors' => array( array( 'message' => 'invalid product' ) ) ) );
 			}
