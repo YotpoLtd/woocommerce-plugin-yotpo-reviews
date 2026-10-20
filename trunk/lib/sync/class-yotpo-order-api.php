@@ -19,7 +19,7 @@ class Yotpo_Order_Api {
 	const MAX_AGE_DAYS     = 180; // Yotpo rejects order dates more than 6 months back; 180 days is always inside that.
 
 	/**
-	 * The lookup spec for Yotpo_Catalog_Api::lookup_all().
+	 * The lookup spec for Yotpo_V3_Client::lookup_all().
 	 */
 	private static function spec() {
 		return array( 'path' => '/orders', 'list_key' => 'orders' );
@@ -63,7 +63,7 @@ class Yotpo_Order_Api {
 			return $yotpo_id;
 		}
 		if ( 409 !== $response['code'] ) {
-			return Yotpo_Catalog_Api::response_error( $response );
+			return Yotpo_V3_Client::response_error( $response );
 		}
 		// Created meanwhile (a second job for the same order, say): find it.
 		$yotpo_id = self::find_yotpo_id( $client, $order, true );
@@ -99,7 +99,7 @@ class Yotpo_Order_Api {
 			}
 			$response = $client->request( 'PATCH', '/orders/' . $yotpo_id, array( 'order' => $fields ) );
 		}
-		$error = Yotpo_Catalog_Api::response_error( $response );
+		$error = Yotpo_V3_Client::response_error( $response );
 		if ( $error ) {
 			return $error;
 		}
@@ -115,16 +115,16 @@ class Yotpo_Order_Api {
 	 */
 	public static function find_yotpo_ids( $client, array $orders ) {
 		$found = array();
-		foreach ( array_chunk( $orders, Yotpo_Catalog_Api::LOOKUP_MAX ) as $chunk ) {
+		foreach ( array_chunk( $orders, Yotpo_V3_Client::LOOKUP_MAX ) as $chunk ) {
 			$ids = array();
 			foreach ( $chunk as $order ) {
 				$ids[] = $order->get_id();
 			}
-			$items = Yotpo_Catalog_Api::lookup_all( $client, self::spec(), $ids );
+			$items = $client->lookup_all( self::spec(), $ids );
 			if ( is_wp_error( $items ) ) {
 				return $items;
 			}
-			$in_yotpo = Yotpo_Catalog_Api::index_by_external_id( $items );
+			$in_yotpo = Yotpo_V3_Client::index_by_external_id( $items );
 			foreach ( $chunk as $order ) {
 				if ( isset( $in_yotpo[ (string) $order->get_id() ] ) ) {
 					$yotpo_id                   = (int) $in_yotpo[ (string) $order->get_id() ]['yotpo_id'];
