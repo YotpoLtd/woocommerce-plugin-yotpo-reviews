@@ -177,7 +177,7 @@ class OrderApiTest extends Yotpo_Test_Case {
 
 		$result = Yotpo_Order_Api::send_fulfilled( $this->client(), $order, time() );
 
-		$this->assertTrue( Yotpo_Catalog_Api::is_retryable( $result ) );
+		$this->assertTrue( Yotpo_V3_Client::is_retryable( $result ) );
 		$this->assertSame( '', wc_get_order( $order->get_id() )->get_meta( Yotpo_Order_Api::META_ORDER_ID ) );
 	}
 

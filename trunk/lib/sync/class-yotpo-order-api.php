@@ -233,7 +233,7 @@ class Yotpo_Order_Api {
 		}
 		if ( 'publish' !== $product->get_status() ) {
 			$result = Yotpo_Catalog_Api::blocklist_product( $client, $product_id, true );
-			if ( is_wp_error( $result ) && Yotpo_Catalog_Api::is_retryable( $result ) ) {
+			if ( is_wp_error( $result ) && Yotpo_V3_Client::is_retryable( $result ) ) {
 				return $result;
 			}
 		}

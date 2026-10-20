@@ -183,6 +183,14 @@ class Yotpo_V3_Client {
 		return new WP_Error( $code, $response['error'] ? $response['error'] : 'HTTP ' . $response['code'] );
 	}
 
+	/**
+	 * Whether an error from response_error() is worth retrying: network, server and rate-limit
+	 * errors are; a 4xx rejection is not.
+	 */
+	public static function is_retryable( $error ) {
+		return in_array( $error->get_error_code(), array( 'yotpo_rate_limited', 'yotpo_network', 'yotpo_server' ), true );
+	}
+
 	private function pace() {
 		$wait = self::MIN_INTERVAL - ( microtime( true ) - self::$last_call );
 		if ( $wait > 0 ) {

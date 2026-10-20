@@ -433,8 +433,9 @@ class Yotpo_Catalog_Api {
 
 	/**
 	 * Network, server and rate-limit errors are worth retrying; a 4xx rejection is not.
+	 * Delegates to Yotpo_V3_Client::is_retryable(), where the errors are produced.
 	 */
 	public static function is_retryable( $error ) {
-		return in_array( $error->get_error_code(), array( 'yotpo_rate_limited', 'yotpo_network', 'yotpo_server' ), true );
+		return Yotpo_V3_Client::is_retryable( $error );
 	}
 }
