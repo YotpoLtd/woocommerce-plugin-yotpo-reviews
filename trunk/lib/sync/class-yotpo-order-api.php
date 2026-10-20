@@ -42,7 +42,7 @@ class Yotpo_Order_Api {
 		}
 		$created = $order->get_date_created();
 		if ( $created && $created->getTimestamp() < time() - self::MAX_AGE_DAYS * DAY_IN_SECONDS ) {
-			return new WP_Error( 'yotpo_order_skipped', 'Not sent to Yotpo: it was placed more than ' . self::MAX_AGE_DAYS . ' days ago' );
+			return Yotpo_Order_Payload::skipped( 'it was placed more than ' . self::MAX_AGE_DAYS . ' days ago' );
 		}
 		$payload = Yotpo_Order_Payload::order( $order, $fulfilled_at );
 		if ( is_wp_error( $payload ) ) {
@@ -183,7 +183,7 @@ class Yotpo_Order_Api {
 		};
 		$payload['line_items'] = array_values( array_filter( $payload['line_items'], $keep ) );
 		if ( ! $payload['line_items'] ) {
-			return new WP_Error( 'yotpo_order_skipped', 'Not sent to Yotpo: none of its products are in WooCommerce or Yotpo any more' );
+			return Yotpo_Order_Payload::skipped( 'none of its products are in WooCommerce or Yotpo any more' );
 		}
 		foreach ( $payload['fulfillments'] as $index => $fulfillment ) {
 			$payload['fulfillments'][ $index ]['fulfilled_items'] = array_values( array_filter( $fulfillment['fulfilled_items'], $keep ) );

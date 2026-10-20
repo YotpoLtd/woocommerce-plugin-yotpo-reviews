@@ -209,7 +209,12 @@ class Yotpo_Order_Payload {
 		return $order->get_date_modified() ? $order->get_date_modified()->getTimestamp() : time();
 	}
 
-	private static function skipped( $reason ) {
+	/**
+	 * The error for an order that can't be sent. Also used by Yotpo_Order_Api.
+	 *
+	 * @param string $reason Why, as the end of "Not sent to Yotpo: ...".
+	 */
+	public static function skipped( $reason ) {
 		return new WP_Error( 'yotpo_order_skipped', 'Not sent to Yotpo: ' . $reason );
 	}
 
