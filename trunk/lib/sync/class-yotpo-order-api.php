@@ -165,11 +165,79 @@ class Yotpo_Order_Api {
 	 * @return array|WP_Error
 	 */
 	private static function with_known_products( $client, array $payload ) {
-		$known = Yotpo_Catalog_Api::ensure_products( $client, Yotpo_Order_Payload::product_ids( $payload ) );
+		$known = self::ensure_products( $client, Yotpo_Order_Payload::product_ids( $payload ) );
 		if ( is_wp_error( $known ) ) {
 			return $known;
 		}
 		return Yotpo_Order_Payload::only_products( $payload, $known );
+	}
+
+	/**
+	 * Makes sure Yotpo has these products before an order that contains them is sent: V3 rejects an
+	 * order line whose product it doesn't know. A product with a stored Yotpo ID counts as known (the
+	 * product sync keeps those right); the rest are looked up, and those Yotpo lacks are created, from
+	 * the same data the product sync sends, without their variations. Runs whether or not "Sync products
+	 * to Yotpo" is on, but only creates: a product Yotpo has is never changed here.
+	 *
+	 * A product deleted from WooCommerce can't be created, so it is left out of the answer and the
+	 * caller drops its lines. A product that still exists but can't be created (Yotpo rejected it) is
+	 * an error: an order is final once sent, so its line can't be dropped and added back later.
+	 *
+	 * @param int[] $product_ids
+	 * @return int[]|WP_Error The products Yotpo has now, or the first error.
+	 */
+	private static function ensure_products( $client, array $product_ids ) {
+		$known = array();
+		$ask   = array();
+		foreach ( array_unique( array_map( 'intval', $product_ids ) ) as $product_id ) {
+			if ( get_post_meta( $product_id, Yotpo_Catalog_Api::META_PRODUCT_ID, true ) ) {
+				$known[] = $product_id;
+			} elseif ( $product_id ) {
+				$ask[] = $product_id;
+			}
+		}
+		$found = Yotpo_Catalog_Api::find_products( $client, $ask );
+		if ( is_wp_error( $found ) ) {
+			return $found;
+		}
+		$known = array_merge( $known, $found );
+		foreach ( array_diff( $ask, $found ) as $product_id ) {
+			$created = self::create_missing_product( $client, $product_id );
+			if ( is_wp_error( $created ) ) {
+				ytdbg( $created->get_error_message(), 'Order sync: product #' . $product_id . ' could not be created in Yotpo:' );
+				return $created;
+			}
+			if ( $created ) {
+				$known[] = $product_id;
+			}
+		}
+		return $known;
+	}
+
+	/**
+	 * Creates a product Yotpo lacks, for ensure_products(). Only the product: its variations are one
+	 * request each, and an order line is accepted without them (V3 keeps the external_variant_id of a
+	 * variation it doesn't know), so they are left to the product sync. One that isn't published is
+	 * blocklisted right after, as the product sync would.
+	 *
+	 * @return bool|WP_Error False when WooCommerce no longer has the product.
+	 */
+	private static function create_missing_product( $client, $product_id ) {
+		$product = wc_get_product( $product_id );
+		if ( ! $product || 'trash' === $product->get_status() ) {
+			return false;
+		}
+		$yotpo_id = Yotpo_Catalog_Api::create_product( $client, $product );
+		if ( is_wp_error( $yotpo_id ) ) {
+			return $yotpo_id;
+		}
+		if ( 'publish' !== $product->get_status() ) {
+			$result = Yotpo_Catalog_Api::blocklist_product( $client, $product_id, true );
+			if ( is_wp_error( $result ) && Yotpo_Catalog_Api::is_retryable( $result ) ) {
+				return $result;
+			}
+		}
+		return true;
 	}
 
 	private static function remember( $order, $yotpo_id, $hash = null ) {
