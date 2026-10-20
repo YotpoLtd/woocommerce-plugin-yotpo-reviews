@@ -24,6 +24,7 @@ delete_post_meta_by_key( '_yotpo_v3_variant_hash' );
 delete_post_meta_by_key( '_yotpo_v3_order_id' );
 delete_post_meta_by_key( '_yotpo_v3_order_hash' );
 delete_option( 'wc_yotpo_order_sync' ); // Yotpo_Order_Sync::STATS_OPTION
+delete_option( 'wc_yotpo_order_sync_lock' ); // Yotpo_Order_Sync::LOCK_OPTION
 global $wpdb;
 $yotpo_orders_meta = $wpdb->prefix . 'wc_orders_meta';
 if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $yotpo_orders_meta ) ) === $yotpo_orders_meta ) { // phpcs:ignore WordPress.DB.DirectDatabaseQuery

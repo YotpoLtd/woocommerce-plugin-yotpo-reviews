@@ -16,9 +16,10 @@ defined( 'ABSPATH' ) || exit;
  */
 class Yotpo_Order_Sync {
 
-	// GROUP and STATS_OPTION are also written out in uninstall.php, which runs without this class loaded.
+	// GROUP, STATS_OPTION and LOCK_OPTION are also written out in uninstall.php, which runs without this class loaded.
 	const GROUP          = 'yotpo-order-sync';
 	const STATS_OPTION   = 'wc_yotpo_order_sync';
+	const LOCK_OPTION    = 'wc_yotpo_order_sync_lock'; // Short-lived lock around changes to the stats; the product sync has its own.
 	const HOOK_FULFILLED = 'wc_yotpo_send_order';
 	const HOOK_UPDATE    = 'wc_yotpo_update_order';
 	const PRIORITY       = 5; // Action Scheduler runs lower numbers first; the product sync's jobs have the default, 10.
@@ -272,13 +273,14 @@ class Yotpo_Order_Sync {
 
 	/**
 	 * Changes the counts without losing a concurrent change: Action Scheduler can run several queue
-	 * runners at once, and each would otherwise overwrite what the others just saved. Takes the lock the
-	 * product sync's state uses.
+	 * runners at once, and each would otherwise overwrite what the others just saved. Takes its own lock,
+	 * so the stats never wait for the product sync.
 	 *
 	 * @param callable $change Receives the stats; returns the stats to save.
 	 */
 	private static function update_stats( $change ) {
-		Yotpo_Sync_State::with_lock(
+		Yotpo_Option_Lock::run(
+			self::LOCK_OPTION,
 			function () use ( $change ) {
 				// Another runner may have saved since this request loaded the option.
 				wp_cache_delete( self::STATS_OPTION, 'options' );
