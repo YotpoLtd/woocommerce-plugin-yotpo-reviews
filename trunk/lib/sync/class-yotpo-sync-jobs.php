@@ -174,10 +174,7 @@ class Yotpo_Sync_Jobs {
 		if ( $full_sync ) {
 			$args[] = (int) $full_sync;
 		}
-		if ( $delay > 0 ) {
-			return (int) as_schedule_single_action( time() + $delay, self::HOOK_PRODUCT, $args, self::GROUP, true );
-		}
-		return (int) as_enqueue_async_action( self::HOOK_PRODUCT, $args, self::GROUP, true );
+		return self::enqueue( self::HOOK_PRODUCT, $args, self::GROUP, $delay );
 	}
 
 	/**
@@ -189,11 +186,7 @@ class Yotpo_Sync_Jobs {
 		if ( ! self::scheduler_ready() || ! Yotpo_Product_Sync::enabled() ) {
 			return 0;
 		}
-		$args = array( (int) $variation_id, (int) $parent_id, (int) $attempt );
-		if ( $delay > 0 ) {
-			return (int) as_schedule_single_action( time() + $delay, self::HOOK_VARIANT_GONE, $args, self::GROUP, true );
-		}
-		return (int) as_enqueue_async_action( self::HOOK_VARIANT_GONE, $args, self::GROUP, true );
+		return self::enqueue( self::HOOK_VARIANT_GONE, array( (int) $variation_id, (int) $parent_id, (int) $attempt ), self::GROUP, $delay );
 	}
 
 	public static function queue_variation_parent( $variation_id ) {
@@ -541,12 +534,47 @@ class Yotpo_Sync_Jobs {
 	 * Cancels every queued sync job (used when the merchant turns the sync off).
 	 */
 	public static function cancel_all() {
+		self::cancel_group( self::GROUP );
+	}
+
+	/**
+	 * Cancels every queued job of an Action Scheduler group. Shared with Yotpo_Order_Sync.
+	 */
+	public static function cancel_group( $group ) {
 		if ( self::scheduler_ready() ) {
-			as_unschedule_all_actions( '', array(), self::GROUP );
+			as_unschedule_all_actions( '', array(), $group );
 		}
 	}
 
-	private static function scheduler_ready() {
+	/**
+	 * Queues a unique job: right away (async), or after a delay in seconds. Callers check
+	 * scheduler_ready() and their own switch first. Shared with Yotpo_Order_Sync.
+	 *
+	 * @param int $priority Action Scheduler runs lower numbers first; 10 is its default.
+	 * @return int The queued action ID (0 when nothing was queued, for example a duplicate).
+	 */
+	public static function enqueue( $hook, array $args, $group, $delay = 0, $priority = 10 ) {
+		if ( $delay > 0 ) {
+			return (int) as_schedule_single_action( time() + $delay, $hook, $args, $group, true, $priority );
+		}
+		return (int) as_enqueue_async_action( $hook, $args, $group, true, $priority );
+	}
+
+	/**
+	 * Whether Action Scheduler is loaded and has initialised. Shared with Yotpo_Order_Sync.
+	 */
+	public static function scheduler_ready() {
 		return function_exists( 'as_enqueue_async_action' ) && did_action( 'action_scheduler_init' );
+	}
+
+	/**
+	 * A merchant's on/off setting that is on by default, including for settings saved before it existed.
+	 * Shared by the product sync's and the order sync's switches.
+	 *
+	 * @param string $key The key in the yotpo_settings option.
+	 */
+	public static function setting_default_on( $key ) {
+		$settings = get_option( 'yotpo_settings', array() );
+		return ! is_array( $settings ) || ! array_key_exists( $key, $settings ) || (bool) $settings[ $key ];
 	}
 }

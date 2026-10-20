@@ -48,8 +48,7 @@ class Yotpo_Order_Sync {
 	 * the setting existed: 1.x always sent orders.
 	 */
 	public static function setting_on() {
-		$settings = get_option( 'yotpo_settings', array() );
-		return ! is_array( $settings ) || ! array_key_exists( 'order_sync_enabled', $settings ) || (bool) $settings['order_sync_enabled'];
+		return Yotpo_Sync_Jobs::setting_default_on( 'order_sync_enabled' );
 	}
 
 	/**
@@ -117,13 +116,10 @@ class Yotpo_Order_Sync {
 	}
 
 	private static function queue( $hook, array $args, $delay ) {
-		if ( ! self::scheduler_ready() || ! self::enabled() ) {
+		if ( ! Yotpo_Sync_Jobs::scheduler_ready() || ! self::enabled() ) {
 			return 0;
 		}
-		if ( $delay > 0 ) {
-			return (int) as_schedule_single_action( time() + $delay, $hook, $args, self::GROUP, true, self::PRIORITY );
-		}
-		return (int) as_enqueue_async_action( $hook, $args, self::GROUP, true, self::PRIORITY );
+		return Yotpo_Sync_Jobs::enqueue( $hook, $args, self::GROUP, $delay, self::PRIORITY );
 	}
 
 	// ---------------------------------------------------------------------------------------
@@ -216,13 +212,7 @@ class Yotpo_Order_Sync {
 	 * Cancels every queued order job (used when the merchant turns sending off).
 	 */
 	public static function cancel_all() {
-		if ( self::scheduler_ready() ) {
-			as_unschedule_all_actions( '', array(), self::GROUP );
-		}
-	}
-
-	private static function scheduler_ready() {
-		return function_exists( 'as_enqueue_async_action' ) && did_action( 'action_scheduler_init' );
+		Yotpo_Sync_Jobs::cancel_group( self::GROUP );
 	}
 
 	// ---------------------------------------------------------------------------------------

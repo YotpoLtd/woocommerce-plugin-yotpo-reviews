@@ -44,8 +44,7 @@ class Yotpo_Product_Sync {
 	 * before the setting existed.
 	 */
 	public static function setting_on() {
-		$settings = get_option( 'yotpo_settings', array() );
-		return ! is_array( $settings ) || ! array_key_exists( 'product_sync_enabled', $settings ) || (bool) $settings['product_sync_enabled'];
+		return Yotpo_Sync_Jobs::setting_default_on( 'product_sync_enabled' );
 	}
 
 	/**
