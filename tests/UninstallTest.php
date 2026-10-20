@@ -51,21 +51,41 @@ class UninstallTest extends Yotpo_Test_Case {
 	/**
 	 * With high-performance order storage, WooCommerce keeps order meta in its own table. Orders made
 	 * by create_order() are in post storage here, so the rows are inserted directly.
+	 *
+	 * WooCommerce only creates that table when high-performance order storage is installed, which the
+	 * test bootstrap does not do. The test creates it when it is missing and drops it again afterwards.
+	 * uninstall.php finds the table with SHOW TABLES, which does not list the temporary tables the
+	 * WordPress test case turns CREATE TABLE into, so this test creates a real table: CREATE TABLE
+	 * commits the test's transaction, and the table and its rows are removed explicitly.
 	 */
 	public function test_uninstall_removes_order_meta_from_the_order_tables() {
 		global $wpdb;
 		$table = $wpdb->prefix . 'wc_orders_meta';
-		$this->assertSame( $table, $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ), 'WooCommerce creates its order tables when it installs' );
-		foreach ( array( Yotpo_Order_Api::META_ORDER_ID, Yotpo_Order_Api::META_UPDATE_HASH, '_not_from_yotpo' ) as $key ) {
-			$wpdb->insert( $table, array( 'order_id' => 987654, 'meta_key' => $key, 'meta_value' => 'x' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		}
+		remove_filter( 'query', array( $this, '_create_temporary_tables' ) );
+		remove_filter( 'query', array( $this, '_drop_temporary_tables' ) );
+		$created = $table !== $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) );
+		try {
+			if ( $created ) {
+				$wpdb->query( "CREATE TABLE {$table} ( id bigint(20) unsigned NOT NULL AUTO_INCREMENT, order_id bigint(20) unsigned NULL, meta_key varchar(255) NULL, meta_value text NULL, PRIMARY KEY (id), KEY order_id (order_id) ) " . $wpdb->get_charset_collate() ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			}
+			$this->assertSame( $table, $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ), 'The order meta table exists' );
+			foreach ( array( Yotpo_Order_Api::META_ORDER_ID, Yotpo_Order_Api::META_UPDATE_HASH, '_not_from_yotpo' ) as $key ) {
+				$wpdb->insert( $table, array( 'order_id' => 987654, 'meta_key' => $key, 'meta_value' => 'x' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			}
 
-		if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
-			define( 'WP_UNINSTALL_PLUGIN', 'yotpo-social-reviews-for-woocommerce/wc_yotpo.php' );
-		}
-		include dirname( __DIR__ ) . '/trunk/uninstall.php';
+			if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
+				define( 'WP_UNINSTALL_PLUGIN', 'yotpo-social-reviews-for-woocommerce/wc_yotpo.php' );
+			}
+			include dirname( __DIR__ ) . '/trunk/uninstall.php';
 
-		$left = $wpdb->get_col( $wpdb->prepare( "SELECT meta_key FROM {$table} WHERE order_id = %d", 987654 ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		$this->assertSame( array( '_not_from_yotpo' ), $left, "Only the plugin's order meta is removed from the order tables" );
+			$left = $wpdb->get_col( $wpdb->prepare( "SELECT meta_key FROM {$table} WHERE order_id = %d", 987654 ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			$this->assertSame( array( '_not_from_yotpo' ), $left, "Only the plugin's order meta is removed from the order tables" );
+		} finally {
+			if ( $created ) {
+				$wpdb->query( "DROP TABLE IF EXISTS {$table}" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			} else {
+				$wpdb->delete( $table, array( 'order_id' => 987654 ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			}
+		}
 	}
 }
