@@ -47,6 +47,17 @@ class OrderSyncTest extends Yotpo_Test_Case {
 		$this->assertSame( 1, Yotpo_Order_Sync::totals()['sent'] );
 	}
 
+	public function test_an_order_yotpo_already_has_is_not_counted_as_sent() {
+		$order = $this->create_order( array( array( $this->product, 1 ) ) );
+		$this->orders[ $order->get_id() ] = array( 'yotpo_id' => 9999 ); // Sent by 1.x, say.
+
+		$this->run_order_jobs();
+
+		$this->assertNotContains( 'POST /orders', $this->calls() );
+		$this->assertSame( array( 'sent' => 0, 'failed' => 0 ), Yotpo_Order_Sync::totals() );
+		$this->assertArrayNotHasKey( 'last_sent', Yotpo_Order_Sync::stats() );
+	}
+
 	public function test_order_jobs_run_ahead_of_product_jobs() {
 		$this->create_order( array( array( $this->product, 1 ) ) );
 		Yotpo_Sync_Jobs::queue_product( $this->product->get_id() );

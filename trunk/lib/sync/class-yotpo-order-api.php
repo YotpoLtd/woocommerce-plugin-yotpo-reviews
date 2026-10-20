@@ -33,9 +33,11 @@ class Yotpo_Order_Api {
 	 * @param Yotpo_V3_Client $client
 	 * @param WC_Order        $order
 	 * @param int             $fulfilled_at Unix time the order reached the fulfilled status.
+	 * @param bool            $created      Set to whether this call created the order (false when Yotpo already had it).
 	 * @return int|WP_Error The Yotpo order ID. WP_Error 'yotpo_order_skipped' for an order that can't be sent.
 	 */
-	public static function send_fulfilled( $client, $order, $fulfilled_at ) {
+	public static function send_fulfilled( $client, $order, $fulfilled_at, &$created = false ) {
+		$created  = false;
 		$yotpo_id = self::find_yotpo_id( $client, $order );
 		if ( is_wp_error( $yotpo_id ) || $yotpo_id ) {
 			return $yotpo_id;
@@ -60,6 +62,7 @@ class Yotpo_Order_Api {
 				return new WP_Error( 'yotpo_bad_response', 'Create order returned no yotpo_id' );
 			}
 			self::remember( $order, $yotpo_id, Yotpo_Order_Payload::fingerprint( Yotpo_Order_Payload::update_sent_with_create( $order ) ) );
+			$created = true;
 			return $yotpo_id;
 		}
 		if ( 409 !== $response['code'] ) {

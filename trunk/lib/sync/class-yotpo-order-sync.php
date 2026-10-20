@@ -130,8 +130,11 @@ class Yotpo_Order_Sync {
 			$order_id,
 			$attempt,
 			function ( $client, $order ) use ( $order_id, $fulfilled_at ) {
-				$result = Yotpo_Order_Api::send_fulfilled( $client, $order, $fulfilled_at );
-				if ( $result && ! is_wp_error( $result ) ) {
+				$created = false;
+				$result  = Yotpo_Order_Api::send_fulfilled( $client, $order, $fulfilled_at, $created );
+				// Only an order created now counts as sent: one Yotpo already had (sent by 1.x, or by an
+				// earlier job) was not sent again.
+				if ( $created ) {
 					self::count_sent( $order_id );
 					// A create never carries the cancellation. If the order was cancelled or refunded before this
 					// job ran, the update job queued for that may have run first and found nothing in Yotpo:
