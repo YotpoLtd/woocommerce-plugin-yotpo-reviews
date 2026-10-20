@@ -17,6 +17,7 @@ class Yotpo_Order_Api {
 	const META_ORDER_ID    = '_yotpo_v3_order_id';
 	const META_UPDATE_HASH = '_yotpo_v3_order_hash'; // Fingerprint of the update fields Yotpo last accepted.
 	const MAX_AGE_DAYS     = 180; // Yotpo rejects order dates more than 6 months back; 180 days is always inside that.
+	const ABSENT_FOR       = 600; // Seconds an update remembers that Yotpo doesn't have an order, so repeated cancel/refund events cost one lookup.
 
 	/**
 	 * The lookup spec for Yotpo_V3_Client::lookup_all().
@@ -81,12 +82,23 @@ class Yotpo_Order_Api {
 	 * is cancelled or fully refunded. Nothing is sent when Yotpo doesn't have the order (it isn't
 	 * fulfilled yet) or when the fields match the last update Yotpo accepted.
 	 *
+	 * An order with no stored Yotpo ID may still be in Yotpo (1.x sent it), so it is looked up. When Yotpo
+	 * doesn't have it, that is remembered for ABSENT_FOR seconds: an order that was never sent (cancelled
+	 * unpaid, refunded before fulfilment) would otherwise cost a lookup for each of its events.
+	 *
 	 * @return int|WP_Error The Yotpo order ID, or 0 when Yotpo doesn't have the order.
 	 */
 	public static function send_update( $client, $order ) {
+		if ( ! $order->get_meta( self::META_ORDER_ID ) && get_transient( self::absent_key( $order ) ) ) {
+			return 0;
+		}
 		$yotpo_id = self::find_yotpo_id( $client, $order );
-		if ( is_wp_error( $yotpo_id ) || ! $yotpo_id ) {
+		if ( is_wp_error( $yotpo_id ) ) {
 			return $yotpo_id;
+		}
+		if ( ! $yotpo_id ) {
+			set_transient( self::absent_key( $order ), 1, self::ABSENT_FOR );
+			return 0;
 		}
 		$fields = Yotpo_Order_Payload::update( $order );
 		$hash   = Yotpo_Order_Payload::fingerprint( $fields );
@@ -243,7 +255,12 @@ class Yotpo_Order_Api {
 		return true;
 	}
 
+	private static function absent_key( $order ) {
+		return 'wc_yotpo_order_absent_' . $order->get_id();
+	}
+
 	private static function remember( $order, $yotpo_id, $hash = null ) {
+		delete_transient( self::absent_key( $order ) );
 		$order->update_meta_data( self::META_ORDER_ID, (int) $yotpo_id );
 		if ( null !== $hash ) {
 			$order->update_meta_data( self::META_UPDATE_HASH, $hash );

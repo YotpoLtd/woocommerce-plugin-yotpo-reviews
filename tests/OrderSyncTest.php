@@ -132,6 +132,30 @@ class OrderSyncTest extends Yotpo_Test_Case {
 		$this->assertArrayHasKey( 'cancellation', $this->orders[ $order->get_id() ], 'The create left the cancellation out; the follow-up update sent it' );
 	}
 
+	public function test_an_order_yotpo_does_not_have_is_looked_up_once_for_repeated_events() {
+		$order = $this->create_order( array( array( $this->product, 1 ) ), 'processing' );
+		$order->set_status( 'cancelled' );
+		$order->save();
+		$this->run_order_jobs();
+		$this->assertContains( 'GET /orders', $this->calls(), 'The first event looks the order up' );
+
+		$this->requests = array();
+		Yotpo_Order_Sync::queue_update( $order->get_id() );
+		$this->run_order_jobs();
+		$this->assertSame( array(), $this->calls(), 'Yotpo did not have it a moment ago: no new lookup' );
+
+		// Once the order is sent, its later events are not held back by what was remembered.
+		$order->set_status( 'completed' );
+		$order->save();
+		$this->run_order_jobs();
+		$this->assertContains( 'POST /orders', $this->calls() );
+		$this->requests = array();
+		$order->set_status( 'cancelled' );
+		$order->save();
+		$this->run_order_jobs();
+		$this->assertSame( array( 'PATCH /orders/' . $this->orders[ $order->get_id() ]['yotpo_id'] ), $this->calls() );
+	}
+
 	public function test_a_refund_queues_an_update() {
 		$order = $this->create_order( array( array( $this->product, 3 ) ) );
 		$this->run_order_jobs();
