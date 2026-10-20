@@ -8,7 +8,7 @@ delete_option('native_star_ratings_enabled');
 
 // Product sync (Core API V3): access token, sync state, throttle flags, stored Yotpo IDs and queued jobs.
 // These names must match the constants in Yotpo_V3_Client (TOKEN_OPTION), Yotpo_Sync_State (STATE_OPTION,
-// LOCK_OPTION), Yotpo_Catalog_Api (META_*) and Yotpo_Sync_Jobs (GROUP, PAUSE_TRANSIENT, RECHECK_TRANSIENT). This file runs without those classes loaded, so it cannot use them;
+// LOCK_OPTION), Yotpo_Catalog_Api (META_*), Yotpo_Order_Api (META_*) and Yotpo_Sync_Jobs (GROUP, PAUSE_TRANSIENT, RECHECK_TRANSIENT). This file runs without those classes loaded, so it cannot use them;
 // when a constant changes, change it here too, or uninstall leaves data behind.
 delete_option( 'wc_yotpo_v3_token' );
 delete_option( 'wc_yotpo_product_sync' );
@@ -20,6 +20,14 @@ delete_post_meta_by_key( '_yotpo_v3_variant_id' );
 delete_post_meta_by_key( '_yotpo_v3_blocklisted' );
 delete_post_meta_by_key( '_yotpo_v3_product_hash' );
 delete_post_meta_by_key( '_yotpo_v3_variant_hash' );
+// Orders (Yotpo_Order_Api META_*): in post meta, or in WooCommerce's own order tables when the store uses them.
+delete_post_meta_by_key( '_yotpo_v3_order_id' );
+delete_post_meta_by_key( '_yotpo_v3_order_hash' );
+global $wpdb;
+$yotpo_orders_meta = $wpdb->prefix . 'wc_orders_meta';
+if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $yotpo_orders_meta ) ) === $yotpo_orders_meta ) { // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+	$wpdb->query( $wpdb->prepare( "DELETE FROM {$yotpo_orders_meta} WHERE meta_key IN (%s, %s)", '_yotpo_v3_order_id', '_yotpo_v3_order_hash' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+}
 if ( function_exists( 'as_unschedule_all_actions' ) ) {
 	as_unschedule_all_actions( '', array(), 'yotpo-product-sync' );
 }

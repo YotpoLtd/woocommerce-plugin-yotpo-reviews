@@ -10,6 +10,10 @@ class UninstallTest extends Yotpo_Test_Case {
 		foreach ( array( Yotpo_Catalog_Api::META_PRODUCT_ID, Yotpo_Catalog_Api::META_VARIANT_ID, Yotpo_Catalog_Api::META_PRODUCT_HASH, Yotpo_Catalog_Api::META_VARIANT_HASH, Yotpo_Catalog_Api::META_BLOCKLISTED ) as $key ) {
 			update_post_meta( $product->get_id(), $key, '1' );
 		}
+		$order = $this->create_order( array( array( $product, 1 ) ) );
+		$order->update_meta_data( Yotpo_Order_Api::META_ORDER_ID, 123 );
+		$order->update_meta_data( Yotpo_Order_Api::META_UPDATE_HASH, 'x' );
+		$order->save_meta_data();
 		update_option( 'wc_yotpo_v3_token', array( 'token' => 'x' ) );
 		update_option( 'wc_yotpo_just_installed', true );
 		update_option( 'native_star_ratings_enabled', 'yes' );
@@ -38,6 +42,12 @@ class UninstallTest extends Yotpo_Test_Case {
 			}
 		);
 		$this->assertSame( array(), array_values( $meta_left ), 'Yotpo meta left behind' );
+		global $wpdb;
+		$order_meta_left = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE meta_key IN (%s, %s)", Yotpo_Order_Api::META_ORDER_ID, Yotpo_Order_Api::META_UPDATE_HASH ) );
+		if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->prefix . 'wc_orders_meta' ) ) ) {
+			$order_meta_left += (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->prefix}wc_orders_meta WHERE meta_key IN (%s, %s)", Yotpo_Order_Api::META_ORDER_ID, Yotpo_Order_Api::META_UPDATE_HASH ) );
+		}
+		$this->assertSame( 0, $order_meta_left, 'Order meta left behind, in either order storage' );
 		$this->assertSame( array(), $this->pending_jobs(), 'Jobs left queued' );
 	}
 }

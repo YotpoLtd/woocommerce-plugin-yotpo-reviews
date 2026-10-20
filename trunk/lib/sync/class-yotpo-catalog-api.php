@@ -141,6 +141,91 @@ class Yotpo_Catalog_Api {
 		return md5( $spec['salt'] . wp_json_encode( $payload ) );
 	}
 
+	/**
+	 * Makes sure Yotpo has these products before an order that contains them is sent: V3 rejects an
+	 * order line whose product it doesn't know. A product with a stored Yotpo ID counts as known (the
+	 * product sync keeps those right); the rest are looked up, and those Yotpo lacks are created, with
+	 * their variations, from the same data the product sync sends. Runs whether or not "Sync products
+	 * to Yotpo" is on, but only creates: a product Yotpo has is never changed here.
+	 *
+	 * A product deleted from WooCommerce can't be created, so it is left out of the answer and the
+	 * caller drops its lines.
+	 *
+	 * @param int[] $product_ids
+	 * @return int[]|WP_Error The products Yotpo has now, or the first retryable error.
+	 */
+	public static function ensure_products( $client, array $product_ids ) {
+		$spec  = self::product_spec();
+		$known = array();
+		$ask   = array();
+		foreach ( array_unique( array_map( 'intval', $product_ids ) ) as $product_id ) {
+			if ( get_post_meta( $product_id, self::META_PRODUCT_ID, true ) ) {
+				$known[] = $product_id;
+			} elseif ( $product_id ) {
+				$ask[] = $product_id;
+			}
+		}
+		foreach ( array_chunk( $ask, self::LOOKUP_MAX ) as $chunk ) {
+			$items = self::lookup_all( $client, $spec, $chunk );
+			if ( is_wp_error( $items ) ) {
+				return $items;
+			}
+			$in_yotpo = self::index_by_external_id( $items );
+			foreach ( $chunk as $product_id ) {
+				if ( isset( $in_yotpo[ (string) $product_id ] ) ) {
+					update_post_meta( $product_id, self::META_PRODUCT_ID, (int) $in_yotpo[ (string) $product_id ]['yotpo_id'] );
+					$known[] = $product_id;
+					continue;
+				}
+				$created = self::create_for_order( $client, $product_id );
+				if ( is_wp_error( $created ) ) {
+					if ( self::is_retryable( $created ) ) {
+						return $created;
+					}
+					ytdbg( $created->get_error_message(), 'Order sync: product #' . $product_id . ' could not be created in Yotpo:' );
+					continue;
+				}
+				if ( $created ) {
+					$known[] = $product_id;
+				}
+			}
+		}
+		return $known;
+	}
+
+	/**
+	 * Creates a product Yotpo lacks, with its variations, for ensure_products(). One that isn't
+	 * published is blocklisted right after, as the product sync would.
+	 *
+	 * @return bool|WP_Error False when WooCommerce no longer has the product.
+	 */
+	private static function create_for_order( $client, $product_id ) {
+		$product = wc_get_product( $product_id );
+		if ( ! $product || 'trash' === $product->get_status() ) {
+			return false;
+		}
+		$yotpo_id = self::upsert_product( $client, $product, true );
+		if ( is_wp_error( $yotpo_id ) ) {
+			return $yotpo_id;
+		}
+		foreach ( self::variation_ids( $product ) as $variation_id ) {
+			$variation = wc_get_product( $variation_id );
+			if ( $variation ) {
+				$result = self::upsert_variant( $client, $yotpo_id, $variation, $product, true );
+				if ( is_wp_error( $result ) && self::is_retryable( $result ) ) {
+					return $result;
+				}
+			}
+		}
+		if ( 'publish' !== $product->get_status() ) {
+			$result = self::blocklist_product( $client, $product_id, true );
+			if ( is_wp_error( $result ) && self::is_retryable( $result ) ) {
+				return $result;
+			}
+		}
+		return true;
+	}
+
 	// ---------------------------------------------------------------------------------------
 	// Comparing with Yotpo before a full sync
 	// ---------------------------------------------------------------------------------------
@@ -262,11 +347,12 @@ class Yotpo_Catalog_Api {
 
 	/**
 	 * The items of a lookup answer that name an external ID and a Yotpo ID, by external ID.
+	 * Shared with Yotpo_Order_Api.
 	 *
 	 * @param array $items The answer's list ($response['body'][ $spec['list_key'] ]).
 	 * @return array[]
 	 */
-	private static function index_by_external_id( array $items ) {
+	public static function index_by_external_id( array $items ) {
 		$by_external_id = array();
 		foreach ( $items as $item ) {
 			if ( isset( $item['external_id'], $item['yotpo_id'] ) ) {
@@ -281,11 +367,13 @@ class Yotpo_Catalog_Api {
 	 * "Max 100 IDs. Can't come with page_info or limit." So the request carries nothing else, and one
 	 * answer holds every match. An answer that still says there is more is not trusted (an ID missing
 	 * from it may be on a page that can't be asked for): it is an error, and the caller sends in full.
+	 * Shared with Yotpo_Order_Api, which passes its own path and list_key.
 	 *
+	 * @param array $spec         At least 'path' and 'list_key' (see product_spec()).
 	 * @param int[] $external_ids At most LOOKUP_MAX.
 	 * @return array|WP_Error The items of the answer.
 	 */
-	private static function lookup_all( $client, $spec, array $external_ids ) {
+	public static function lookup_all( $client, $spec, array $external_ids ) {
 		$response = $client->request( 'GET', $spec['path'], null, array( 'external_ids' => implode( ',', $external_ids ) ) );
 		$error    = self::response_error( $response );
 		if ( $error ) {
@@ -427,9 +515,9 @@ class Yotpo_Catalog_Api {
 	}
 
 	/**
-	 * Maps a response to a WP_Error, or null when it succeeded.
+	 * Maps a response to a WP_Error, or null when it succeeded. Shared with Yotpo_Order_Api.
 	 */
-	private static function response_error( $response ) {
+	public static function response_error( $response ) {
 		if ( $response['code'] >= 200 && $response['code'] < 300 ) {
 			return null;
 		}

@@ -47,6 +47,8 @@ require plugin_dir_path( __FILE__ ) . 'lib/sync/class-yotpo-product-payload.php'
 require plugin_dir_path( __FILE__ ) . 'lib/sync/class-yotpo-product-tags.php';
 require plugin_dir_path( __FILE__ ) . 'lib/sync/class-yotpo-payload-compare.php';
 require plugin_dir_path( __FILE__ ) . 'lib/sync/class-yotpo-catalog-api.php';
+require plugin_dir_path( __FILE__ ) . 'lib/sync/class-yotpo-order-payload.php';
+require plugin_dir_path( __FILE__ ) . 'lib/sync/class-yotpo-order-api.php';
 require plugin_dir_path( __FILE__ ) . 'lib/sync/class-yotpo-sync-state.php';
 require plugin_dir_path( __FILE__ ) . 'lib/sync/class-yotpo-sync-jobs.php';
 require plugin_dir_path( __FILE__ ) . 'lib/sync/class-yotpo-product-sync.php';
