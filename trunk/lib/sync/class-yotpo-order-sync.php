@@ -137,14 +137,7 @@ class Yotpo_Order_Sync {
 				// Only an order created now counts as sent: one Yotpo already had (sent by 1.x, or by an
 				// earlier job) was not sent again.
 				if ( $created ) {
-					self::count_sent( $order_id );
-					// A create never carries the cancellation. If the order was cancelled or refunded before this
-					// job ran, the update job queued for that may have run first and found nothing in Yotpo:
-					// send the cancellation now. The fingerprint stored by the create makes this a no-op for an
-					// order that is not cancelled.
-					if ( Yotpo_Order_Payload::is_cancelled( $order ) ) {
-						self::queue_update( $order_id );
-					}
+					self::after_create( $order_id, $order );
 				}
 				return $result;
 			},
@@ -152,6 +145,19 @@ class Yotpo_Order_Sync {
 				self::queue_fulfilled( $order_id, $fulfilled_at, $next_attempt, $delay );
 			}
 		);
+	}
+
+	/**
+	 * What follows an order created in Yotpo: it counts as sent, and a cancellation the create left out
+	 * is sent. A create never carries the cancellation. If the order was cancelled or refunded before this
+	 * job ran, the update job queued for that may have run first and found nothing in Yotpo. The
+	 * fingerprint stored by the create makes the update a no-op for an order that is not cancelled.
+	 */
+	private static function after_create( $order_id, $order ) {
+		self::count_sent( $order_id );
+		if ( Yotpo_Order_Payload::is_cancelled( $order ) ) {
+			self::queue_update( $order_id );
+		}
 	}
 
 	public static function run_update_job( $order_id, $attempt = 1 ) {
