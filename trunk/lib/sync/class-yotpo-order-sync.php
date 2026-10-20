@@ -129,13 +129,23 @@ class Yotpo_Order_Sync {
 		self::run(
 			$order_id,
 			$attempt,
-			function ( $client, $order ) use ( $fulfilled_at ) {
-				return Yotpo_Order_Api::send_fulfilled( $client, $order, $fulfilled_at );
+			function ( $client, $order ) use ( $order_id, $fulfilled_at ) {
+				$result = Yotpo_Order_Api::send_fulfilled( $client, $order, $fulfilled_at );
+				if ( $result && ! is_wp_error( $result ) ) {
+					self::count_sent( $order_id );
+					// A create never carries the cancellation. If the order was cancelled or refunded before this
+					// job ran, the update job queued for that may have run first and found nothing in Yotpo:
+					// send the cancellation now. The fingerprint stored by the create makes this a no-op for an
+					// order that is not cancelled.
+					if ( Yotpo_Order_Payload::is_cancelled( $order ) ) {
+						self::queue_update( $order_id );
+					}
+				}
+				return $result;
 			},
 			function ( $next_attempt, $delay ) use ( $order_id, $fulfilled_at ) {
 				self::queue_fulfilled( $order_id, $fulfilled_at, $next_attempt, $delay );
-			},
-			true
+			}
 		);
 	}
 
@@ -148,20 +158,19 @@ class Yotpo_Order_Sync {
 			},
 			function ( $next_attempt, $delay ) use ( $order_id ) {
 				self::queue_update( $order_id, $next_attempt, $delay );
-			},
-			false
+			}
 		);
 	}
 
 	/**
-	 * What both jobs share: the switch, the pause after a 429, retries with growing delays, the log and
-	 * the counts for the status line.
+	 * What both jobs share: the switch, the pause after a 429, retries with growing delays and the log.
+	 * Counting an order as sent is up to the fulfilled job's $send.
 	 *
-	 * @param callable $send    Receives the client and the order; returns the Yotpo order ID or a WP_Error.
+	 * @param callable $send    Receives the client and the order; returns the Yotpo order ID (0 when
+	 *                          Yotpo does not have the order) or a WP_Error.
 	 * @param callable $requeue Receives the next attempt and the delay in seconds.
-	 * @param bool     $create  Whether this sends the order (counted as sent) rather than updating it.
 	 */
-	private static function run( $order_id, $attempt, $send, $requeue, $create ) {
+	private static function run( $order_id, $attempt, $send, $requeue ) {
 		if ( ! self::enabled() ) {
 			return;
 		}
@@ -180,17 +189,7 @@ class Yotpo_Order_Sync {
 		Yotpo_Sync_Jobs::pause_if_rate_limited( $result, $attempt );
 		$what = 'Order sync: order #' . $order_id;
 		if ( ! is_wp_error( $result ) ) {
-			if ( $create && $result ) {
-				self::count_sent( $order_id );
-				// A create never carries the cancellation. If the order was cancelled or refunded before this
-				// job ran, the update job queued for that may have run first and found nothing in Yotpo:
-				// send the cancellation now. The fingerprint stored by the create makes this a no-op for an
-				// order that is not cancelled.
-				if ( Yotpo_Order_Payload::is_cancelled( $order ) ) {
-					self::queue_update( $order_id );
-				}
-			}
-			ytdbg( 'Yotpo ID ' . $result, $what . ( $create ? ' sent,' : ' updated,' ) );
+			ytdbg( $result ? 'Yotpo ID ' . $result : 'Yotpo does not have the order', $what . ' done,' );
 			return;
 		}
 		if ( 'yotpo_order_skipped' === $result->get_error_code() ) {
