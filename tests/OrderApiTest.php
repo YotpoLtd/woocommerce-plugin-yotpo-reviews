@@ -17,11 +17,15 @@ class OrderApiTest extends Yotpo_Test_Case {
 	/** @var int|null When set, POST /orders answers this code. */
 	private $create_fails = null;
 
+	/** @var int|null When set, POST /products answers this code. */
+	private $product_create_fails = null;
+
 	public function set_up() {
 		parent::set_up();
-		$this->catalog      = array();
-		$this->orders       = array();
-		$this->create_fails = null;
+		$this->catalog              = array();
+		$this->orders               = array();
+		$this->create_fails         = null;
+		$this->product_create_fails = null;
 		$this->route_tokens();
 		$this->route_fake_yotpo();
 	}
@@ -100,6 +104,19 @@ class OrderApiTest extends Yotpo_Test_Case {
 		$sent = $this->orders[ $order->get_id() ];
 		$this->assertSame( array( (string) $beanie->get_id() ), array_column( $sent['line_items'], 'external_product_id' ) );
 		$this->assertSame( array( (string) $beanie->get_id() ), array_column( $sent['fulfillments'][0]['fulfilled_items'], 'external_product_id' ) );
+	}
+
+	public function test_product_yotpo_rejects_fails_the_order_instead_of_dropping_its_line() {
+		$beanie = $this->in_yotpo( $this->create_product() );
+		$scarf  = $this->create_product( 'Silk Scarf', 'YT-ACC-010', '30' );
+		$order  = $this->create_order( array( array( $beanie, 1 ), array( $scarf, 1 ) ) );
+		$this->product_create_fails = 400;
+
+		$result = Yotpo_Order_Api::send_fulfilled( $this->client(), $order, time() );
+
+		$this->assertSame( 'yotpo_rejected', $result->get_error_code() );
+		$this->assertSame( array(), $this->orders, 'An order sent without a line could never get it back' );
+		$this->assertSame( '', wc_get_order( $order->get_id() )->get_meta( Yotpo_Order_Api::META_ORDER_ID ) );
 	}
 
 	public function test_order_left_without_products_is_skipped() {
@@ -305,6 +322,9 @@ class OrderApiTest extends Yotpo_Test_Case {
 		} );
 		$this->route( 'POST', '#^/products$#', function ( $request ) {
 			$product = $request['body']['product'];
+			if ( $this->product_create_fails ) {
+				return $this->respond( $this->product_create_fails, array( 'errors' => array( array( 'message' => 'invalid product' ) ) ) );
+			}
 			if ( isset( $this->catalog[ $product['external_id'] ] ) ) {
 				return $this->respond( 409 );
 			}

@@ -149,10 +149,11 @@ class Yotpo_Catalog_Api {
 	 * to Yotpo" is on, but only creates: a product Yotpo has is never changed here.
 	 *
 	 * A product deleted from WooCommerce can't be created, so it is left out of the answer and the
-	 * caller drops its lines.
+	 * caller drops its lines. A product that still exists but can't be created (Yotpo rejected it) is
+	 * an error: an order is final once sent, so its line can't be dropped and added back later.
 	 *
 	 * @param int[] $product_ids
-	 * @return int[]|WP_Error The products Yotpo has now, or the first retryable error.
+	 * @return int[]|WP_Error The products Yotpo has now, or the first error.
 	 */
 	public static function ensure_products( $client, array $product_ids ) {
 		$spec  = self::product_spec();
@@ -179,11 +180,8 @@ class Yotpo_Catalog_Api {
 				}
 				$created = self::create_for_order( $client, $product_id );
 				if ( is_wp_error( $created ) ) {
-					if ( self::is_retryable( $created ) ) {
-						return $created;
-					}
 					ytdbg( $created->get_error_message(), 'Order sync: product #' . $product_id . ' could not be created in Yotpo:' );
-					continue;
+					return $created;
 				}
 				if ( $created ) {
 					$known[] = $product_id;
