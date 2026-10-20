@@ -470,9 +470,9 @@ class Yotpo_Sync_Jobs {
 
 	/**
 	 * Seconds to wait before retrying after a retryable error: Retry-After for a 429,
-	 * else a delay that doubles with each attempt.
+	 * else a delay that doubles with each attempt. Shared with Yotpo_Order_Sync.
 	 */
-	private static function retry_delay( $error, $attempt ) {
+	public static function retry_delay( $error, $attempt ) {
 		if ( 'yotpo_rate_limited' === $error->get_error_code() ) {
 			return max( self::RATE_LIMIT_MIN_DELAY, (int) $error->get_error_data() );
 		}
@@ -480,18 +480,19 @@ class Yotpo_Sync_Jobs {
 	}
 
 	/**
-	 * Seconds left of the pause that a 429 set for all sync jobs (0 when there is none).
+	 * Seconds left of the pause that a 429 set for all sync jobs, order jobs included (0 when there is none).
 	 */
-	private static function paused_for() {
+	public static function paused_for() {
 		return max( 0, (int) get_transient( self::PAUSE_TRANSIENT ) - time() );
 	}
 
 	/**
-	 * A 429 answers for the whole app key, so it pauses every queued job, not only the one that got it.
+	 * A 429 answers for the whole app key, so it pauses every queued job, not only the one that got it:
+	 * the product sync's and the order sync's (Yotpo_Order_Sync) alike.
 	 *
 	 * @param mixed $result A job result; anything but a rate-limit error is ignored.
 	 */
-	private static function pause_if_rate_limited( $result, $attempt ) {
+	public static function pause_if_rate_limited( $result, $attempt ) {
 		if ( is_wp_error( $result ) && 'yotpo_rate_limited' === $result->get_error_code() ) {
 			$seconds = self::retry_delay( $result, $attempt );
 			set_transient( self::PAUSE_TRANSIENT, time() + $seconds, $seconds );

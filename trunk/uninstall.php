@@ -23,6 +23,7 @@ delete_post_meta_by_key( '_yotpo_v3_variant_hash' );
 // Orders (Yotpo_Order_Api META_*): in post meta, or in WooCommerce's own order tables when the store uses them.
 delete_post_meta_by_key( '_yotpo_v3_order_id' );
 delete_post_meta_by_key( '_yotpo_v3_order_hash' );
+delete_option( 'wc_yotpo_order_sync' ); // Yotpo_Order_Sync::STATS_OPTION
 global $wpdb;
 $yotpo_orders_meta = $wpdb->prefix . 'wc_orders_meta';
 if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $yotpo_orders_meta ) ) === $yotpo_orders_meta ) { // phpcs:ignore WordPress.DB.DirectDatabaseQuery
@@ -30,6 +31,7 @@ if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $yotpo_orders_meta )
 }
 if ( function_exists( 'as_unschedule_all_actions' ) ) {
 	as_unschedule_all_actions( '', array(), 'yotpo-product-sync' );
+	as_unschedule_all_actions( '', array(), 'yotpo-order-sync' ); // Yotpo_Order_Sync::GROUP
 }
 
 // Remove the private debug log directory (log, .htaccess and index.php guards); the log contains customer emails.

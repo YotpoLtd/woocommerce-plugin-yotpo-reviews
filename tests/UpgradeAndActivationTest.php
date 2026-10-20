@@ -76,6 +76,8 @@ class UpgradeAndActivationTest extends Yotpo_Test_Case {
 			$this->assertFalse( $read['v3_widgets_enables'][ $widget ], "$widget does not appear on its own" );
 		}
 		$this->assertTrue( Yotpo_Product_Sync::setting_on(), 'The product sync stays on for existing stores' );
+		$this->assertTrue( Yotpo_Order_Sync::setting_on(), 'Orders are still sent: 1.x always sent them' );
+		$this->assertTrue( $read['order_sync_enabled'] );
 	}
 
 	public function test_saved_nested_values_win_over_the_defaults() {

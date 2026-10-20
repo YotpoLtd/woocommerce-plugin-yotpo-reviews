@@ -48,7 +48,7 @@ class SettingsPageTest extends Yotpo_Test_Case {
 
 	public function test_saving_the_page_with_every_option_flipped_keeps_every_setting() {
 		$settings = get_option( 'yotpo_settings' );
-		foreach ( array( 'yotpo_language_as_site', 'disable_native_review_system', 'product_sync_enabled', 'product_sync_tags' ) as $key ) {
+		foreach ( array( 'yotpo_language_as_site', 'disable_native_review_system', 'product_sync_enabled', 'product_sync_tags', 'order_sync_enabled' ) as $key ) {
 			$settings[ $key ] = empty( $settings[ $key ] );
 		}
 		foreach ( array( 'v3_widgets_enables', 'v2_widgets_enables' ) as $group ) {
@@ -80,6 +80,34 @@ class SettingsPageTest extends Yotpo_Test_Case {
 		$html = $this->render();
 		$this->assertMatchesRegularExpression( '#id="product_sync_enabled" name="product_sync_enabled" value="1"\s*/>#', $html, 'Unchecked when off' );
 		$this->assertStringContainsString( '<div class="yotpo-status yotpo-tone--neutral">Off. Products are not sent to Yotpo.</div>', $html );
+	}
+
+	public function test_orders_card_has_the_switch_status_line_and_trigger_status() {
+		$html   = $this->render();
+		$orders = substr( $html, strpos( $html, '>Orders<' ) );
+		$orders = substr( $orders, 0, strpos( $orders, '</section>' ) );
+
+		$this->assertMatchesRegularExpression( '#id="order_sync_enabled" name="order_sync_enabled" value="1" checked="checked" />#', $orders );
+		$this->assertStringContainsString( '<div class="yotpo-status yotpo-tone--info">On. No orders sent yet.</div>', $orders );
+		$this->assertStringContainsString( 'Send review requests when an order reaches', $orders, 'The trigger status moved here' );
+		$this->assertMatchesRegularExpression( '#<option value="wc-completed" selected="selected">Completed</option>#', $orders );
+		$this->assertStringNotContainsString( 'Reviews and orders', $html );
+
+		$this->set_setting( 'order_sync_enabled', false );
+		$this->assertMatchesRegularExpression( '#id="order_sync_enabled" name="order_sync_enabled" value="1"\s*/>#', $this->render(), 'Unchecked when off' );
+	}
+
+	public function test_custom_order_status_can_be_the_trigger_and_survives_a_save() {
+		add_filter(
+			'wc_order_statuses',
+			function ( $statuses ) {
+				return array_merge( $statuses, array( 'wc-delivered' => 'Delivered' ) );
+			}
+		);
+		$this->set_setting( 'yotpo_order_status', 'wc-delivered' );
+
+		$this->assertMatchesRegularExpression( '#<option value="wc-delivered" selected="selected">Delivered</option>#', $this->render() );
+		$this->assert_save_keeps_settings();
 	}
 
 	public function test_saved_secret_is_masked_and_shown_while_being_entered() {

@@ -41,12 +41,15 @@ abstract class Yotpo_Test_Case extends WP_UnitTestCase {
 		delete_transient( Yotpo_Sync_Jobs::PAUSE_TRANSIENT );
 		delete_transient( Yotpo_Sync_Jobs::RECHECK_TRANSIENT );
 		as_unschedule_all_actions( '', array(), Yotpo_Sync_Jobs::GROUP );
+		as_unschedule_all_actions( '', array(), Yotpo_Order_Sync::GROUP );
+		delete_option( Yotpo_Order_Sync::STATS_OPTION );
 		add_filter( 'pre_http_request', array( $this, 'answer_request' ), 10, 3 );
 	}
 
 	public function tear_down() {
 		remove_filter( 'pre_http_request', array( $this, 'answer_request' ), 10 );
 		as_unschedule_all_actions( '', array(), Yotpo_Sync_Jobs::GROUP );
+		as_unschedule_all_actions( '', array(), Yotpo_Order_Sync::GROUP );
 		parent::tear_down();
 	}
 
@@ -188,12 +191,11 @@ abstract class Yotpo_Test_Case extends WP_UnitTestCase {
 
 	/**
 	 * An order from Dana Levi (IL) with these lines, each a product (or variation) and a quantity, in
-	 * $status. The 1.x order hook is kept out of it: it would call the legacy API.
+	 * $status. Reaching the status queues an order job like any status change; nothing runs it.
 	 *
 	 * @param array[] $lines Each: array( WC_Product $product, int $quantity ).
 	 */
 	protected function create_order( array $lines, $status = 'completed', array $billing = array() ) {
-		remove_action( 'woocommerce_order_status_changed', 'wc_yotpo_map' );
 		$order = wc_create_order();
 		foreach ( $lines as $line ) {
 			$order->add_product( $line[0], $line[1] );
@@ -206,7 +208,6 @@ abstract class Yotpo_Test_Case extends WP_UnitTestCase {
 		$order->calculate_totals();
 		$order->set_status( $status );
 		$order->save();
-		add_action( 'woocommerce_order_status_changed', 'wc_yotpo_map' );
 		return wc_get_order( $order->get_id() );
 	}
 
@@ -228,10 +229,10 @@ abstract class Yotpo_Test_Case extends WP_UnitTestCase {
 		return wc_get_order( $order->get_id() );
 	}
 
-	/** Sync jobs waiting to run, optionally only one hook's. */
-	protected function pending_jobs( $hook = null ) {
+	/** Sync jobs waiting to run, optionally only one hook's; the product sync's unless $group says otherwise. */
+	protected function pending_jobs( $hook = null, $group = Yotpo_Sync_Jobs::GROUP ) {
 		$query = array(
-			'group'    => Yotpo_Sync_Jobs::GROUP,
+			'group'    => $group,
 			'status'   => ActionScheduler_Store::STATUS_PENDING,
 			'per_page' => -1,
 		);
