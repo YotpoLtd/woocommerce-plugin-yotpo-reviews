@@ -44,10 +44,28 @@ class UninstallTest extends Yotpo_Test_Case {
 		$this->assertSame( array(), array_values( $meta_left ), 'Yotpo meta left behind' );
 		global $wpdb;
 		$order_meta_left = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE meta_key IN (%s, %s)", Yotpo_Order_Api::META_ORDER_ID, Yotpo_Order_Api::META_UPDATE_HASH ) );
-		if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->prefix . 'wc_orders_meta' ) ) ) {
-			$order_meta_left += (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->prefix}wc_orders_meta WHERE meta_key IN (%s, %s)", Yotpo_Order_Api::META_ORDER_ID, Yotpo_Order_Api::META_UPDATE_HASH ) );
-		}
-		$this->assertSame( 0, $order_meta_left, 'Order meta left behind, in either order storage' );
+		$this->assertSame( 0, $order_meta_left, 'Order meta left behind in post meta (the order storage of this test)' );
 		$this->assertSame( array(), $this->pending_jobs(), 'Jobs left queued' );
+	}
+
+	/**
+	 * With high-performance order storage, WooCommerce keeps order meta in its own table. Orders made
+	 * by create_order() are in post storage here, so the rows are inserted directly.
+	 */
+	public function test_uninstall_removes_order_meta_from_the_order_tables() {
+		global $wpdb;
+		$table = $wpdb->prefix . 'wc_orders_meta';
+		$this->assertSame( $table, $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ), 'WooCommerce creates its order tables when it installs' );
+		foreach ( array( Yotpo_Order_Api::META_ORDER_ID, Yotpo_Order_Api::META_UPDATE_HASH, '_not_from_yotpo' ) as $key ) {
+			$wpdb->insert( $table, array( 'order_id' => 987654, 'meta_key' => $key, 'meta_value' => 'x' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		}
+
+		if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
+			define( 'WP_UNINSTALL_PLUGIN', 'yotpo-social-reviews-for-woocommerce/wc_yotpo.php' );
+		}
+		include dirname( __DIR__ ) . '/trunk/uninstall.php';
+
+		$left = $wpdb->get_col( $wpdb->prepare( "SELECT meta_key FROM {$table} WHERE order_id = %d", 987654 ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$this->assertSame( array( '_not_from_yotpo' ), $left, "Only the plugin's order meta is removed from the order tables" );
 	}
 }
