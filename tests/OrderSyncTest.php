@@ -91,6 +91,17 @@ class OrderSyncTest extends Yotpo_Test_Case {
 		$this->assertSame( $processing->get_id(), reset( $jobs )->get_args()[0] );
 	}
 
+	public function test_cancelled_as_the_trigger_status_sends_the_order_and_the_cancellation() {
+		$this->set_setting( 'yotpo_order_status', 'wc-cancelled' );
+
+		$order = $this->create_order( array( array( $this->product, 1 ) ), 'cancelled' );
+
+		$this->assertCount( 1, $this->order_jobs( Yotpo_Order_Sync::HOOK_FULFILLED ) );
+		$this->assertCount( 1, $this->order_jobs( Yotpo_Order_Sync::HOOK_UPDATE ), 'The cancellation is queued too' );
+		$this->run_order_jobs();
+		$this->assertArrayHasKey( 'cancellation', $this->orders[ $order->get_id() ] );
+	}
+
 	public function test_cancelling_a_sent_order_sends_the_cancellation() {
 		$order = $this->create_order( array( array( $this->product, 1 ) ) );
 		$this->run_order_jobs();

@@ -83,12 +83,14 @@ class Yotpo_Order_Sync {
 
 	/**
 	 * woocommerce_order_status_changed: an order reaching the fulfilled status is sent; one cancelled or
-	 * refunded is updated, if Yotpo has it.
+	 * refunded is updated, if Yotpo has it. Both can apply: the merchant may have chosen Cancelled or
+	 * Refunded as the status that sends the order, and the cancellation then follows the create.
 	 */
 	public static function order_status_changed( $order_id, $from, $to ) {
 		if ( self::fulfilled_status() === $to ) {
 			self::queue_fulfilled( $order_id, time() );
-		} elseif ( in_array( $to, array( 'cancelled', 'refunded' ), true ) ) {
+		}
+		if ( in_array( $to, array( 'cancelled', 'refunded' ), true ) ) {
 			self::queue_update( $order_id );
 		}
 	}
