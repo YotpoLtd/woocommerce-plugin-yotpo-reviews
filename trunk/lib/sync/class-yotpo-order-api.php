@@ -59,7 +59,11 @@ class Yotpo_Order_Api {
 			if ( ! $yotpo_id ) {
 				return new WP_Error( 'yotpo_bad_response', 'Create order returned no yotpo_id' );
 			}
-			self::remember( $order, $yotpo_id, self::fingerprint( Yotpo_Order_Payload::update( $order ) ) );
+			// The fingerprint covers what the create carried. It carries no cancellation, so an order
+			// cancelled or refunded by now still gets its cancellation from send_update().
+			$sent = Yotpo_Order_Payload::update( $order );
+			unset( $sent['cancellation'] );
+			self::remember( $order, $yotpo_id, self::fingerprint( $sent ) );
 			return $yotpo_id;
 		}
 		if ( 409 !== $response['code'] ) {

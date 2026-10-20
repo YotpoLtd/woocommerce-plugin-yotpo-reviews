@@ -161,6 +161,19 @@ class OrderApiTest extends Yotpo_Test_Case {
 		$this->assertSame( 'voided', $this->orders[ $order->get_id() ]['payment_status'] );
 	}
 
+	public function test_order_cancelled_before_it_was_sent_still_gets_its_cancellation() {
+		$order = $this->create_order( array( array( $this->in_yotpo( $this->create_product() ), 1 ) ), 'cancelled' );
+		Yotpo_Order_Api::send_fulfilled( $this->client(), $order, time() );
+		$yotpo_id = $this->orders[ $order->get_id() ]['yotpo_id'];
+		$this->assertArrayNotHasKey( 'cancellation', $this->orders[ $order->get_id() ], 'The create carries no cancellation' );
+		$this->requests = array();
+
+		Yotpo_Order_Api::send_update( $this->client(), wc_get_order( $order->get_id() ) );
+
+		$this->assertSame( array( 'PATCH /orders/' . $yotpo_id ), $this->calls(), 'The cancellation was never sent: the update goes out' );
+		$this->assertArrayHasKey( 'cancellation_date', $this->orders[ $order->get_id() ]['cancellation'] );
+	}
+
 	public function test_update_right_after_create_sends_nothing() {
 		$order = $this->create_order( array( array( $this->in_yotpo( $this->create_product() ), 1 ) ) );
 		Yotpo_Order_Api::send_fulfilled( $this->client(), $order, time() );
