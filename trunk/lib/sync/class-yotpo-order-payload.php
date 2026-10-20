@@ -37,7 +37,7 @@ class Yotpo_Order_Payload {
 		}
 		$payload = array(
 			'external_id'    => (string) $order->get_id(),
-			'order_name'     => self::limit( $order->get_order_number(), 255 ),
+			'order_name'     => Yotpo_Product_Payload::limit( $order->get_order_number(), 255 ),
 			'order_date'     => self::date( $order->get_date_created() ? $order->get_date_created()->getTimestamp() : time() ),
 			'currency'       => $order->get_currency(),
 			'total_price'    => self::money( $order->get_total() ),
@@ -49,7 +49,7 @@ class Yotpo_Order_Payload {
 		);
 		$payment_method = trim( (string) $order->get_payment_method_title() );
 		if ( '' !== $payment_method ) {
-			$payload['payment_method'] = self::limit( $payment_method, 64 );
+			$payload['payment_method'] = Yotpo_Product_Payload::limit( $payment_method, 64 );
 		}
 		$custom = self::custom_properties( $order );
 		if ( $custom ) {
@@ -190,9 +190,9 @@ class Yotpo_Order_Payload {
 			return self::skipped( 'it has no billing first name' );
 		}
 		$customer = array(
-			'email'      => self::limit( $email, 255 ),
-			'first_name' => self::limit( $first_name, 255 ),
-			'last_name'  => self::limit( trim( (string) $order->get_billing_last_name() ), 255 ),
+			'email'      => Yotpo_Product_Payload::limit( $email, 255 ),
+			'first_name' => Yotpo_Product_Payload::limit( $first_name, 255 ),
+			'last_name'  => Yotpo_Product_Payload::limit( trim( (string) $order->get_billing_last_name() ), 255 ),
 		);
 		if ( $order->get_customer_id() ) {
 			$customer['external_id'] = (string) $order->get_customer_id();
@@ -296,10 +296,5 @@ class Yotpo_Order_Payload {
 
 	private static function money( $amount ) {
 		return round( (float) $amount, wc_get_price_decimals() );
-	}
-
-	private static function limit( $text, $max ) {
-		$text = (string) $text;
-		return function_exists( 'mb_substr' ) ? mb_substr( $text, 0, $max ) : substr( $text, 0, $max );
 	}
 }
