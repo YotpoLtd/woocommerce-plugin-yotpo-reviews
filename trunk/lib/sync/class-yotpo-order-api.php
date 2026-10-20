@@ -108,7 +108,7 @@ class Yotpo_Order_Api {
 	}
 
 	/**
-	 * Looks these orders up in Yotpo, LOOKUP_MAX per request, and stores the Yotpo IDs found.
+	 * Looks these orders up in Yotpo, Yotpo_V3_Client::LOOKUP_MAX per request, and stores the Yotpo IDs found.
 	 *
 	 * @param WC_Order[] $orders
 	 * @return int[]|WP_Error Yotpo order IDs by WooCommerce order ID, for the orders Yotpo has.

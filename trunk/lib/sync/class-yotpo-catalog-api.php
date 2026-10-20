@@ -7,7 +7,8 @@ defined( 'ABSPATH' ) || exit;
  * blocklisting and discontinuing. Remembers Yotpo IDs and data fingerprints in post meta.
  *
  * - Yotpo creates products implicitly from widgets and orders, so a create often answers
- *   409 "already exists": the product is then looked up by external ID and updated.
+ *   409 "already exists": the product is then looked up by external ID and updated, except by
+ *   create_product() (the order path), which only stores the ID it found and sends no update.
  * - A stored Yotpo ID that Yotpo rejects is re-checked by external ID before anything is created.
  */
 class Yotpo_Catalog_Api {
@@ -84,7 +85,9 @@ class Yotpo_Catalog_Api {
 	}
 
 	/**
-	 * @param bool $create_only Leave a product or variant Yotpo turns out to have as it is (create_product()).
+	 * @param bool $create_only Leave a product or variant Yotpo turns out to have, after a create answering 409, as it is
+	 *                          (create_product()). Does not cover a stored Yotpo ID, which is still updated: create_product()
+	 *                          returns before this for one.
 	 */
 	private static function send_upsert( $client, $spec, $post_id, $payload, $create_only = false ) {
 		$yotpo_id = (int) get_post_meta( $post_id, $spec['meta'], true );
@@ -127,7 +130,7 @@ class Yotpo_Catalog_Api {
 			return Yotpo_V3_Client::response_error( $response );
 		}
 
-		// Already in Yotpo (often created from widgets or orders): find it and update it.
+		// Already in Yotpo (often created from widgets or orders): find it, and update it unless $create_only.
 		$yotpo_id = self::find_yotpo_id( $client, $spec, $post_id );
 		if ( is_wp_error( $yotpo_id ) ) {
 			return $yotpo_id;
@@ -163,7 +166,7 @@ class Yotpo_Catalog_Api {
 	}
 
 	/**
-	 * Looks these products up in Yotpo, LOOKUP_MAX per request, and stores the Yotpo IDs found.
+	 * Looks these products up in Yotpo, Yotpo_V3_Client::LOOKUP_MAX per request, and stores the Yotpo IDs found.
 	 *
 	 * @param int[] $product_ids WooCommerce product IDs.
 	 * @return int[]|WP_Error The IDs of the products Yotpo has.
