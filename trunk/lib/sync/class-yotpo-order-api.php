@@ -59,11 +59,7 @@ class Yotpo_Order_Api {
 			if ( ! $yotpo_id ) {
 				return new WP_Error( 'yotpo_bad_response', 'Create order returned no yotpo_id' );
 			}
-			// The fingerprint covers what the create carried. It carries no cancellation, so an order
-			// cancelled or refunded by now still gets its cancellation from send_update().
-			$sent = Yotpo_Order_Payload::update( $order );
-			unset( $sent['cancellation'] );
-			self::remember( $order, $yotpo_id, self::fingerprint( $sent ) );
+			self::remember( $order, $yotpo_id, Yotpo_Order_Payload::fingerprint( Yotpo_Order_Payload::update_sent_with_create( $order ) ) );
 			return $yotpo_id;
 		}
 		if ( 409 !== $response['code'] ) {
@@ -90,7 +86,7 @@ class Yotpo_Order_Api {
 			return $yotpo_id;
 		}
 		$fields = Yotpo_Order_Payload::update( $order );
-		$hash   = self::fingerprint( $fields );
+		$hash   = Yotpo_Order_Payload::fingerprint( $fields );
 		if ( $order->get_meta( self::META_UPDATE_HASH ) === $hash ) {
 			return $yotpo_id;
 		}
@@ -169,37 +165,11 @@ class Yotpo_Order_Api {
 	 * @return array|WP_Error
 	 */
 	private static function with_known_products( $client, array $payload ) {
-		$product_ids = array();
-		foreach ( $payload['line_items'] as $line ) {
-			$product_ids[] = (int) $line['external_product_id'];
-		}
-		$known = Yotpo_Catalog_Api::ensure_products( $client, $product_ids );
+		$known = Yotpo_Catalog_Api::ensure_products( $client, Yotpo_Order_Payload::product_ids( $payload ) );
 		if ( is_wp_error( $known ) ) {
 			return $known;
 		}
-		$known = array_map( 'strval', $known );
-		$keep  = function ( $item ) use ( $known ) {
-			return in_array( (string) $item['external_product_id'], $known, true );
-		};
-		$payload['line_items'] = array_values( array_filter( $payload['line_items'], $keep ) );
-		if ( ! $payload['line_items'] ) {
-			return Yotpo_Order_Payload::skipped( 'none of its products are in WooCommerce or Yotpo any more' );
-		}
-		foreach ( $payload['fulfillments'] as $index => $fulfillment ) {
-			$payload['fulfillments'][ $index ]['fulfilled_items'] = array_values( array_filter( $fulfillment['fulfilled_items'], $keep ) );
-		}
-		return $payload;
-	}
-
-	/**
-	 * The fingerprint of update fields. The cancellation date is left out: it is derived from the order,
-	 * and only whether the order is cancelled matters for sending again.
-	 */
-	private static function fingerprint( array $fields ) {
-		if ( isset( $fields['cancellation'] ) ) {
-			$fields['cancellation'] = true;
-		}
-		return md5( wp_json_encode( $fields ) );
+		return Yotpo_Order_Payload::only_products( $payload, $known );
 	}
 
 	private static function remember( $order, $yotpo_id, $hash = null ) {

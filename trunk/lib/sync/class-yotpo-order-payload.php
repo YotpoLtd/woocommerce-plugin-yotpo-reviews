@@ -89,6 +89,78 @@ class Yotpo_Order_Payload {
 	}
 
 	/**
+	 * The update fields as the create already carried them: the same, without the cancellation, which
+	 * a create never carries. Their fingerprint is what Yotpo has right after create, so an order
+	 * cancelled or refunded by then still gets its cancellation from the next update.
+	 *
+	 * @param WC_Order $order
+	 * @return array
+	 */
+	public static function update_sent_with_create( $order ) {
+		$fields = self::update( $order );
+		unset( $fields['cancellation'] );
+		return $fields;
+	}
+
+	/**
+	 * The fingerprint of update fields, to send an update only when it differs from the last one
+	 * accepted. The cancellation date is left out: it is derived from the order, and only whether the
+	 * order is cancelled matters for sending again.
+	 *
+	 * @return string
+	 */
+	public static function fingerprint( array $fields ) {
+		if ( isset( $fields['cancellation'] ) ) {
+			$fields['cancellation'] = true;
+		}
+		return md5( wp_json_encode( $fields ) );
+	}
+
+	/**
+	 * The external product IDs of an order payload's lines.
+	 *
+	 * @param array $payload As returned by order().
+	 * @return int[]
+	 */
+	public static function product_ids( array $payload ) {
+		$ids = array();
+		if ( isset( $payload['line_items'] ) && is_array( $payload['line_items'] ) ) {
+			foreach ( $payload['line_items'] as $line ) {
+				if ( isset( $line['external_product_id'] ) ) {
+					$ids[] = (int) $line['external_product_id'];
+				}
+			}
+		}
+		return $ids;
+	}
+
+	/**
+	 * The payload with only the lines of these products, and only their fulfilled items.
+	 *
+	 * @param array $payload     As returned by order().
+	 * @param int[] $product_ids The products to keep.
+	 * @return array|WP_Error WP_Error 'yotpo_order_skipped' when no line is left.
+	 */
+	public static function only_products( array $payload, array $product_ids ) {
+		$keep = array_map( 'strval', $product_ids );
+		$kept = function ( $item ) use ( $keep ) {
+			return isset( $item['external_product_id'] ) && in_array( (string) $item['external_product_id'], $keep, true );
+		};
+		$payload['line_items'] = isset( $payload['line_items'] ) && is_array( $payload['line_items'] ) ? array_values( array_filter( $payload['line_items'], $kept ) ) : array();
+		if ( ! $payload['line_items'] ) {
+			return self::skipped( 'none of its products are in WooCommerce or Yotpo any more' );
+		}
+		if ( isset( $payload['fulfillments'] ) && is_array( $payload['fulfillments'] ) ) {
+			foreach ( $payload['fulfillments'] as $index => $fulfillment ) {
+				if ( isset( $fulfillment['fulfilled_items'] ) && is_array( $fulfillment['fulfilled_items'] ) ) {
+					$payload['fulfillments'][ $index ]['fulfilled_items'] = array_values( array_filter( $fulfillment['fulfilled_items'], $kept ) );
+				}
+			}
+		}
+		return $payload;
+	}
+
+	/**
 	 * Cancelled, or refunded in full (by status or by the refunds' total).
 	 */
 	public static function is_cancelled( $order ) {
