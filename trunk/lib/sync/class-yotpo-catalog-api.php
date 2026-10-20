@@ -144,8 +144,8 @@ class Yotpo_Catalog_Api {
 	/**
 	 * Makes sure Yotpo has these products before an order that contains them is sent: V3 rejects an
 	 * order line whose product it doesn't know. A product with a stored Yotpo ID counts as known (the
-	 * product sync keeps those right); the rest are looked up, and those Yotpo lacks are created, with
-	 * their variations, from the same data the product sync sends. Runs whether or not "Sync products
+	 * product sync keeps those right); the rest are looked up, and those Yotpo lacks are created, from
+	 * the same data the product sync sends, without their variations. Runs whether or not "Sync products
 	 * to Yotpo" is on, but only creates: a product Yotpo has is never changed here.
 	 *
 	 * A product deleted from WooCommerce can't be created, so it is left out of the answer and the
@@ -192,8 +192,10 @@ class Yotpo_Catalog_Api {
 	}
 
 	/**
-	 * Creates a product Yotpo lacks, with its variations, for ensure_products(). One that isn't
-	 * published is blocklisted right after, as the product sync would.
+	 * Creates a product Yotpo lacks, for ensure_products(). Only the product: its variations are one
+	 * request each, and an order line is accepted without them (V3 keeps the external_variant_id of a
+	 * variation it doesn't know), so they are left to the product sync. One that isn't published is
+	 * blocklisted right after, as the product sync would.
 	 *
 	 * @return bool|WP_Error False when WooCommerce no longer has the product.
 	 */
@@ -205,15 +207,6 @@ class Yotpo_Catalog_Api {
 		$yotpo_id = self::upsert_product( $client, $product, true );
 		if ( is_wp_error( $yotpo_id ) ) {
 			return $yotpo_id;
-		}
-		foreach ( self::variation_ids( $product ) as $variation_id ) {
-			$variation = wc_get_product( $variation_id );
-			if ( $variation ) {
-				$result = self::upsert_variant( $client, $yotpo_id, $variation, $product, true );
-				if ( is_wp_error( $result ) && self::is_retryable( $result ) ) {
-					return $result;
-				}
-			}
 		}
 		if ( 'publish' !== $product->get_status() ) {
 			$result = self::blocklist_product( $client, $product_id, true );

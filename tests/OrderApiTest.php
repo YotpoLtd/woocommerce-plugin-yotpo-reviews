@@ -77,8 +77,9 @@ class OrderApiTest extends Yotpo_Test_Case {
 		$this->assertSame( array( 'POST /access_tokens', 'GET /orders', 'GET /products' ), array_slice( $calls, 0, 3 ), 'One lookup for both products' );
 		$this->assertSame( 'POST /orders', end( $calls ), 'The order goes last' );
 		$this->assertArrayHasKey( $beanie->get_id(), $this->catalog );
-		$this->assertCount( 3, $this->catalog[ $hoodie->get_id() ]['variants'], 'With its variations' );
+		$this->assertSame( array(), $this->catalog[ $hoodie->get_id() ]['variants'], 'Without its variations: one request each, left to the product sync' );
 		$this->assertCount( 2, $this->orders[ $order->get_id() ]['line_items'] );
+		$this->assertSame( (string) $medium->get_id(), $this->orders[ $order->get_id() ]['line_items'][1]['external_variant_id'], 'The purchased variation is still on the line' );
 	}
 
 	public function test_product_yotpo_has_is_not_changed() {
