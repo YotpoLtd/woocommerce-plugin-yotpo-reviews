@@ -186,6 +186,48 @@ abstract class Yotpo_Test_Case extends WP_UnitTestCase {
 		return $attributes;
 	}
 
+	/**
+	 * An order from Dana Levi (IL) with these lines, each a product (or variation) and a quantity, in
+	 * $status. The 1.x order hook is kept out of it: it would call the legacy API.
+	 *
+	 * @param array[] $lines Each: array( WC_Product $product, int $quantity ).
+	 */
+	protected function create_order( array $lines, $status = 'completed', array $billing = array() ) {
+		remove_action( 'woocommerce_order_status_changed', 'wc_yotpo_map' );
+		$order = wc_create_order();
+		foreach ( $lines as $line ) {
+			$order->add_product( $line[0], $line[1] );
+		}
+		$billing = array_merge( array( 'first_name' => 'Dana', 'last_name' => 'Levi', 'email' => 'dana@example.com', 'country' => 'IL' ), $billing );
+		foreach ( $billing as $field => $value ) {
+			$order->{'set_billing_' . $field}( $value );
+		}
+		$order->set_payment_method_title( 'Credit card' );
+		$order->calculate_totals();
+		$order->set_status( $status );
+		$order->save();
+		add_action( 'woocommerce_order_status_changed', 'wc_yotpo_map' );
+		return wc_get_order( $order->get_id() );
+	}
+
+	/**
+	 * Refunds these quantities of an order's lines, by line item ID. The refund amount is the lines' price.
+	 *
+	 * @param array $quantities Quantities by line item ID.
+	 */
+	protected function refund( $order, array $quantities ) {
+		$lines  = array();
+		$amount = 0;
+		foreach ( $quantities as $item_id => $quantity ) {
+			$item             = $order->get_item( $item_id );
+			$line_total       = $item->get_total() / $item->get_quantity() * $quantity;
+			$lines[ $item_id ] = array( 'qty' => $quantity, 'refund_total' => $line_total );
+			$amount          += $line_total;
+		}
+		wc_create_refund( array( 'order_id' => $order->get_id(), 'amount' => $amount, 'line_items' => $lines ) );
+		return wc_get_order( $order->get_id() );
+	}
+
 	/** Sync jobs waiting to run, optionally only one hook's. */
 	protected function pending_jobs( $hook = null ) {
 		$query = array(

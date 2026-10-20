@@ -62,7 +62,7 @@ Run these before opening a PR:
 
 | Check | Command | What it catches |
 |---|---|---|
-| Tests | `composer test` | Product sync, settings page and uninstall behavior. See [Tests](#tests) below. Also run on every PR by GitHub Actions (PHP 7.4 and 8.3) |
+| Tests | `composer test` | Product sync, orders, settings page and uninstall behavior. See [Tests](#tests) below. Also run on every PR by GitHub Actions (PHP 7.4 and 8.3) |
 | PHP lint | `composer lint` | Syntax errors and deprecations. Set `PHP_BINARIES` to test several PHP versions, e.g. `PHP_BINARIES="php7.4 php8.4" composer lint` |
 | PHPCS | `composer phpcs` | Security (escaping, nonces, sanitization), PHP 7.4+ compatibility, unprefixed globals. Rules are in `phpcs.xml.dist` |
 | Plugin Check | `wp plugin check yotpo-social-reviews-for-woocommerce` | WordPress.org directory requirements (readme headers, direct file access, etc.). Run inside a WordPress install with the [Plugin Check](https://wordpress.org/plugins/plugin-check/) plugin active |

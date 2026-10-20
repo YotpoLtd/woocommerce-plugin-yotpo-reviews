@@ -15,6 +15,7 @@ class Yotpo_V3_Client {
 	const TOKEN_OPTION = 'wc_yotpo_v3_token'; // Also written out in uninstall.php: keep both in sync.
 	const MIN_INTERVAL = 0.2; // Seconds between calls: 5 requests per second per app key.
 	const TIMEOUT      = 15;
+	const LOOKUP_MAX   = 100; // External IDs per lookup request: Yotpo's maximum.
 
 	private $app_key;
 	private $secret;
@@ -123,6 +124,71 @@ class Yotpo_V3_Client {
 		// Not autoloaded: only sync jobs need it.
 		update_option( self::TOKEN_OPTION, array( 'app_key' => $this->app_key, 'token' => $decoded['access_token'] ), false );
 		return $decoded['access_token'];
+	}
+
+	/**
+	 * The items of a lookup answer that name an external ID and a Yotpo ID, by external ID.
+	 *
+	 * @param array $items The answer's list ($response['body'][ $spec['list_key'] ]).
+	 * @return array[]
+	 */
+	public static function index_by_external_id( array $items ) {
+		$by_external_id = array();
+		foreach ( $items as $item ) {
+			if ( isset( $item['external_id'], $item['yotpo_id'] ) ) {
+				$by_external_id[ (string) $item['external_id'] ] = $item;
+			}
+		}
+		return $by_external_id;
+	}
+
+	/**
+	 * Looks up these external IDs in Yotpo in one request. Yotpo's reference for external_ids:
+	 * "Max 100 IDs. Can't come with page_info or limit." So the request carries nothing else, and one
+	 * answer holds every match. An answer that still says there is more is not trusted (an ID missing
+	 * from it may be on a page that can't be asked for): it is an error, and the caller sends in full.
+	 * Takes the path and list_key of the collection, so it serves products and orders alike.
+	 *
+	 * @param array $spec         At least 'path' (e.g. '/products') and 'list_key' (the answer's list, e.g. 'products').
+	 * @param int[] $external_ids At most LOOKUP_MAX.
+	 * @return array|WP_Error The items of the answer.
+	 */
+	public function lookup_all( $spec, array $external_ids ) {
+		$response = $this->request( 'GET', $spec['path'], null, array( 'external_ids' => implode( ',', $external_ids ) ) );
+		$error    = self::response_error( $response );
+		if ( $error ) {
+			return $error;
+		}
+		if ( ! is_array( $response['body'] ) || ! isset( $response['body'][ $spec['list_key'] ] ) || ! is_array( $response['body'][ $spec['list_key'] ] ) ) {
+			// A 2xx that is not a lookup answer (a proxy's page, say) is not "Yotpo has none of these".
+			return new WP_Error( 'yotpo_bad_response', 'The lookup answer has no "' . $spec['list_key'] . '" list' );
+		}
+		if ( ! empty( $response['body']['pagination']['next_page_info'] ) ) {
+			return new WP_Error( 'yotpo_bad_response', 'The lookup of ' . count( $external_ids ) . ' external IDs answered with more pages' );
+		}
+		return array_values( $response['body'][ $spec['list_key'] ] );
+	}
+
+	/**
+	 * Maps a response to a WP_Error, or null when it succeeded.
+	 */
+	public static function response_error( $response ) {
+		if ( $response['code'] >= 200 && $response['code'] < 300 ) {
+			return null;
+		}
+		if ( 429 === $response['code'] ) {
+			return new WP_Error( 'yotpo_rate_limited', 'Yotpo rate limit reached', $response['retry_after'] );
+		}
+		$code = 0 === $response['code'] ? 'yotpo_network' : ( $response['code'] >= 500 ? 'yotpo_server' : 'yotpo_rejected' );
+		return new WP_Error( $code, $response['error'] ? $response['error'] : 'HTTP ' . $response['code'] );
+	}
+
+	/**
+	 * Whether an error from response_error() is worth retrying: network, server and rate-limit
+	 * errors are; a 4xx rejection is not.
+	 */
+	public static function is_retryable( $error ) {
+		return in_array( $error->get_error_code(), array( 'yotpo_rate_limited', 'yotpo_network', 'yotpo_server' ), true );
 	}
 
 	private function pace() {

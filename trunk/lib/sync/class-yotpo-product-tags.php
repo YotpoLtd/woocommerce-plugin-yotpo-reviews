@@ -73,7 +73,7 @@ class Yotpo_Product_Tags {
 	 */
 	public static function form_tag_name( $value ) {
 		$value = trim( str_replace( ',', '', (string) $value ) );
-		return function_exists( 'mb_substr' ) ? mb_substr( $value, 0, self::FORM_MAX ) : substr( $value, 0, self::FORM_MAX );
+		return Yotpo_Product_Payload::limit( $value, self::FORM_MAX );
 	}
 
 	/**

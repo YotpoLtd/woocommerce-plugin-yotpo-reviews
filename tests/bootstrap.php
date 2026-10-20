@@ -29,6 +29,9 @@ tests_add_filter(
 	'setup_theme',
 	function () {
 		WC_Install::install();
+		// WooCommerce's own order tables, which it creates only once high-performance order storage is
+		// turned on. Created here, not in a test: the test suite makes every table created in a test temporary.
+		wc_get_container()->get( Automattic\WooCommerce\Internal\DataStores\Orders\DataSynchronizer::class )->create_database_tables();
 		$GLOBALS['wp_roles'] = null;
 		wp_roles();
 	}

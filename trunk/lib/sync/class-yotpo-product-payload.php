@@ -175,7 +175,10 @@ class Yotpo_Product_Payload {
 		return self::limit( $sku, 255 );
 	}
 
-	private static function limit( $text, $max ) {
+	/**
+	 * The text cut to at most $max characters (bytes without mbstring). Shared by the other payloads.
+	 */
+	public static function limit( $text, $max ) {
 		$text = (string) $text;
 		return function_exists( 'mb_substr' ) ? mb_substr( $text, 0, $max ) : substr( $text, 0, $max );
 	}
