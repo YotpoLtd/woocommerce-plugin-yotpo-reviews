@@ -225,6 +225,7 @@ class OrderSyncTest extends Yotpo_Test_Case {
 		$this->run_order_jobs();
 
 		$this->assertSame( array(), Yotpo_Order_Sync::stats()['failures'] );
+		$this->assertSame( array( 'sent' => 1, 'failed' => 0 ), Yotpo_Order_Sync::totals(), 'No failed count left without a failure to show' );
 	}
 
 	public function test_a_rejected_order_is_not_retried() {

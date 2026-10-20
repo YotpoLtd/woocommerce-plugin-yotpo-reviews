@@ -155,17 +155,33 @@ class Yotpo_Sync_State {
 	 * @param callable $change Receives the current state; returns the state to save, or null to save nothing.
 	 */
 	private static function update( $change ) {
+		self::with_lock(
+			function () use ( $change ) {
+				wp_cache_delete( self::STATE_OPTION, 'options' );
+				$new_state = call_user_func( $change, self::get() );
+				if ( is_array( $new_state ) ) {
+					self::save( $new_state );
+				}
+			}
+		);
+	}
+
+	/**
+	 * Runs a change to options while holding the state lock (best effort, see lock()). Also used by
+	 * Yotpo_Order_Sync for its counts.
+	 *
+	 * @param callable $change Called with no arguments, once the lock is taken; it re-reads what it changes.
+	 * @return mixed What $change returns.
+	 */
+	public static function with_lock( $change ) {
 		$token = self::lock();
 		// Another runner may have saved since this request loaded its options.
 		wp_cache_delete( 'alloptions', 'options' );
-		wp_cache_delete( self::STATE_OPTION, 'options' );
-		$new_state = call_user_func( $change, self::get() );
-		if ( is_array( $new_state ) ) {
-			self::save( $new_state );
-		}
+		$result = call_user_func( $change );
 		if ( $token ) {
 			self::unlock( $token );
 		}
+		return $result;
 	}
 
 	/**

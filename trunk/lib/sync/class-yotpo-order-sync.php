@@ -71,9 +71,12 @@ class Yotpo_Order_Sync {
 		if ( $was_on && ! $is_on ) {
 			self::cancel_all();
 		} elseif ( ! $was_on && $is_on ) {
-			$stats               = self::stats();
-			$stats['enabled_at'] = time();
-			self::save_stats( $stats );
+			self::update_stats(
+				function ( $stats ) {
+					$stats['enabled_at'] = time();
+					return $stats;
+				}
+			);
 		}
 	}
 
@@ -261,35 +264,63 @@ class Yotpo_Order_Sync {
 		update_option( self::STATS_OPTION, $stats, false ); // Not autoloaded: only jobs and the settings page read it.
 	}
 
-	private static function count_sent( $order_id ) {
-		$stats              = self::stats();
-		$stats['last_sent'] = time();
-		self::add_to_today( $stats, 'sent' );
-		// Sent after all (a later attempt, or Send past orders): no longer a failure.
-		$stats['failures'] = array_values(
-			array_filter(
-				$stats['failures'],
-				function ( $failure ) use ( $order_id ) {
-					return (int) $failure['order_id'] !== (int) $order_id;
-				}
-			)
+	/**
+	 * Changes the counts without losing a concurrent change: Action Scheduler can run several queue
+	 * runners at once, and each would otherwise overwrite what the others just saved. Takes the lock the
+	 * product sync's state uses.
+	 *
+	 * @param callable $change Receives the stats; returns the stats to save.
+	 */
+	private static function update_stats( $change ) {
+		Yotpo_Sync_State::with_lock(
+			function () use ( $change ) {
+				// Another runner may have saved since this request loaded the option.
+				wp_cache_delete( self::STATS_OPTION, 'options' );
+				self::save_stats( call_user_func( $change, self::stats() ) );
+			}
 		);
-		self::save_stats( $stats );
+	}
+
+	private static function count_sent( $order_id ) {
+		self::update_stats(
+			function ( $stats ) use ( $order_id ) {
+				$stats['last_sent'] = time();
+				self::add_to_today( $stats, 'sent' );
+				// Sent after all (a later attempt, or Send past orders): no longer a failure, so it no longer
+				// counts as one on the day it failed either.
+				$kept = array();
+				foreach ( $stats['failures'] as $failure ) {
+					if ( (int) $failure['order_id'] !== (int) $order_id ) {
+						$kept[] = $failure;
+						continue;
+					}
+					$day = gmdate( 'Y-m-d', (int) $failure['time'] );
+					if ( ! empty( $stats['days'][ $day ]['failed'] ) ) {
+						--$stats['days'][ $day ]['failed'];
+					}
+				}
+				$stats['failures'] = $kept;
+				return $stats;
+			}
+		);
 	}
 
 	private static function count_failed( $order, $error ) {
-		$stats = self::stats();
-		self::add_to_today( $stats, 'failed' );
-		array_unshift(
-			$stats['failures'],
-			array(
-				'order_id' => $order->get_id(),
-				'number'   => (string) $order->get_order_number(),
-				'error'    => $error->get_error_message(),
-				'time'     => time(),
-			)
+		self::update_stats(
+			function ( $stats ) use ( $order, $error ) {
+				self::add_to_today( $stats, 'failed' );
+				array_unshift(
+					$stats['failures'],
+					array(
+						'order_id' => $order->get_id(),
+						'number'   => (string) $order->get_order_number(),
+						'error'    => $error->get_error_message(),
+						'time'     => time(),
+					)
+				);
+				return $stats;
+			}
 		);
-		self::save_stats( $stats );
 	}
 
 	private static function add_to_today( array &$stats, $count ) {
