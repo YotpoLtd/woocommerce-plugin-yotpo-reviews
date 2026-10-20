@@ -17,6 +17,7 @@ class Yotpo_Order_Api {
 	const META_ORDER_ID    = '_yotpo_v3_order_id';
 	const META_UPDATE_HASH = '_yotpo_v3_order_hash'; // Fingerprint of the update fields Yotpo last accepted.
 	const MAX_AGE_DAYS     = 180; // Yotpo rejects order dates more than 6 months back; 180 days is always inside that.
+	const ABSENT_PREFIX    = 'wc_yotpo_order_absent_'; // Transient per order; also written out in uninstall.php.
 	const ABSENT_FOR       = 600; // Seconds an update remembers that Yotpo doesn't have an order, so repeated cancel/refund events cost one lookup.
 
 	/**
@@ -256,7 +257,7 @@ class Yotpo_Order_Api {
 	}
 
 	private static function absent_key( $order ) {
-		return 'wc_yotpo_order_absent_' . $order->get_id();
+		return self::ABSENT_PREFIX . $order->get_id();
 	}
 
 	private static function remember( $order, $yotpo_id, $hash = null ) {
