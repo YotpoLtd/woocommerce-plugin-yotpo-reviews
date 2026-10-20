@@ -241,8 +241,15 @@ class Yotpo_Order_Sync {
 		return array_merge( array( 'days' => array(), 'failures' => array() ), $stats );
 	}
 
+	/**
+	 * The oldest day (Y-m-d, UTC) still counted: pruning and the totals use the same window.
+	 */
+	private static function oldest_counted_day() {
+		return gmdate( 'Y-m-d', time() - ( self::STATS_DAYS - 1 ) * DAY_IN_SECONDS );
+	}
+
 	private static function save_stats( array $stats ) {
-		$oldest = gmdate( 'Y-m-d', time() - ( self::STATS_DAYS - 1 ) * DAY_IN_SECONDS );
+		$oldest = self::oldest_counted_day();
 		foreach ( array_keys( $stats['days'] ) as $day ) {
 			if ( $day < $oldest ) {
 				unset( $stats['days'][ $day ] );
@@ -338,7 +345,7 @@ class Yotpo_Order_Sync {
 	 */
 	public static function totals() {
 		$totals = array( 'sent' => 0, 'failed' => 0 );
-		$oldest = gmdate( 'Y-m-d', time() - ( self::STATS_DAYS - 1 ) * DAY_IN_SECONDS );
+		$oldest = self::oldest_counted_day();
 		foreach ( self::stats()['days'] as $day => $counts ) {
 			if ( $day >= $oldest ) {
 				$totals['sent']   += (int) $counts['sent'];
