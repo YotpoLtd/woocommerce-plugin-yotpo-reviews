@@ -43,8 +43,8 @@ class Yotpo_Order_Api {
 		if ( is_wp_error( $yotpo_id ) || $yotpo_id ) {
 			return $yotpo_id;
 		}
-		$created = $order->get_date_created();
-		if ( $created && $created->getTimestamp() < time() - self::MAX_AGE_DAYS * DAY_IN_SECONDS ) {
+		$placed = $order->get_date_created();
+		if ( $placed && $placed->getTimestamp() < time() - self::MAX_AGE_DAYS * DAY_IN_SECONDS ) {
 			return Yotpo_Order_Payload::skipped( 'it was placed more than ' . self::MAX_AGE_DAYS . ' days ago' );
 		}
 		$payload = Yotpo_Order_Payload::order( $order, $fulfilled_at );
