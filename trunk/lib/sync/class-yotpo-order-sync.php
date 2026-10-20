@@ -182,6 +182,13 @@ class Yotpo_Order_Sync {
 		if ( ! is_wp_error( $result ) ) {
 			if ( $create && $result ) {
 				self::count_sent( $order_id );
+				// A create never carries the cancellation. If the order was cancelled or refunded before this
+				// job ran, the update job queued for that may have run first and found nothing in Yotpo:
+				// send the cancellation now. The fingerprint stored by the create makes this a no-op for an
+				// order that is not cancelled.
+				if ( Yotpo_Order_Payload::is_cancelled( $order ) ) {
+					self::queue_update( $order_id );
+				}
 			}
 			ytdbg( 'Yotpo ID ' . $result, $what . ( $create ? ' sent,' : ' updated,' ) );
 			return;

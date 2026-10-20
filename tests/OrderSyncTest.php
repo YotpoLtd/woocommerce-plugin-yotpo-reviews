@@ -94,6 +94,22 @@ class OrderSyncTest extends Yotpo_Test_Case {
 		$this->assertArrayHasKey( 'cancellation', $this->orders[ $order->get_id() ] );
 	}
 
+	public function test_a_cancellation_that_ran_ahead_of_the_create_is_sent_after_it() {
+		$order = $this->create_order( array( array( $this->product, 1 ) ) );
+		$order->set_status( 'cancelled' );
+		$order->save();
+
+		// The update job runs first: Yotpo does not have the order yet, so there is nothing to update.
+		$updates = $this->order_jobs( Yotpo_Order_Sync::HOOK_UPDATE );
+		$this->run_job( key( $updates ) );
+		$this->assertSame( array(), preg_grep( '/^PATCH/', $this->calls() ) );
+		$this->assertArrayNotHasKey( $order->get_id(), $this->orders );
+
+		$this->run_order_jobs();
+
+		$this->assertArrayHasKey( 'cancellation', $this->orders[ $order->get_id() ], 'The create left the cancellation out; the follow-up update sent it' );
+	}
+
 	public function test_a_refund_queues_an_update() {
 		$order = $this->create_order( array( array( $this->product, 3 ) ) );
 		$this->run_order_jobs();
