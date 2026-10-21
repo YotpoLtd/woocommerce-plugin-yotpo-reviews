@@ -107,7 +107,7 @@ class OrderBackfillTest extends Yotpo_Test_Case {
 		Yotpo_Order_Backfill::start( 10 );
 		$this->run_order_jobs();
 		$this->assertCount( 1, $this->orders, 'The first create went through' );
-		$this->assertSame( 1, Yotpo_Order_Backfill::state()['offset'] );
+		$this->assertSame( array( array( 1, 2, 1 ) ), $this->page_job_args(), 'The retry starts at the second order' );
 
 		$this->create_fails = null;
 		$this->run_due_later();
@@ -173,9 +173,8 @@ class OrderBackfillTest extends Yotpo_Test_Case {
 		ActionScheduler_QueueRunner::instance()->process_action( reset( $page_jobs ), 'phpunit' );
 
 		$this->assertCount( 1, $this->orders, 'One order created, then the job gave up the rest of its page' );
-		$state = Yotpo_Order_Backfill::state();
-		$this->assertSame( array( Yotpo_Order_Backfill::STATUS_RUNNING, 1 ), array( $state['status'], $state['offset'] ) );
-		$this->assertCount( 1, $this->order_jobs( Yotpo_Order_Backfill::HOOK_PAGE ), 'The rest is queued as a job of its own' );
+		$this->assertSame( Yotpo_Order_Backfill::STATUS_RUNNING, Yotpo_Order_Backfill::state()['status'] );
+		$this->assertSame( array( array( 1, 1, 1 ) ), $this->page_job_args(), 'The rest is queued as a job of its own, starting at the second order' );
 
 		$this->run_order_jobs();
 
@@ -425,6 +424,18 @@ class OrderBackfillTest extends Yotpo_Test_Case {
 	private function sweep() {
 		Yotpo_Order_Backfill::run_sweep_job();
 		$this->run_order_jobs();
+	}
+
+	/** The arguments of the queued page jobs of a run. */
+	private function page_job_args() {
+		return array_values(
+			array_map(
+				function ( $job ) {
+					return $job->get_args();
+				},
+				$this->order_jobs( Yotpo_Order_Backfill::HOOK_PAGE )
+			)
+		);
 	}
 
 	private function order_jobs( $hook = null ) {
