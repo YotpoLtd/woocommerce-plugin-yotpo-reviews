@@ -31,8 +31,15 @@ function wc_display_yotpo_admin_page() {
                 wc_display_yotpo_register();
             }
         } elseif (isset($_POST['yotpo_past_orders'])) {
+            // A second submit button of the settings form: starts a run and saves nothing else.
             check_admin_referer('yotpo_settings_form');
-            wc_yotpo_send_past_orders();
+            $days = isset($_POST['yotpo_past_orders_days']) ? (int) $_POST['yotpo_past_orders_days'] : Yotpo_Order_Backfill::DEFAULT_DAYS;
+            $started = Yotpo_Order_Backfill::start($days);
+            if (is_wp_error($started)) {
+                wc_yotpo_display_message($started->get_error_message(), true);
+            } else {
+                wc_yotpo_display_message('Sending orders from the last ' . $days . ' days in the background. Progress shows under Send past orders.', false);
+            }
             wc_display_yotpo_settings();
         } elseif (isset($_POST['yotdbg-clear'])) {
             check_admin_referer('yotdbg-clear');
@@ -137,7 +144,8 @@ function wc_display_yotpo_settings($success_type = false) {
             '',
             "<div class='yotpo-status yotpo-tone--" . esc_attr(Yotpo_Order_Sync::status_tone()) . "'>" . esc_html(Yotpo_Order_Sync::status_summary()) . "</div>"
         ) .
-        yotpo_order_status_option($yotpo_settings)
+        yotpo_order_status_option($yotpo_settings) .
+        wc_yotpo_past_orders_row()
     );
 
     $widgets = yotpo_card(
@@ -193,19 +201,6 @@ function wc_display_yotpo_settings($success_type = false) {
         )
     );
 
-    $past_orders = $yotpo_settings['show_submit_past_orders']
-        ? "<div class='yotpo-row'>
-                <div class='yotpo-row__text'>
-                    <span class='yotpo-label'>Send past orders</span>
-                    <p class='yotpo-help'>Sends orders from the last 90 days with the order status above, so Yotpo can ask those customers for reviews. Available once.</p>
-                </div>
-                <div class='yotpo-row__control'>
-                    <form method='post'>" . wp_nonce_field('yotpo_settings_form', '_wpnonce', true, false) . "
-                        <input type='submit' name='yotpo_past_orders' value='Send past orders' class='yotpo-btn yotpo-btn--outline' " . disabled(true, $no_credentials, false) . " />
-                    </form>
-                </div>
-            </div>"
-        : '';
     $tools = yotpo_card(
         'Tools',
         '',
@@ -217,7 +212,7 @@ function wc_display_yotpo_settings($success_type = false) {
             <div class='yotpo-row__control'>
                 <button type='button' id='yotpo-export-reviews' class='yotpo-btn yotpo-btn--outline' " . disabled(true, $no_credentials, false) . ">Export reviews</button>
             </div>
-        </div>" . $past_orders
+        </div>"
     );
 
     $settings_html = "
@@ -279,6 +274,36 @@ function wc_display_yotpo_settings($success_type = false) {
 /**
  * Color of the product sync status line: what the merchant should make of it at a glance.
  */
+/**
+ * The Send past orders row of the Orders card: how many days back, the button, the orders that covers,
+ * and the last run's progress. Inside the settings form, so its button is a second submit with its own
+ * handler (wc_display_yotpo_admin_page()). settings.js updates the count as the days change and asks
+ * for confirmation before a run starts.
+ */
+function wc_yotpo_past_orders_row() {
+    $days = Yotpo_Order_Backfill::DEFAULT_DAYS;
+    $ready = Yotpo_Order_Sync::enabled();
+    $running = Yotpo_Order_Backfill::running();
+    $count = $ready ? Yotpo_Order_Backfill::count($days) : 0;
+    $status = Yotpo_Order_Backfill::status_summary();
+    $note = $ready ? '' : " <p class='yotpo-help'>Turn on Send orders to Yotpo and save to use it.</p>";
+    return "
+    <div class='yotpo-row'>
+      <div class='yotpo-row__text'>
+        <label class='yotpo-label' for='yotpo_past_orders_days'>Send past orders</label>
+        <p class='yotpo-help'>Sends orders in the status above from the last 1 to " . Yotpo_Order_Backfill::MAX_DAYS . " days, except those Yotpo already has. Their customers may get a review request.</p>
+        <p class='yotpo-help' id='yotpo-past-orders-count'>" . ($ready ? esc_html(sprintf(_n('%1$d order in the last %2$d days.', '%1$d orders in the last %2$d days.', $count, 'yotpo-social-reviews-for-woocommerce'), $count, $days)) : '') . "</p>" .
+        $note .
+        ('' !== $status ? "<div class='yotpo-status yotpo-tone--" . esc_attr(Yotpo_Order_Backfill::status_tone()) . "' id='yotpo-past-orders-status'>" . esc_html($status) . "</div>" : '') . "
+      </div>
+      <div class='yotpo-row__control yotpo-row__control--nowrap'>
+        <input type='number' class='yotpo-input yotpo-input--days' id='yotpo_past_orders_days' name='yotpo_past_orders_days' value='" . esc_attr($days) . "' min='1' max='" . esc_attr(Yotpo_Order_Backfill::MAX_DAYS) . "' step='1' " . disabled(true, !$ready || $running, false) . " />
+        <span class='yotpo-help'>days</span>
+        <input type='submit' name='yotpo_past_orders' id='yotpo-past-orders' value='Send past orders' class='yotpo-btn yotpo-btn--outline' " . disabled(true, !$ready || $running, false) . " />
+      </div>
+    </div>";
+}
+
 function wc_yotpo_sync_status_tone() {
     if (!Yotpo_Product_Sync::enabled()) {
         return 'neutral';

@@ -25,6 +25,8 @@ delete_post_meta_by_key( '_yotpo_v3_order_id' );
 delete_post_meta_by_key( '_yotpo_v3_order_hash' );
 delete_option( 'wc_yotpo_order_sync' ); // Yotpo_Order_Sync::STATS_OPTION
 delete_option( 'wc_yotpo_order_sync_lock' ); // Yotpo_Order_Sync::LOCK_OPTION
+delete_option( 'wc_yotpo_order_backfill' ); // Yotpo_Order_Backfill::STATE_OPTION
+delete_transient( 'wc_yotpo_order_sweep_check' ); // Yotpo_Order_Backfill::SWEEP_CHECK
 global $wpdb;
 // One transient per order that Yotpo didn't have (Yotpo_Order_Api::ABSENT_PREFIX). The names carry the order ID, so
 // they are found by prefix and deleted as transients (which also drops their timeout rows and cached copies). With

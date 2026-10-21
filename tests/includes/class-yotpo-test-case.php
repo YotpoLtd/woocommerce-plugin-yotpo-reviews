@@ -43,6 +43,8 @@ abstract class Yotpo_Test_Case extends WP_UnitTestCase {
 		as_unschedule_all_actions( '', array(), Yotpo_Sync_Jobs::GROUP );
 		as_unschedule_all_actions( '', array(), Yotpo_Order_Sync::GROUP );
 		delete_option( Yotpo_Order_Sync::STATS_OPTION );
+		delete_option( Yotpo_Order_Backfill::STATE_OPTION );
+		delete_transient( Yotpo_Order_Backfill::SWEEP_CHECK );
 		add_filter( 'pre_http_request', array( $this, 'answer_request' ), 10, 3 );
 	}
 

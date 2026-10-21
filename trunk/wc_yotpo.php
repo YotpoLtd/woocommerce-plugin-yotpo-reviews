@@ -49,6 +49,7 @@ require plugin_dir_path( __FILE__ ) . 'lib/sync/class-yotpo-catalog-api.php';
 require plugin_dir_path( __FILE__ ) . 'lib/sync/class-yotpo-order-payload.php';
 require plugin_dir_path( __FILE__ ) . 'lib/sync/class-yotpo-order-api.php';
 require plugin_dir_path( __FILE__ ) . 'lib/sync/class-yotpo-order-sync.php';
+require plugin_dir_path( __FILE__ ) . 'lib/sync/class-yotpo-order-backfill.php';
 require plugin_dir_path( __FILE__ ) . 'lib/sync/class-yotpo-option-lock.php';
 require plugin_dir_path( __FILE__ ) . 'lib/sync/class-yotpo-sync-state.php';
 require plugin_dir_path( __FILE__ ) . 'lib/sync/class-yotpo-sync-jobs.php';
@@ -63,6 +64,7 @@ function wc_yotpo_init() {
 	// Product catalog and order sync to Yotpo (Core API V3), in background jobs.
 	Yotpo_Product_Sync::init();
 	Yotpo_Order_Sync::init();
+	Yotpo_Order_Backfill::init();
 	if (defined('WP_CLI') && WP_CLI) {
 		require_once plugin_dir_path( __FILE__ ) . 'lib/sync/class-yotpo-sync-cli.php';
 		WP_CLI::add_command('yotpo product-sync', 'Yotpo_Sync_CLI');
@@ -338,179 +340,9 @@ function wc_yotpo_remove_native_review_system($open, $post_id) {
 	}
 	return $open;
 }
-function wc_yotpo_get_single_map_data($order_id) {
-	$order = new WC_Order($order_id);
-	$data = null;
-	if(!is_null($order->get_id())) {
-		$data = array();
-		$data['order_date'] = gmdate('Y-m-d H:i:s', strtotime($order->get_date_created()));
-		if (!empty($order->get_billing_email()) && !preg_match('/\d$/', $order->get_billing_email())) { $data['email'] = $order->get_billing_email(); } else { return; }
-		if (!empty($order->get_billing_first_name())) { $data['customer_name'] = $order->get_billing_first_name().' '.$order->get_billing_last_name(); } else { return; }
-		$data['order_id'] = $order_id;
-		$data['currency_iso'] = wc_yotpo_get_order_currency($order);
-		$products_arr = array();
-		ytdbg("Date: ".$data['order_date']." Email: ".$data['email'], "Order #".$data['order_id']);
-		if(empty($order->get_items())) { ytdbg('','No Products'); return; }
-		foreach ($order->get_items() as $product) {
-			if ($product['product_id'] == "0") { ytdbg('','Invalid product - ID 0'); return; }
-			$_product = wc_get_product($product['product_id']);
-			if(is_object($_product)){
-				$product_data = array();
-				$product_data['url'] = get_permalink($product['product_id']);
-				$product_data['name'] = $product['name'];
-				$product_data['image'] = wc_yotpo_get_product_image_url($product['product_id']);
-				$product_data['description'] = wp_strip_all_tags($_product->get_description());
-				$product_data['price'] = $_product->get_price();
-				$specs_data = array();
-				if($_product->get_sku()){ $specs_data['external_sku'] =$_product->get_sku();}
-				if($_product->get_attribute('upc')){ $specs_data['upc'] =$_product->get_attribute('upc');}
-				if($_product->get_attribute('isbn')){ $specs_data['isbn'] = $_product->get_attribute('isbn');}
-				if($_product->get_attribute('brand')){ $specs_data['brand'] = $_product->get_attribute('brand');}
-				if($_product->get_attribute('mpn')){ $specs_data['mpn'] =$_product->get_attribute('mpn');}
-				if(!empty($specs_data)){ $product_data['specs'] = $specs_data;  }
-				ytdbg($product_data['name'].", Descr. length: ".strlen($product_data['description']).", ID: ".$product['product_id'] .", Specs: ".implode(' / ', $specs_data), "\tProduct:", false);
-			} else { ytdbg('','Invalid product - Not an Object'); return; }
-			$products_arr[$product['product_id']] = $product_data;
-		}
-		$data['products'] = $products_arr;
-	}
-	return $data;
-}
 function wc_yotpo_get_product_image_url($product_id) {
 	$url = wp_get_attachment_url(get_post_thumbnail_id($product_id));
 	return $url ? $url : null;
-}
-function wc_yotpo_get_past_orders() {
-	if (defined('WC_VERSION') && (version_compare(WC_VERSION, '3.0') >= 0)) {
-		$orders = wc_yotpo_get_past_orders_crud();
-	} else {
-		$orders = wc_yotpo_get_past_orders_legacy();
-	}
-
-	if (is_null($orders) || count($orders) == 0) {
-		return null;
-	}
-
-	$post_bulk_orders = array_chunk($orders, 200);
-	$result = array();
-	foreach ($post_bulk_orders as $index => $bulk)
-	{
-		$result[$index] = array();
-		$result[$index]['orders'] = $bulk;
-		$result[$index]['platform'] = 'woocommerce';
-	}
-	return $result;
-}
-function wc_yotpo_get_past_orders_crud() {
-	ytdbg("","wc_yotpo_get_past_orders_crud");
-	$yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_default_settings());
-	$result = null;
-	$args = array(
-		'type' => 'shop_order',
-		'paginate' => false
-	);
-	$args['status'] = $yotpo_settings['yotpo_order_status'];
-	$args['date_created'] = '>' . gmdate('Y-m-d', strtotime('-90 days'));
-
-	$orders_from_db = wc_get_orders( $args );
-
-	if (is_null($orders_from_db)) {
-		return null;
-	}
-
-	$orders = array();
-	foreach ( $orders_from_db as $order ) {
-		$single_order_data = wc_yotpo_get_single_map_data($order->get_id());
-		if(!is_null($single_order_data)) {
-			$orders[] = $single_order_data;
-		}
-	}
-
-	return $orders;
-}
-function wc_yotpo_get_past_orders_legacy() {
-	ytdbg("","wc_yotpo_get_past_orders_legacy");
-	$yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_default_settings());
-	$result = null;
-	$args = array(
-		'post_type'		 => 'shop_order',
-		'posts_per_page' => -1
-	);
-	if (defined('WC_VERSION') && (version_compare(WC_VERSION, '2.2.0') >= 0)) {
-		$args['post_status'] = $yotpo_settings['yotpo_order_status'];
-	} else {
-		$args['tax_query'] = array(
-			array(
-				'taxonomy' => 'shop_order_status',
-				'field'    => 'slug',
-				'terms'    => array('completed'),
-				'operator' => 'IN'
-			)
-		);
-	}
-	add_filter( 'posts_where', 'wc_yotpo_past_order_time_query' );
-	$query = new WP_Query( $args );
-	remove_filter( 'posts_where', 'wc_yotpo_past_order_time_query' );
-	wp_reset_query();
-	if (!$query->have_posts()) {
-		return null;
-	}
-
-	$orders = array();
-	while ($query->have_posts()) {
-		$query->the_post();
-		$order = $query->post;
-		$single_order_data = wc_yotpo_get_single_map_data($order->ID);
-		if(!is_null($single_order_data)) {
-			$orders[] = $single_order_data;
-		}
-	}
-	return $orders;
-}
-function wc_yotpo_past_order_time_query( $where = '' ) {
-	$where .= " AND post_date > '" . gmdate('Y-m-d', strtotime('-90 days')) . "'";
-	return $where;
-}
-function wc_yotpo_send_past_orders() {
-	ytdbg('', 'Submit Past Orders Start -------------------------------------------------------------------');
-	$yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_default_settings());
-	if (!empty($yotpo_settings['app_key']) && !empty($yotpo_settings['secret'])) {
-		$past_orders = wc_yotpo_get_past_orders();
-		if(!is_null($past_orders) && is_array($past_orders)) {
-			ytdbg("", "\tGot ".count($past_orders)." batches, sending...");
-			$is_success = true;
-			$yotpo_api = new Yotpo($yotpo_settings['app_key'], $yotpo_settings['secret']);
-			$get_oauth_token_response = $yotpo_api->get_oauth_token();
-			if(!empty($get_oauth_token_response) && !empty($get_oauth_token_response['access_token'])) {
-				foreach ($past_orders as $index => $post_bulk)
-					if (!is_null($post_bulk)) {
-						$post_bulk['utoken'] = $get_oauth_token_response['access_token'];
-						$response = $yotpo_api->create_purchases($post_bulk);
-						if ($response['code'] != 200 && $is_success) {
-							ytdbg($response, "\tSending Past Orders failed for batch".$index." :");
-							$is_success = false;
-							$message = !empty($response['status']) && !empty($response['status']['message']) ? $response['status']['message'] : 'Error occurred';
-							wc_yotpo_display_message($message, true);
-						} else { ytdbg($response['code']." ".$response['message'], "\tBatch ".$index." sent successfully with response"); }
-					}
-				if ($is_success) {
-					wc_yotpo_display_message('Past orders sent successfully' , false);
-					ytdbg('', 'Submit Past Orders End -------------------------------------------------------------------');
-					$yotpo_settings['show_submit_past_orders'] = false;
-					update_option('yotpo_settings', $yotpo_settings);
-				}
-			}
-			else {
-				ytdbg("", "failed creating utoken");
-			}
-		}
-		else {
-			wc_yotpo_display_message('Could not retrieve past orders', true);
-		}
-	}
-	else {
-		wc_yotpo_display_message('You need to set your app key and secret token to post past orders', false);
-	}
 }
 function wc_yotpo_conversion_track($order_id) {
 	$yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_default_settings());
@@ -539,6 +371,11 @@ function wc_yotpo_admin_styles($hook) {
 	if($hook == 'toplevel_page_woocommerce-yotpo-settings-page') {
 		// Versioned by file time: without a version WordPress appends its own, so browsers kept the old files after a plugin update.
 		wp_enqueue_script( 'yotpoSettingsJs', plugins_url('assets/js/settings.js', __FILE__), array('jquery-effects-core'), filemtime( __DIR__ . '/assets/js/settings.js' ) );
+		// For Send past orders: the order count as the days change (Yotpo_Order_Backfill::ajax_count()).
+		wp_localize_script( 'yotpoSettingsJs', 'yotpoPastOrders', array(
+			'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+			'nonce'   => wp_create_nonce( 'wc_yotpo_past_orders_count' ),
+		) );
 		wp_enqueue_style( 'yotpoSettingsStylesheet', plugins_url('assets/css/yotpo.css', __FILE__), array(), filemtime( __DIR__ . '/assets/css/yotpo.css' ) );
 	}
 }

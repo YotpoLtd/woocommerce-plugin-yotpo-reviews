@@ -113,7 +113,6 @@ function wc_proccess_yotpo_settings() {
     'product_sync_enabled' => isset($_POST['product_sync_enabled']),
     'product_sync_tags' => isset($_POST['product_sync_tags']),
     'order_sync_enabled' => isset($_POST['order_sync_enabled']),
-    'show_submit_past_orders' => yotpo_get_arr_value($current_settings, 'show_submit_past_orders'),
     'debug_mode' => isset($_POST['debug_mode']) ? true : false);
   update_option('yotpo_settings', $new_settings);
   Yotpo_Product_Sync::setting_changed($product_sync_was_on, $new_settings['product_sync_enabled']);

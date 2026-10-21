@@ -63,14 +63,17 @@ class Yotpo_Order_Sync {
 	}
 
 	/**
-	 * Called after the settings are saved: turning orders off cancels the queued order jobs. Turning them
+	 * Called after the settings are saved: turning orders off cancels the queued order jobs, the daily
+	 * sweep and a Send past orders run (Yotpo_Order_Backfill). Turning them
 	 * back on sends nothing by itself (orders fulfilled meanwhile need Send past orders); the time is kept
 	 * so the daily sweep covers only orders fulfilled while sending was on.
 	 */
 	public static function setting_changed( $was_on, $is_on ) {
 		if ( $was_on && ! $is_on ) {
-			self::cancel_all();
+			self::cancel_all(); // The daily sweep and a Send past orders run included.
+			Yotpo_Order_Backfill::stop( 'Stopped: "Send orders to Yotpo" was turned off.' );
 		} elseif ( ! $was_on && $is_on ) {
+			Yotpo_Order_Backfill::forget_sweep_check();
 			self::update_stats(
 				function ( $stats ) {
 					$stats['enabled_at'] = time();
@@ -289,7 +292,10 @@ class Yotpo_Order_Sync {
 		);
 	}
 
-	private static function count_sent( $order_id ) {
+	/**
+	 * Counts an order as sent for the status line. Also used by the daily sweep.
+	 */
+	public static function count_sent( $order_id ) {
 		self::update_stats(
 			function ( $stats ) use ( $order_id ) {
 				$stats['last_sent'] = time();
@@ -313,7 +319,11 @@ class Yotpo_Order_Sync {
 		);
 	}
 
-	private static function count_failed( $order, $error ) {
+	/**
+	 * Counts an order as failed for the status line, and keeps it among the last failures. Also used by
+	 * the daily sweep.
+	 */
+	public static function count_failed( $order, $error ) {
 		self::update_stats(
 			function ( $stats ) use ( $order, $error ) {
 				self::add_to_today( $stats, 'failed' );

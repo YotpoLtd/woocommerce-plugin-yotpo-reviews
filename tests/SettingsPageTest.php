@@ -97,6 +97,42 @@ class SettingsPageTest extends Yotpo_Test_Case {
 		$this->assertMatchesRegularExpression( '#id="order_sync_enabled" name="order_sync_enabled" value="1"\s*/>#', $this->render(), 'Unchecked when off' );
 	}
 
+	public function test_send_past_orders_sits_in_the_orders_card() {
+		$order = $this->create_order( array( array( $this->create_product(), 1 ) ) );
+		$html  = $this->render();
+		$orders = substr( $html, strpos( $html, '>Orders<' ) );
+		$orders = substr( $orders, 0, strpos( $orders, '</section>' ) );
+
+		$this->assertMatchesRegularExpression( '#<input type="number" class="yotpo-input yotpo-input--days" id="yotpo_past_orders_days" name="yotpo_past_orders_days" value="90" min="1" max="180" step="1"\s*/>#', $orders );
+		$this->assertStringContainsString( '<p class="yotpo-help" id="yotpo-past-orders-count">1 order in the last 90 days.</p>', $orders );
+		$this->assertSame( 1, substr_count( $html, 'name="yotpo_past_orders"' ), 'Only in the Orders card, not in Tools any more' );
+	}
+
+	public function test_send_past_orders_starts_a_run_and_saves_nothing_else() {
+		$before = get_option( 'yotpo_settings' );
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		$_POST  = array(
+			'yotpo_past_orders'      => 'Send past orders',
+			'yotpo_past_orders_days' => '30',
+			'order_sync_enabled'     => '', // A switch changed but not saved: the button doesn't save it.
+			'_wpnonce'               => wp_create_nonce( 'yotpo_settings_form' ),
+		);
+		$_REQUEST = $_POST;
+
+		ob_start();
+		wc_display_yotpo_admin_page();
+		$html = ob_get_clean();
+
+		$state = Yotpo_Order_Backfill::state();
+		$this->assertSame( Yotpo_Order_Backfill::STATUS_RUNNING, $state['status'] );
+		$this->assertSame( 30, $state['days'] );
+		$this->assertStringContainsString( 'Sending orders from the last 30 days in the background.', $html );
+		$this->assertStringContainsString( 'Sending past orders: 0 of 0 checked.', $html, 'Progress shows under the button' );
+		$this->assertMatchesRegularExpression( '#id="yotpo-past-orders" value="Send past orders" class="yotpo-btn yotpo-btn--outline"\s+disabled#', $html, 'One run at a time' );
+		$this->assertSame( $before, get_option( 'yotpo_settings' ) );
+		$_REQUEST = array();
+	}
+
 	public function test_custom_order_status_can_be_the_trigger_and_survives_a_save() {
 		add_filter(
 			'wc_order_statuses',
@@ -126,7 +162,7 @@ class SettingsPageTest extends Yotpo_Test_Case {
 		$this->set_setting( 'secret', '' );
 		$html = $this->render();
 		$this->assertMatchesRegularExpression( '#<button type="button" id="yotpo-export-reviews" class="yotpo-btn yotpo-btn--outline"\s+disabled#', $html );
-		$this->assertMatchesRegularExpression( '#name="yotpo_past_orders" value="Send past orders" class="yotpo-btn yotpo-btn--outline"\s+disabled#', $html );
+		$this->assertMatchesRegularExpression( '#name="yotpo_past_orders" id="yotpo-past-orders" value="Send past orders" class="yotpo-btn yotpo-btn--outline"\s+disabled#', $html );
 	}
 
 	public function test_registration_screen_keeps_its_fields() {

@@ -146,6 +146,11 @@
 	gap: 8px 16px;
 	padding-top: 1px;
 }
+/* A field, its unit and its button stay on one line (Send past orders). */
+.yotpo-row__control--nowrap {
+	flex-wrap: nowrap;
+	gap: 8px;
+}
 
 .yotpo-label {
 	display: block;
@@ -203,6 +208,9 @@
 }
 .yotpo-admin input.yotpo-input--short {
 	max-width: 120px;
+}
+.yotpo-admin input.yotpo-input--days {
+	max-width: 80px;
 }
 .yotpo-admin input.yotpo-input--mono {
 	font-family: var(--font-mono);

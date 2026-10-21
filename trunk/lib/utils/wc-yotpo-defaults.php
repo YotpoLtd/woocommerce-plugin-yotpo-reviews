@@ -39,7 +39,6 @@ function wc_yotpo_get_default_settings() {
       'bottom_line_category' => false,
     ),
     'yotpo_language_as_site' => true,
-    'show_submit_past_orders' => true,
     'yotpo_order_status' => 'wc-completed',
     'disable_native_review_system' => true,
     'product_sync_enabled' => true,

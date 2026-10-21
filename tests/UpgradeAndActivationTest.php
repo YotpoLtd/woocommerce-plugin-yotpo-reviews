@@ -38,7 +38,6 @@ class UpgradeAndActivationTest extends Yotpo_Test_Case {
 		$this->assertFalse( use_v3_widgets(), 'Still on the v2 widgets' );
 		$this->assertFalse( $settings['yotpo_language_as_site'], 'The saved language_code is used' );
 		$this->assertFalse( $settings['disable_native_review_system'], 'Native reviews are kept' );
-		$this->assertFalse( $settings['show_submit_past_orders'] );
 	}
 
 	public function test_saved_values_win_over_the_legacy_behaviour() {

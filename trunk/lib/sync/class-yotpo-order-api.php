@@ -44,7 +44,20 @@ class Yotpo_Order_Api {
 		if ( is_wp_error( $yotpo_id ) || $yotpo_id ) {
 			return $yotpo_id;
 		}
-		$placed = $order->get_date_created();
+		return self::create_fulfilled( $client, $order, $fulfilled_at, $created );
+	}
+
+	/**
+	 * The create half of send_fulfilled(), for callers that already looked the order up and know Yotpo
+	 * doesn't have it: Send past orders and the daily sweep look up a page of orders in one request
+	 * (find_yotpo_ids()). A create that answers 409 is resolved with a lookup, as in send_fulfilled().
+	 *
+	 * @param bool $created Set to whether this call created the order.
+	 * @return int|WP_Error The Yotpo order ID. WP_Error 'yotpo_order_skipped' for an order that can't be sent.
+	 */
+	public static function create_fulfilled( $client, $order, $fulfilled_at, &$created = false ) {
+		$created = false;
+		$placed  = $order->get_date_created();
 		if ( $placed && $placed->getTimestamp() < time() - self::MAX_AGE_DAYS * DAY_IN_SECONDS ) {
 			return Yotpo_Order_Payload::skipped( 'it was placed more than ' . self::MAX_AGE_DAYS . ' days ago' );
 		}
@@ -150,6 +163,22 @@ class Yotpo_Order_Api {
 			}
 		}
 		return $found;
+	}
+
+	/**
+	 * When the order reached the fulfilled status, as best WooCommerce records it, for orders sent after the
+	 * fact (Send past orders, the daily sweep): its completion date, else its last change, else its creation.
+	 * Yotpo times the review request from this date.
+	 *
+	 * @return int Unix time.
+	 */
+	public static function fulfilled_at( $order ) {
+		foreach ( array( $order->get_date_completed(), $order->get_date_modified(), $order->get_date_created() ) as $date ) {
+			if ( $date ) {
+				return $date->getTimestamp();
+			}
+		}
+		return time();
 	}
 
 	/**
