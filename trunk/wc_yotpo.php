@@ -27,7 +27,6 @@ add_action('plugins_loaded', 'wc_yotpo_init');
 add_action('admin_init', 'wc_yotpo_redirect');
 // Settings saved by an older version lack the keys added since: fill them in on every read.
 add_filter('option_yotpo_settings', 'wc_yotpo_fill_missing_settings');
-add_action( 'woocommerce_order_status_changed', 'wc_yotpo_map');
 add_action( 'before_woocommerce_init', 'wc_declare_hops_support' );
 require plugin_dir_path( __FILE__ ) . 'lib/widgets/qna-widget.php';
 require plugin_dir_path( __FILE__ ) . 'lib/widgets/reviews-widget.php';
@@ -49,6 +48,8 @@ require plugin_dir_path( __FILE__ ) . 'lib/sync/class-yotpo-payload-compare.php'
 require plugin_dir_path( __FILE__ ) . 'lib/sync/class-yotpo-catalog-api.php';
 require plugin_dir_path( __FILE__ ) . 'lib/sync/class-yotpo-order-payload.php';
 require plugin_dir_path( __FILE__ ) . 'lib/sync/class-yotpo-order-api.php';
+require plugin_dir_path( __FILE__ ) . 'lib/sync/class-yotpo-order-sync.php';
+require plugin_dir_path( __FILE__ ) . 'lib/sync/class-yotpo-option-lock.php';
 require plugin_dir_path( __FILE__ ) . 'lib/sync/class-yotpo-sync-state.php';
 require plugin_dir_path( __FILE__ ) . 'lib/sync/class-yotpo-sync-jobs.php';
 require plugin_dir_path( __FILE__ ) . 'lib/sync/class-yotpo-product-sync.php';
@@ -59,8 +60,9 @@ function wc_yotpo_init() {
 		add_action('admin_notices', 'wc_yotpo_woocommerce_missing_notice');
 		return;
 	}
-	// Product catalog sync to Yotpo (Core API V3), in background jobs.
+	// Product catalog and order sync to Yotpo (Core API V3), in background jobs.
 	Yotpo_Product_Sync::init();
+	Yotpo_Order_Sync::init();
 	if (defined('WP_CLI') && WP_CLI) {
 		require_once plugin_dir_path( __FILE__ ) . 'lib/sync/class-yotpo-sync-cli.php';
 		WP_CLI::add_command('yotpo product-sync', 'Yotpo_Sync_CLI');
@@ -335,35 +337,6 @@ function wc_yotpo_remove_native_review_system($open, $post_id) {
 		return false;
 	}
 	return $open;
-}
-function wc_yotpo_map($order_id) {
-	$order = wc_get_order($order_id);
-	$orderStatus = 'wc-' . $order->get_status();
-	$yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_default_settings());
-	ytdbg(($orderStatus.' should be '.$yotpo_settings['yotpo_order_status']), "Order #".$order_id." status changed to");
-	if ($orderStatus === $yotpo_settings['yotpo_order_status']) {
-		ytdbg('', "Order #".$order_id." submission starting...");
-		$secret = $yotpo_settings['secret'];
-		$app_key = $yotpo_settings['app_key'];
-		if (!empty($app_key) && !empty($secret) && wc_yotpo_compatible()) {
-			try {
-				$purchase_data = wc_yotpo_get_single_map_data($order_id);
-				if (!is_null($purchase_data) && is_array($purchase_data)) {
-					require_once(plugin_dir_path(__FILE__) . 'lib/yotpo-api/Yotpo.php');
-					$yotpo_api = new Yotpo($app_key, $secret);
-					$get_oauth_token_response = $yotpo_api->get_oauth_token();
-					if (!empty($get_oauth_token_response) && !empty($get_oauth_token_response['access_token'])) {
-						$purchase_data['utoken'] = $get_oauth_token_response['access_token'];
-						$purchase_data['platform'] = 'woocommerce';
-						$response = $yotpo_api->create_purchase($purchase_data);
-						ytdbg($response['code'].' '.$response['message'], "Order #".$order_id." Submitted with response");
-					}
-				}
-			} catch (Exception $e) {
-				error_log($e->getMessage());
-			}
-		}
-	}
 }
 function wc_yotpo_get_single_map_data($order_id) {
 	$order = new WC_Order($order_id);

@@ -8,7 +8,7 @@ delete_option('native_star_ratings_enabled');
 
 // Product sync (Core API V3): access token, sync state, throttle flags, stored Yotpo IDs and queued jobs.
 // These names must match the constants in Yotpo_V3_Client (TOKEN_OPTION), Yotpo_Sync_State (STATE_OPTION,
-// LOCK_OPTION), Yotpo_Catalog_Api (META_*), Yotpo_Order_Api (META_*) and Yotpo_Sync_Jobs (GROUP, PAUSE_TRANSIENT, RECHECK_TRANSIENT). This file runs without those classes loaded, so it cannot use them;
+// LOCK_OPTION), Yotpo_Catalog_Api (META_*), Yotpo_Order_Api (META_*, ABSENT_PREFIX) and Yotpo_Sync_Jobs (GROUP, PAUSE_TRANSIENT, RECHECK_TRANSIENT). This file runs without those classes loaded, so it cannot use them;
 // when a constant changes, change it here too, or uninstall leaves data behind.
 delete_option( 'wc_yotpo_v3_token' );
 delete_option( 'wc_yotpo_product_sync' );
@@ -23,13 +23,23 @@ delete_post_meta_by_key( '_yotpo_v3_variant_hash' );
 // Orders (Yotpo_Order_Api META_*): in post meta, or in WooCommerce's own order tables when the store uses them.
 delete_post_meta_by_key( '_yotpo_v3_order_id' );
 delete_post_meta_by_key( '_yotpo_v3_order_hash' );
+delete_option( 'wc_yotpo_order_sync' ); // Yotpo_Order_Sync::STATS_OPTION
+delete_option( 'wc_yotpo_order_sync_lock' ); // Yotpo_Order_Sync::LOCK_OPTION
 global $wpdb;
+// One transient per order that Yotpo didn't have (Yotpo_Order_Api::ABSENT_PREFIX). The names carry the order ID, so
+// they are found by prefix and deleted as transients (which also drops their timeout rows and cached copies). With
+// an external object cache they live outside the options table and expire within ten minutes.
+$yotpo_absent_transients = $wpdb->get_col( $wpdb->prepare( "SELECT option_name FROM {$wpdb->options} WHERE option_name LIKE %s", $wpdb->esc_like( '_transient_wc_yotpo_order_absent_' ) . '%' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+foreach ( $yotpo_absent_transients as $yotpo_absent_transient ) {
+	delete_transient( substr( $yotpo_absent_transient, strlen( '_transient_' ) ) );
+}
 $yotpo_orders_meta = $wpdb->prefix . 'wc_orders_meta';
 if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $yotpo_orders_meta ) ) === $yotpo_orders_meta ) { // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 	$wpdb->query( $wpdb->prepare( "DELETE FROM {$yotpo_orders_meta} WHERE meta_key IN (%s, %s)", '_yotpo_v3_order_id', '_yotpo_v3_order_hash' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 }
 if ( function_exists( 'as_unschedule_all_actions' ) ) {
 	as_unschedule_all_actions( '', array(), 'yotpo-product-sync' );
+	as_unschedule_all_actions( '', array(), 'yotpo-order-sync' ); // Yotpo_Order_Sync::GROUP
 }
 
 // Remove the private debug log directory (log, .htaccess and index.php guards); the log contains customer emails.

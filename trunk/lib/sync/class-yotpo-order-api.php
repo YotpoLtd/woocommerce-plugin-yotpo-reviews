@@ -17,6 +17,8 @@ class Yotpo_Order_Api {
 	const META_ORDER_ID    = '_yotpo_v3_order_id';
 	const META_UPDATE_HASH = '_yotpo_v3_order_hash'; // Fingerprint of the update fields Yotpo last accepted.
 	const MAX_AGE_DAYS     = 180; // Yotpo rejects order dates more than 6 months back; 180 days is always inside that.
+	const ABSENT_PREFIX    = 'wc_yotpo_order_absent_'; // Transient per order; also written out in uninstall.php.
+	const ABSENT_FOR       = 600; // Seconds an update remembers that Yotpo doesn't have an order, so repeated cancel/refund events cost one lookup.
 
 	/**
 	 * The lookup spec for Yotpo_V3_Client::lookup_all().
@@ -33,15 +35,17 @@ class Yotpo_Order_Api {
 	 * @param Yotpo_V3_Client $client
 	 * @param WC_Order        $order
 	 * @param int             $fulfilled_at Unix time the order reached the fulfilled status.
+	 * @param bool            $created      Set to whether this call created the order (false when Yotpo already had it).
 	 * @return int|WP_Error The Yotpo order ID. WP_Error 'yotpo_order_skipped' for an order that can't be sent.
 	 */
-	public static function send_fulfilled( $client, $order, $fulfilled_at ) {
+	public static function send_fulfilled( $client, $order, $fulfilled_at, &$created = false ) {
+		$created  = false;
 		$yotpo_id = self::find_yotpo_id( $client, $order );
 		if ( is_wp_error( $yotpo_id ) || $yotpo_id ) {
 			return $yotpo_id;
 		}
-		$created = $order->get_date_created();
-		if ( $created && $created->getTimestamp() < time() - self::MAX_AGE_DAYS * DAY_IN_SECONDS ) {
+		$placed = $order->get_date_created();
+		if ( $placed && $placed->getTimestamp() < time() - self::MAX_AGE_DAYS * DAY_IN_SECONDS ) {
 			return Yotpo_Order_Payload::skipped( 'it was placed more than ' . self::MAX_AGE_DAYS . ' days ago' );
 		}
 		$payload = Yotpo_Order_Payload::order( $order, $fulfilled_at );
@@ -60,6 +64,7 @@ class Yotpo_Order_Api {
 				return new WP_Error( 'yotpo_bad_response', 'Create order returned no yotpo_id' );
 			}
 			self::remember( $order, $yotpo_id, Yotpo_Order_Payload::fingerprint( Yotpo_Order_Payload::update_sent_with_create( $order ) ) );
+			$created = true;
 			return $yotpo_id;
 		}
 		if ( 409 !== $response['code'] ) {
@@ -78,12 +83,23 @@ class Yotpo_Order_Api {
 	 * is cancelled or fully refunded. Nothing is sent when Yotpo doesn't have the order (it isn't
 	 * fulfilled yet) or when the fields match the last update Yotpo accepted.
 	 *
+	 * An order with no stored Yotpo ID may still be in Yotpo (1.x sent it), so it is looked up. When Yotpo
+	 * doesn't have it, that is remembered for ABSENT_FOR seconds: an order that was never sent (cancelled
+	 * unpaid, refunded before fulfilment) would otherwise cost a lookup for each of its events.
+	 *
 	 * @return int|WP_Error The Yotpo order ID, or 0 when Yotpo doesn't have the order.
 	 */
 	public static function send_update( $client, $order ) {
+		if ( ! $order->get_meta( self::META_ORDER_ID ) && get_transient( self::absent_key( $order ) ) ) {
+			return 0;
+		}
 		$yotpo_id = self::find_yotpo_id( $client, $order );
-		if ( is_wp_error( $yotpo_id ) || ! $yotpo_id ) {
+		if ( is_wp_error( $yotpo_id ) ) {
 			return $yotpo_id;
+		}
+		if ( ! $yotpo_id ) {
+			set_transient( self::absent_key( $order ), 1, self::ABSENT_FOR );
+			return 0;
 		}
 		$fields = Yotpo_Order_Payload::update( $order );
 		$hash   = Yotpo_Order_Payload::fingerprint( $fields );
@@ -240,7 +256,12 @@ class Yotpo_Order_Api {
 		return true;
 	}
 
+	private static function absent_key( $order ) {
+		return self::ABSENT_PREFIX . $order->get_id();
+	}
+
 	private static function remember( $order, $yotpo_id, $hash = null ) {
+		delete_transient( self::absent_key( $order ) );
 		$order->update_meta_data( self::META_ORDER_ID, (int) $yotpo_id );
 		if ( null !== $hash ) {
 			$order->update_meta_data( self::META_UPDATE_HASH, $hash );

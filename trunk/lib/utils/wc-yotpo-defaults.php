@@ -44,6 +44,7 @@ function wc_yotpo_get_default_settings() {
     'disable_native_review_system' => true,
     'product_sync_enabled' => true,
     'product_sync_tags' => false,
+    'order_sync_enabled' => true,
     'native_star_ratings_enabled' => 'no',
     'debug_mode' => false
   );
@@ -52,11 +53,13 @@ function wc_yotpo_get_default_settings() {
 // What a missing key meant before it existed: every switch off, widgets included (a widget added
 // after the settings were last saved stays hidden), and v2 widgets. Settings saved by an older
 // version lack these keys, so they must read as they always did, not as the new-install defaults
-// above. The product sync is the exception: it is on for existing stores (Yotpo_Product_Sync::setting_on()).
+// above. The product and order syncs are the exceptions: they are on for existing stores
+// (Yotpo_Product_Sync::setting_on(), Yotpo_Order_Sync::setting_on()); 1.x always sent orders.
 function wc_yotpo_legacy_missing_settings() {
   $legacy = wc_yotpo_switches_off( wc_yotpo_get_default_settings() );
   $legacy['widget_version'] = 'v2';
   $legacy['product_sync_enabled'] = true;
+  $legacy['order_sync_enabled'] = true;
   return $legacy;
 }
 

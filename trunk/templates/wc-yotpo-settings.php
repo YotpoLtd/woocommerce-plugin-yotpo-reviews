@@ -125,6 +125,21 @@ function wc_display_yotpo_settings($success_type = false) {
         )
     );
 
+    $orders = yotpo_card(
+        'Orders',
+        '',
+        yotpo_switch_row(
+            'order_sync_enabled',
+            'order_sync_enabled',
+            checked(true, Yotpo_Order_Sync::setting_on(), false),
+            'Send orders to Yotpo',
+            'Sends each order once it reaches the status below, so Yotpo can ask for a review. Runs in the background. Turn off only if your orders reach Yotpo another way.',
+            '',
+            "<div class='yotpo-status yotpo-tone--" . esc_attr(Yotpo_Order_Sync::status_tone()) . "'>" . esc_html(Yotpo_Order_Sync::status_summary()) . "</div>"
+        ) .
+        yotpo_order_status_option($yotpo_settings)
+    );
+
     $widgets = yotpo_card(
         'On-site widgets',
         'Choose where Yotpo widgets appear in your store. Their design is set in the Yotpo dashboard.',
@@ -167,7 +182,7 @@ function wc_display_yotpo_settings($success_type = false) {
     );
 
     $reviews = yotpo_card(
-        'Reviews and orders',
+        'Reviews',
         '',
         yotpo_switch_row(
             'disable_native_review_system',
@@ -175,8 +190,7 @@ function wc_display_yotpo_settings($success_type = false) {
             checked(1, $yotpo_settings['disable_native_review_system'], false),
             'Turn off WooCommerce reviews',
             'Hides the WooCommerce review form and star ratings, so shoppers only see Yotpo reviews.'
-        ) .
-        yotpo_order_status_option($yotpo_settings)
+        )
     );
 
     $past_orders = $yotpo_settings['show_submit_past_orders']
@@ -210,7 +224,7 @@ function wc_display_yotpo_settings($success_type = false) {
     <div class='wrap yotpo-admin'>
         " . yotpo_page_header('Customize how the widgets look, and your review request emails, in the <a href=\'https://reviews.yotpo.com/\' target=\'_blank\' rel=\'noopener\'>Yotpo dashboard</a>.') . "
         <form method='post' id='yotpo_settings_form'>" . wp_nonce_field('yotpo_settings_form', '_wpnonce', true, false) .
-            $connection . $catalog . $widgets . $language . $reviews . "
+            $connection . $catalog . $orders . $widgets . $language . $reviews . "
             <div id='yotpodbg' style='display: none;'>" .
                 yotpo_switch_row('debug_mode', 'debug_mode', checked(1, $yotpo_settings['debug_mode'], false), 'Debug mode', 'Writes all plugin actions to a private log file under <i>wp-content/uploads/yotpo-social-reviews-for-woocommerce/</i> and shows the log and all settings on this page.') . "
             </div>

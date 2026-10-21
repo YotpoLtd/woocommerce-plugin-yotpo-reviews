@@ -11,9 +11,6 @@ class Yotpo_Sync_State {
 	// Also written out in uninstall.php, which runs without this class loaded: keep both in sync.
 	const STATE_OPTION    = 'wc_yotpo_product_sync';
 	const LOCK_OPTION     = 'wc_yotpo_product_sync_lock'; // Short-lived lock around changes to the sync state.
-	const LOCK_TTL        = 30; // Seconds after which a lock left behind by a killed job is taken over.
-	const LOCK_WAIT_TRIES = 50; // Attempts to take the lock, LOCK_WAIT_USEC apart: five seconds in all.
-	const LOCK_WAIT_USEC  = 100000;
 	const STATUS_RUNNING  = 'running';
 	const STATUS_STOPPED  = 'stopped'; // Cut short by the off switch; starts again once the switch is back on.
 	const STATUS_COMPLETE = 'complete';
@@ -155,75 +152,16 @@ class Yotpo_Sync_State {
 	 * @param callable $change Receives the current state; returns the state to save, or null to save nothing.
 	 */
 	private static function update( $change ) {
-		$token = self::lock();
-		// Another runner may have saved since this request loaded its options.
-		wp_cache_delete( 'alloptions', 'options' );
-		wp_cache_delete( self::STATE_OPTION, 'options' );
-		$new_state = call_user_func( $change, self::get() );
-		if ( is_array( $new_state ) ) {
-			self::save( $new_state );
-		}
-		if ( $token ) {
-			self::unlock( $token );
-		}
-	}
-
-	/**
-	 * Takes the state lock (an option that add_option() only creates once). Waits up to five seconds
-	 * (LOCK_WAIT_TRIES x LOCK_WAIT_USEC);
-	 * a lock older than LOCK_TTL was left by a killed job and is taken over. Best effort: after
-	 * the wait the change goes ahead without the lock rather than being lost.
-	 *
-	 * The lock value is "<time>:<owner token>", so only the request that took the lock releases it.
-	 *
-	 * @return string The owner token, or '' when the lock was not obtained.
-	 */
-	private static function lock() {
-		$token = wp_generate_password( 12, false );
-		for ( $try = 0; $try < self::LOCK_WAIT_TRIES; $try++ ) {
-			// add_option() trusts these caches when deciding whether the option exists.
-			wp_cache_delete( self::LOCK_OPTION, 'options' );
-			wp_cache_delete( 'notoptions', 'options' );
-			if ( add_option( self::LOCK_OPTION, self::lock_value( $token ), '', false ) ) {
-				return $token;
-			}
-			$taken = (string) get_option( self::LOCK_OPTION );
-			if ( '' !== $taken && time() - self::lock_part( $taken, 0 ) > self::LOCK_TTL ) {
-				// Only remove the stale lock that was read, not a fresh one taken since.
-				wp_cache_delete( self::LOCK_OPTION, 'options' );
-				if ( (string) get_option( self::LOCK_OPTION ) === $taken ) {
-					delete_option( self::LOCK_OPTION );
+		Yotpo_Option_Lock::run(
+			self::LOCK_OPTION,
+			function () use ( $change ) {
+				wp_cache_delete( self::STATE_OPTION, 'options' );
+				$new_state = call_user_func( $change, self::get() );
+				if ( is_array( $new_state ) ) {
+					self::save( $new_state );
 				}
-				continue;
 			}
-			usleep( self::LOCK_WAIT_USEC );
-		}
-		return '';
-	}
-
-	private static function lock_value( $token ) {
-		return time() . ':' . $token;
-	}
-
-	/**
-	 * Part 0 of a lock value is the time it was taken (int), part 1 the owner token (string).
-	 */
-	private static function lock_part( $value, $part ) {
-		$parts = explode( ':', (string) $value, 2 );
-		if ( 0 === $part ) {
-			return (int) $parts[0];
-		}
-		return isset( $parts[1] ) ? $parts[1] : '';
-	}
-
-	/**
-	 * Releases the lock, unless it expired and another request took it over in the meantime.
-	 */
-	private static function unlock( $token ) {
-		wp_cache_delete( self::LOCK_OPTION, 'options' );
-		if ( self::lock_part( get_option( self::LOCK_OPTION ), 1 ) === $token ) {
-			delete_option( self::LOCK_OPTION );
-		}
+		);
 	}
 
 	private static function save( $state ) {
