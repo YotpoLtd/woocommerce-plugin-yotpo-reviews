@@ -182,6 +182,28 @@ class OrderBackfillTest extends Yotpo_Test_Case {
 		$this->assertCount( 3, $this->orders );
 		$this->assertSame( array( 3, 3, 0, 0 ), array( $state['checked'], $state['sent'], $state['already'], $state['failed'] ), 'No order sent or counted twice' );
 		$this->assertSame( Yotpo_Order_Backfill::STATUS_COMPLETE, $state['status'] );
+		$this->assertCount( 1, array_keys( $this->calls(), 'GET /orders', true ), 'Only the first job of the page looks it up' );
+	}
+
+	public function test_a_page_of_150_orders_continued_in_new_jobs_is_sent_once_each() {
+		for ( $i = 0; $i < 150; $i++ ) {
+			$this->past_order( 3 );
+		}
+		add_filter(
+			'wc_yotpo_order_job_budget',
+			function () {
+				return 0;
+			}
+		);
+
+		Yotpo_Order_Backfill::start( 10 );
+		$this->run_order_jobs_until_done( 400 );
+
+		$state = Yotpo_Order_Backfill::state();
+		$this->assertSame( Yotpo_Order_Backfill::STATUS_COMPLETE, $state['status'] );
+		$this->assertSame( array( 150, 150, 0 ), array( $state['checked'], $state['sent'], $state['already'] ), 'No order sent or counted twice, none left out' );
+		$this->assertCount( 150, $this->orders );
+		$this->assertCount( 2, array_keys( $this->calls(), 'GET /orders', true ), 'One lookup per page, not per job' );
 	}
 
 	public function test_a_page_job_put_off_by_a_429_pause_is_queued_again() {
@@ -381,6 +403,25 @@ class OrderBackfillTest extends Yotpo_Test_Case {
 
 		$this->assertCount( 3, $this->orders );
 		$this->assertSame( 3, Yotpo_Order_Sync::totals()['sent'], 'No order counted twice' );
+		$this->assertCount( 1, array_keys( $this->calls(), 'GET /orders', true ), 'Only the first job of the page looks it up' );
+	}
+
+	public function test_a_sweep_continued_in_new_jobs_starts_after_the_orders_it_left_out() {
+		update_option( Yotpo_Order_Sync::STATS_OPTION, array( 'enabled_at' => time() - DAY_IN_SECONDS ) );
+		$edited_only = $this->past_order( 2 );
+		$this->complete_at( $edited_only, time() - 3 * DAY_IN_SECONDS ); // Completed before sending was turned on, edited just now.
+		$first = $this->past_order( 2 );
+		$this->complete_at( $first, time() - HOUR_IN_SECONDS );
+		$edited_again = $this->past_order( 2 );
+		$this->complete_at( $edited_again, time() - 3 * DAY_IN_SECONDS );
+		$second = $this->past_order( 2 );
+		$this->complete_at( $second, time() - HOUR_IN_SECONDS );
+		add_filter( 'wc_yotpo_order_job_budget', '__return_zero' );
+
+		$this->sweep();
+
+		$this->assertSame( array( $first->get_id(), $second->get_id() ), array_keys( $this->orders ) );
+		$this->assertSame( 2, Yotpo_Order_Sync::totals()['sent'], 'No order counted twice' );
 	}
 
 	public function test_a_sweep_page_put_off_by_a_429_pause_is_queued_again() {
@@ -482,6 +523,19 @@ class OrderBackfillTest extends Yotpo_Test_Case {
 			foreach ( array_keys( $due ) as $action_id ) {
 				ActionScheduler_QueueRunner::instance()->process_action( $action_id, 'phpunit' );
 			}
+		}
+	}
+
+	/** Like run_order_jobs(), for a run of many jobs. */
+	private function run_order_jobs_until_done( $rounds ) {
+		for ( $round = 0; $round < $rounds && Yotpo_Order_Backfill::running(); $round++ ) {
+			$this->run_order_jobs_once();
+		}
+	}
+
+	private function run_order_jobs_once() {
+		foreach ( array_keys( $this->order_jobs() ) as $action_id ) {
+			ActionScheduler_QueueRunner::instance()->process_action( $action_id, 'phpunit' );
 		}
 	}
 

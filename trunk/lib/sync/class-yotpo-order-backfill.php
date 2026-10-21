@@ -153,14 +153,16 @@ class Yotpo_Order_Backfill {
 		if ( self::requeue_if_paused( self::HOOK_PAGE, array( (int) $page, (int) $attempt, (int) $offset ) ) ) {
 			return;
 		}
+		// A job after the first one starts at the order its predecessor stopped at: the orders before it are not loaded again.
+		$offset = (int) $offset;
 		$orders = wc_get_orders(
 			array_merge(
-				self::window_query( 0, array( 'limit' => self::PAGE_SIZE, 'page' => (int) $page, 'orderby' => 'ID', 'order' => 'ASC' ) ),
+				self::window_query( 0, array( 'limit' => self::PAGE_SIZE - $offset, 'offset' => ( (int) $page - 1 ) * self::PAGE_SIZE + $offset, 'orderby' => 'ID', 'order' => 'ASC' ) ),
 				array( 'date_created' => '>=' . (int) $state['since'] )
 			)
 		);
 		$counts = self::new_counts();
-		$error  = self::send_missing( array_slice( $orders, (int) $offset ), $counts, false, self::deadline() );
+		$error  = self::send_missing( $orders, $counts, false, self::deadline(), 0 === $offset );
 
 		$state             = self::state();
 		$state['checked'] += $counts['done'];
@@ -168,7 +170,7 @@ class Yotpo_Order_Backfill {
 			$state[ $key ] += $counts[ $key ];
 		}
 		self::save_state( $state ); // Before a next job is queued, which starts from this state.
-		$next = self::continue_page( self::HOOK_PAGE, array(), $page, $attempt, $offset, $error, $counts, count( $orders ) === self::PAGE_SIZE );
+		$next = self::continue_page( self::HOOK_PAGE, array(), $page, $attempt, $offset + $counts['done'], $error, $counts, count( $orders ) === self::PAGE_SIZE - $offset );
 		if ( self::PAGE_GAVE_UP === $next ) {
 			self::stop( 'Stopped: ' . $error->get_error_message() . ' Run it again to send the rest; orders already sent are skipped.' );
 		} elseif ( self::PAGE_FINISHED === $next ) {
@@ -324,8 +326,8 @@ class Yotpo_Order_Backfill {
 			array(
 				'status'        => Yotpo_Order_Sync::fulfilled_status(),
 				'date_modified' => '>=' . (int) $since,
-				'limit'         => self::PAGE_SIZE,
-				'page'          => (int) $page,
+				'limit'         => self::PAGE_SIZE - (int) $offset,
+				'offset'        => ( (int) $page - 1 ) * self::PAGE_SIZE + (int) $offset, // A job after the first starts where its predecessor stopped.
 				'orderby'       => 'ID',
 				'order'         => 'ASC',
 				'type'          => 'shop_order',
@@ -337,22 +339,22 @@ class Yotpo_Order_Backfill {
 		// (a custom status may be reached long after completion), so there the change date alone decides.
 		$fulfilled = $orders;
 		if ( 'completed' === Yotpo_Order_Sync::fulfilled_status() ) {
-			$fulfilled = array_values(
-				array_filter(
-					$orders,
-					function ( $order ) use ( $since ) {
-						return Yotpo_Order_Api::fulfilled_at( $order ) >= (int) $since;
-					}
-				)
+			$fulfilled = array_filter(
+				$orders,
+				function ( $order ) use ( $since ) {
+					return Yotpo_Order_Api::fulfilled_at( $order ) >= (int) $since;
+				}
 			);
 		}
 		$counts = self::new_counts();
-		$error  = self::send_missing( array_slice( $fulfilled, (int) $offset ), $counts, true, self::deadline() );
+		$error  = self::send_missing( array_values( $fulfilled ), $counts, true, self::deadline(), 0 === (int) $offset );
 		if ( ! $error && ( $counts['sent'] || $counts['failed'] ) ) {
 			ytdbg( $counts['sent'] . ' sent, ' . $counts['failed'] . ' failed', 'Order sync: daily sweep page ' . $page . ',' );
 		}
-		// Orders created so far store their Yotpo ID, so a retry does not send them again.
-		if ( self::PAGE_GAVE_UP === self::continue_page( self::HOOK_SWEEP_PAGE, array( (int) $since ), $page, $attempt, $offset, $error, $counts, count( $orders ) === self::PAGE_SIZE ) ) {
+		// A retry or continuation starts at the first order not done (the offset counts the page's orders, not only the fulfilled ones).
+		$not_done  = array_slice( array_keys( $fulfilled ), $counts['done'], 1 );
+		$resume_at = (int) $offset + ( $not_done ? $not_done[0] : count( $orders ) );
+		if ( self::PAGE_GAVE_UP === self::continue_page( self::HOOK_SWEEP_PAGE, array( (int) $since ), $page, $attempt, $resume_at, $error, $counts, count( $orders ) === self::PAGE_SIZE - (int) $offset ) ) {
 			ytdbg( $error->get_error_message(), 'Order sync: daily sweep stopped,' );
 		}
 	}
@@ -387,19 +389,20 @@ class Yotpo_Order_Backfill {
 	 * What follows a page job, the same for a run and for the sweep: a retry of the rest of the page after a
 	 * retryable error (after MAX_ATTEMPTS the page is given up), the rest of the page in a new job when the time
 	 * budget ran out, else the next page when this one was full. Every continuation carries the page, the
-	 * attempt and the orders of the page done so far in its arguments, so it is a job of its own.
+	 * attempt and the orders of the page done so far in its arguments, so it is a job of its own, and the page's
+	 * earlier orders are not loaded again.
 	 *
 	 * @param string        $hook      The page job's hook.
 	 * @param array         $lead      Its arguments between the page and the attempt (the sweep's window).
 	 * @param int           $page      The page just worked on.
 	 * @param int           $attempt   Its attempt.
-	 * @param int           $offset    The orders of the page that were done before this job.
+	 * @param int           $resume_at The orders of the page done after this job: where a retry or continuation starts.
 	 * @param WP_Error|null $error     send_missing()'s result.
 	 * @param array         $counts    new_counts(), as send_missing() left them.
 	 * @param bool          $page_full Whether the page was a full one, so a next page may exist.
 	 * @return string PAGE_QUEUED, PAGE_GAVE_UP or PAGE_FINISHED.
 	 */
-	private static function continue_page( $hook, array $lead, $page, $attempt, $offset, $error, array $counts, $page_full ) {
+	private static function continue_page( $hook, array $lead, $page, $attempt, $resume_at, $error, array $counts, $page_full ) {
 		$args = function ( $page, $attempt, $offset ) use ( $lead ) {
 			return array_merge( array( (int) $page ), $lead, array( (int) $attempt, (int) $offset ) );
 		};
@@ -408,11 +411,11 @@ class Yotpo_Order_Backfill {
 			if ( $attempt >= Yotpo_Sync_Jobs::MAX_ATTEMPTS ) {
 				return self::PAGE_GAVE_UP;
 			}
-			Yotpo_Sync_Jobs::enqueue( $hook, $args( $page, $attempt + 1, $offset + $counts['done'] ), Yotpo_Order_Sync::GROUP, Yotpo_Sync_Jobs::retry_delay( $error, $attempt ) );
+			Yotpo_Sync_Jobs::enqueue( $hook, $args( $page, $attempt + 1, $resume_at ), Yotpo_Order_Sync::GROUP, Yotpo_Sync_Jobs::retry_delay( $error, $attempt ) );
 			return self::PAGE_QUEUED;
 		}
 		if ( $counts['more'] ) {
-			Yotpo_Sync_Jobs::enqueue( $hook, $args( $page, 1, $offset + $counts['done'] ), Yotpo_Order_Sync::GROUP );
+			Yotpo_Sync_Jobs::enqueue( $hook, $args( $page, 1, $resume_at ), Yotpo_Order_Sync::GROUP );
 			return self::PAGE_QUEUED;
 		}
 		if ( $page_full ) {
@@ -436,9 +439,12 @@ class Yotpo_Order_Backfill {
 	 * @param int        $deadline Unix time after which no further order is created: $counts['more'] is
 	 *                             set instead, and the caller continues with the orders not done.
 	 *                             At least one order is done first, so a job always makes progress.
+	 * @param bool       $look_up  Whether to look the orders without a stored Yotpo ID up first. Not for a job that
+	 *                             continues a page: the first job's lookup stored every ID Yotpo had, and
+	 *                             create_fulfilled() treats an order Yotpo has anyway as already there.
 	 * @return WP_Error|null A retryable error, which stops the page at the first order not done.
 	 */
-	private static function send_missing( array $orders, array &$counts, $is_sweep, $deadline ) {
+	private static function send_missing( array $orders, array &$counts, $is_sweep, $deadline, $look_up ) {
 		if ( ! $orders ) {
 			return null;
 		}
@@ -449,7 +455,7 @@ class Yotpo_Order_Backfill {
 				$ask[] = $order;
 			}
 		}
-		$found = $ask ? Yotpo_Order_Api::find_yotpo_ids( $client, $ask ) : array();
+		$found = $ask && $look_up ? Yotpo_Order_Api::find_yotpo_ids( $client, $ask ) : array();
 		if ( is_wp_error( $found ) ) {
 			return $found;
 		}
