@@ -273,9 +273,6 @@ function wc_display_yotpo_settings($success_type = false) {
 }
 
 /**
- * Color of the product sync status line: what the merchant should make of it at a glance.
- */
-/**
  * The Send past orders row of the Orders card: how many days back, the button, the orders that covers,
  * and the last run's progress. The row sits in the Orders card, inside the settings form, but its days
  * field and button belong to their own form (yotpo_past_orders_form, rendered after the settings form)
@@ -307,6 +304,9 @@ function wc_yotpo_past_orders_row() {
     </div>";
 }
 
+/**
+ * Color of the product sync status line: what the merchant should make of it at a glance.
+ */
 function wc_yotpo_sync_status_tone() {
     if (!Yotpo_Product_Sync::enabled()) {
         return 'neutral';
