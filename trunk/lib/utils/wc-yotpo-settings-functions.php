@@ -19,9 +19,14 @@ function get_yotpo_widget_field_name($widget_type_name) {
   }
 }
 
-function receive_widget_instances() {
-  $yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_default_settings());
-  $yotpo_api = new Yotpo($yotpo_settings['app_key'], $yotpo_settings['secret']);
+// Reads the widget instances with the given app key and secret, or with the stored ones when none are given.
+function receive_widget_instances($app_key = null, $secret = null) {
+  if (null === $app_key && null === $secret) {
+    $yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_default_settings());
+    $app_key = $yotpo_settings['app_key'];
+    $secret = $yotpo_settings['secret'];
+  }
+  $yotpo_api = new Yotpo($app_key, $secret);
   $response = $yotpo_api->get_widget_instances();
   if (!is_array($response) || !isset($response['widget_instances']) || !is_array($response['widget_instances'])) {
     $reason = !empty($yotpo_api->error) ? $yotpo_api->error : 'unexpected response from the Yotpo API';
@@ -33,8 +38,9 @@ function receive_widget_instances() {
 
 // Returns the widget IDs keyed by field name, or a WP_Error when the Yotpo API could not be reached
 // or answered unexpectedly (e.g. a TLS certificate problem). Callers must keep the stored IDs on error.
-function get_widget_instances() {
-  $response = receive_widget_instances();
+// Uses the given app key and secret, or the stored ones when none are given.
+function get_widget_instances($app_key = null, $secret = null) {
+  $response = receive_widget_instances($app_key, $secret);
   if (is_wp_error($response)) {
     return $response;
   }
@@ -49,8 +55,9 @@ function wc_yotpo_widget_instances_error_message($error) {
   return 'Could not fetch the widgets\' IDs from Yotpo, the saved IDs were kept: ' . esc_html($error->get_error_message());
 }
 
-function get_widgets_instances() {
-  return use_v3_widgets() ? get_widget_instances() : array(
+// $app_key and $secret are the ones being saved: the lookup must not use the previously stored keys.
+function get_widgets_instances($app_key = null, $secret = null) {
+  return use_v3_widgets() ? get_widget_instances($app_key, $secret) : array(
     'reviews_widget' => yotpo_get_arr_value($_POST, 'yotpo_reviews_widget_id'),
     'qna' => yotpo_get_arr_value($_POST, 'yotpo_qna_widget_id'),
     'star_rating' => yotpo_get_arr_value($_POST, 'yotpo_star_ratings_widget_id'),
@@ -90,7 +97,7 @@ function wc_proccess_yotpo_settings() {
   $product_sync_was_on = Yotpo_Product_Sync::setting_on();
   $tags_were_on = Yotpo_Product_Sync::tags_on();
   $order_sync_was_on = Yotpo_Order_Sync::setting_on();
-  $widgets_ids = get_widgets_instances();
+  $widgets_ids = get_widgets_instances(yotpo_get_arr_value($_POST, 'yotpo_app_key', ''), yotpo_get_arr_value($_POST, 'yotpo_oauth_token', ''));
   if (is_wp_error($widgets_ids)) {
     wc_yotpo_display_message(wc_yotpo_widget_instances_error_message($widgets_ids), true);
     $widgets_ids = yotpo_get_arr_value($current_settings, 'v3_widgets_ids', []);

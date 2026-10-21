@@ -298,6 +298,26 @@ class SettingsPageTest extends Yotpo_Test_Case {
 		$this->assertStringContainsString( 'Yotpo did not accept the app key and secret token', $html );
 	}
 
+	public function test_the_first_save_of_new_keys_fetches_the_widget_ids_with_those_keys() {
+		$this->set_setting( 'app_key', '' );
+		$this->set_setting( 'secret', '' );
+		$this->set_setting( 'v3_widgets_ids', array() );
+		$_POST = array( 'yotpo_app_key' => 'new-app-key', 'yotpo_oauth_token' => 'new-secret', 'yotpo_settings' => 'Save changes' ) + $this->submission( $this->render() );
+
+		ob_start();
+		wc_proccess_yotpo_settings();
+		$html = ob_get_clean();
+
+		$token_requests = array_values( array_filter( $this->requests, function ( $request ) {
+			return 'POST' === $request['method'] && 'https://api.yotpo.com/oauth/token' === $request['path'];
+		} ) );
+		$this->assertCount( 1, $token_requests );
+		$this->assertSame( 'new-app-key', $token_requests[0]['body']['client_id'], 'The keys being saved, not the stored (empty) ones' );
+		$this->assertSame( 'new-secret', $token_requests[0]['body']['client_secret'] );
+		$this->assertSame( self::WIDGET_IDS, get_option( 'yotpo_settings' )['v3_widgets_ids'], 'No second save needed' );
+		$this->assertStringNotContainsString( 'Yotpo did not accept the app key and secret token', $html );
+	}
+
 	/** The admin page as WordPress shows it, after a POST of $post with the settings nonce. */
 	private function admin_page( array $post = array() ) {
 		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
