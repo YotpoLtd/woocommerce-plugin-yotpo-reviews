@@ -25,6 +25,10 @@ class Yotpo_Sync_Jobs {
 	const FULL_SYNC          = 1; // The variations are still to be compared with Yotpo.
 	const FULL_SYNC_COMPARED = 2; // They were; a requeue or a retry doesn't compare again.
 
+	// Action Scheduler's statuses (ActionScheduler_Store::STATUS_*), spelled out: Action Scheduler may not be loaded where they are named.
+	const JOB_PENDING = 'pending';
+	const JOB_RUNNING = 'in-progress';
+
 	const HOOK_PRODUCT      = 'wc_yotpo_sync_product';
 	const HOOK_BATCH        = 'wc_yotpo_sync_product_batch';
 	const HOOK_VARIANT_GONE = 'wc_yotpo_discontinue_variant';
@@ -502,32 +506,45 @@ class Yotpo_Sync_Jobs {
 	 * @return array{queued:int, in_progress:int}
 	 */
 	public static function queue_counts() {
-		$counts = array( 'queued' => 0, 'in_progress' => 0 );
-		if ( self::scheduler_ready() && class_exists( 'ActionScheduler' ) ) {
-			$counts['queued']      = (int) ActionScheduler::store()->query_actions(
-				array(
-					'group'  => self::GROUP,
-					'status' => ActionScheduler_Store::STATUS_PENDING,
-				),
-				'count'
-			);
-			$counts['in_progress'] = (int) ActionScheduler::store()->query_actions(
-				array(
-					'group'  => self::GROUP,
-					'status' => ActionScheduler_Store::STATUS_RUNNING,
-				),
-				'count'
-			);
+		return array(
+			'queued'      => self::count_jobs( self::GROUP, self::JOB_PENDING ),
+			'in_progress' => self::count_jobs( self::GROUP, self::JOB_RUNNING ),
+		);
+	}
+
+	/**
+	 * Jobs of an Action Scheduler group (and of one hook, when given) in a status; 0 when there is no
+	 * Action Scheduler. Shared with Yotpo_Order_Backfill.
+	 *
+	 * @param string $status JOB_PENDING or JOB_RUNNING.
+	 */
+	public static function count_jobs( $group, $status, $hook = '' ) {
+		if ( ! self::scheduler_ready() || ! class_exists( 'ActionScheduler' ) ) {
+			return 0;
 		}
-		return $counts;
+		$query = array(
+			'group'  => $group,
+			'status' => $status,
+		);
+		if ( '' !== $hook ) {
+			$query['hook'] = $hook;
+		}
+		return (int) ActionScheduler::store()->query_actions( $query, 'count' );
+	}
+
+	/**
+	 * Whether a job of a group (and of one hook, when given) is still queued or running. Shared with
+	 * Yotpo_Order_Backfill, which asks it of its own hook to tell a dead run from a waiting one.
+	 */
+	public static function has_jobs( $group, $hook = '' ) {
+		return self::count_jobs( $group, self::JOB_PENDING, $hook ) + self::count_jobs( $group, self::JOB_RUNNING, $hook ) > 0;
 	}
 
 	/**
 	 * Whether sync jobs are still queued or running.
 	 */
 	private static function jobs_left() {
-		$counts = self::queue_counts();
-		return $counts['queued'] + $counts['in_progress'] > 0;
+		return self::has_jobs( self::GROUP );
 	}
 
 	/**

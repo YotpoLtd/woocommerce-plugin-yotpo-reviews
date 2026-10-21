@@ -30,7 +30,7 @@ class Yotpo_Order_Backfill {
 	const DEFAULT_DAYS    = 90; // 1.x's fixed window.
 	const SWEEP_DAYS      = 7;
 	const JOB_BUDGET      = 15; // Seconds a page job keeps creating orders before it hands the rest of its page to a new job.
-	const STALL_AFTER     = Yotpo_Sync_Jobs::STALL_AFTER; // Seconds without progress after which a run with no job left counts as dead.
+	const STALL_AFTER     = 3600; // Seconds without progress after which a run with no job left counts as dead; its own, apart from the product sync's.
 
 	const STATUS_RUNNING  = 'running';
 	const STATUS_COMPLETE = 'complete';
@@ -229,20 +229,7 @@ class Yotpo_Order_Backfill {
 		if ( ! Yotpo_Sync_Jobs::scheduler_ready() || ! class_exists( 'ActionScheduler' ) ) {
 			return true;
 		}
-		foreach ( array( ActionScheduler_Store::STATUS_PENDING, ActionScheduler_Store::STATUS_RUNNING ) as $status ) {
-			$left = ActionScheduler::store()->query_actions(
-				array(
-					'hook'   => self::HOOK_PAGE,
-					'group'  => Yotpo_Order_Sync::GROUP,
-					'status' => $status,
-				),
-				'count'
-			);
-			if ( (int) $left > 0 ) {
-				return true;
-			}
-		}
-		return false;
+		return Yotpo_Sync_Jobs::has_jobs( Yotpo_Order_Sync::GROUP, self::HOOK_PAGE );
 	}
 
 	/**
