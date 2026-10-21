@@ -287,6 +287,20 @@ class OrderBackfillTest extends Yotpo_Test_Case {
 		$this->assertArrayNotHasKey( $order->get_id(), $this->orders );
 	}
 
+	public function test_the_sweep_skips_orders_completed_before_the_window_even_if_changed_since() {
+		update_option( Yotpo_Order_Sync::STATS_OPTION, array( 'enabled_at' => time() - DAY_IN_SECONDS ) );
+		$before_enabled = $this->past_order( 2 );
+		$this->complete_at( $before_enabled, time() - 3 * DAY_IN_SECONDS ); // Completed while sending was off, edited just now.
+		$before_window = $this->past_order( 2 );
+		$this->complete_at( $before_window, time() - 9 * DAY_IN_SECONDS );
+		$fulfilled_now = $this->past_order( 2 );
+		$this->complete_at( $fulfilled_now, time() - HOUR_IN_SECONDS );
+
+		$this->sweep();
+
+		$this->assertSame( array( $fulfilled_now->get_id() ), array_keys( $this->orders ) );
+	}
+
 	public function test_a_sweep_page_that_uses_its_time_budget_goes_on_in_a_new_job() {
 		for ( $i = 0; $i < 3; $i++ ) {
 			$this->past_order( 2 );
@@ -325,6 +339,14 @@ class OrderBackfillTest extends Yotpo_Test_Case {
 		as_unschedule_all_actions( '', array(), Yotpo_Order_Sync::GROUP ); // The status change queued a send.
 		$this->set_date_modified( $order, $when );
 		return wc_get_order( $order->get_id() );
+	}
+
+	/** Changes when the order was completed, and edits it just now: it is modified now. */
+	private function complete_at( $order, $timestamp ) {
+		$order->set_date_completed( $timestamp );
+		$order->save();
+		as_unschedule_all_actions( '', array(), Yotpo_Order_Sync::GROUP );
+		$this->set_date_modified( $order, time() );
 	}
 
 	/** WooCommerce sets the date modified on every save, so it is written to the database directly. */
