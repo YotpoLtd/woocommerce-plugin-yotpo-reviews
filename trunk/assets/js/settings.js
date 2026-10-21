@@ -172,6 +172,21 @@ function monitorPastOrders() {
 	});
 }
 
+/**
+ * Switch to V3 widgets (stores still on v2): one way, so it asks first. The button belongs to its own form,
+ * so other changes on the page are not saved by it.
+ */
+function confirmSwitchToV3() {
+	jQuery('#yotpo-switch-to-v3').on('click', (event) => {
+		const question = 'Switch this store to V3 widgets?\n\n'
+			+ 'Your product pages will show the V3 widgets set up in your Yotpo dashboard. You can\'t switch back.\n\n'
+			+ 'Other changes on this page are not saved by this button.';
+		if (!window.confirm(question)) {
+			event.preventDefault();
+		}
+	});
+}
+
 jQuery(document).ready(function () {
 	defineSelectors();
 
@@ -181,5 +196,6 @@ jQuery(document).ready(function () {
 
 	monitorDynamicElements();
 	monitorPastOrders();
+	confirmSwitchToV3();
 	openInfoDialogIfExists();
 });

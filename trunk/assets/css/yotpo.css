@@ -461,6 +461,14 @@
 	color: var(--card-foreground);
 	font-size: 13px;
 }
+.yotpo-callout.yotpo-tone--warning {
+	background: var(--color-mg-orange-100);
+	color: var(--color-mg-orange-800);
+}
+/* A callout that ends with a button (Switch to V3 widgets). */
+.yotpo-callout--action p {
+	margin: 0 0 10px;
+}
 
 /* Save bar: stays at the bottom of the window while the settings scroll. */
 
