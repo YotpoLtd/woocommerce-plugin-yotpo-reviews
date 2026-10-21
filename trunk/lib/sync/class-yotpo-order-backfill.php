@@ -97,6 +97,7 @@ class Yotpo_Order_Backfill {
 		if ( ! Yotpo_Sync_Jobs::scheduler_ready() ) {
 			return new WP_Error( 'yotpo_no_scheduler', 'Action Scheduler is not available.' );
 		}
+		self::end_if_stalled();
 		if ( self::running() ) {
 			return new WP_Error( 'yotpo_backfill_busy', 'Past orders are being sent already.' );
 		}
@@ -197,16 +198,19 @@ class Yotpo_Order_Backfill {
 	}
 
 	/**
-	 * Whether a run is going. A run whose page job died without returning (killed at the PHP time limit,
-	 * a fatal error) has no job left and makes no progress: after STALL_AFTER it is ended here, so the
-	 * merchant can start again instead of finding the button disabled for good.
+	 * Whether a run is going. A pure read: a run whose job died is ended by end_if_stalled(), which the
+	 * callers that need a fresh answer (start(), the settings page) call first.
 	 */
 	public static function running() {
-		self::stop_if_stalled();
 		return self::STATUS_RUNNING === self::state()['status'];
 	}
 
-	private static function stop_if_stalled() {
+	/**
+	 * Ends a run whose page job died without returning (killed at the PHP time limit, a fatal error): it
+	 * has no job left and makes no progress, and after STALL_AFTER it is ended here, so the merchant can
+	 * start again instead of finding the button disabled for good. Writes the state when it ends a run.
+	 */
+	public static function end_if_stalled() {
 		$state = self::state();
 		if ( self::STATUS_RUNNING !== $state['status'] ) {
 			return;

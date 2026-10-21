@@ -190,6 +190,7 @@ class OrderBackfillTest extends Yotpo_Test_Case {
 		Yotpo_Order_Backfill::start( 10 );
 		as_unschedule_all_actions( '', array(), Yotpo_Order_Sync::GROUP ); // The page job died: nothing is queued or running.
 
+		Yotpo_Order_Backfill::end_if_stalled();
 		$this->assertTrue( Yotpo_Order_Backfill::running(), 'Not before it has been quiet for a while' );
 
 		$state                  = Yotpo_Order_Backfill::state();
@@ -197,6 +198,8 @@ class OrderBackfillTest extends Yotpo_Test_Case {
 		$state['last_activity'] = $state['started'];
 		update_option( Yotpo_Order_Backfill::STATE_OPTION, $state );
 
+		$this->assertTrue( Yotpo_Order_Backfill::running(), 'Reading it changes nothing' );
+		Yotpo_Order_Backfill::end_if_stalled();
 		$this->assertFalse( Yotpo_Order_Backfill::running() );
 		$this->assertSame( Yotpo_Order_Backfill::STATUS_STOPPED, Yotpo_Order_Backfill::state()['status'] );
 		$this->assertStringContainsString( 'ended without finishing', Yotpo_Order_Backfill::status_summary() );
@@ -212,6 +215,7 @@ class OrderBackfillTest extends Yotpo_Test_Case {
 		$state['last_activity'] = $state['started'];
 		update_option( Yotpo_Order_Backfill::STATE_OPTION, $state );
 
+		Yotpo_Order_Backfill::end_if_stalled();
 		$this->assertTrue( Yotpo_Order_Backfill::running(), 'Its page job is still queued, for example behind a 429 pause' );
 	}
 

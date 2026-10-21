@@ -283,6 +283,7 @@ function wc_display_yotpo_settings($success_type = false) {
 function wc_yotpo_past_orders_row() {
     $days = Yotpo_Order_Backfill::DEFAULT_DAYS;
     $ready = Yotpo_Order_Sync::enabled();
+    Yotpo_Order_Backfill::end_if_stalled();
     $running = Yotpo_Order_Backfill::running();
     $count = $ready ? Yotpo_Order_Backfill::count($days) : 0;
     $status = Yotpo_Order_Backfill::status_summary();
