@@ -273,12 +273,12 @@ function wc_display_yotpo_settings($success_type = false) {
 }
 
 /**
- * The Send past orders row of the Orders card: how many days back, the button, the orders that covers,
- * and the last run's progress. The row sits in the Orders card, inside the settings form, but its days
- * field and button belong to their own form (yotpo_past_orders_form, rendered after the settings form)
- * through the form attribute, with their own handler (wc_display_yotpo_admin_page()). The button is
- * therefore not the settings form's default button: Enter in a settings field still saves. settings.js
- * updates the count as the days change and asks for confirmation before a run starts.
+ * The Send past orders row of the Orders card: how many days back and the button, with the orders that
+ * covers under them, and the last run's progress. The row sits in the Orders card, inside the settings
+ * form, but its days field and button belong to their own form (yotpo_past_orders_form, rendered after
+ * the settings form) through the form attribute, with their own handler (wc_display_yotpo_admin_page()).
+ * The button is therefore not the settings form's default button: Enter in a settings field still saves.
+ * settings.js updates the count as the days change and asks for confirmation before a run starts.
  */
 function wc_yotpo_past_orders_row() {
     $days = Yotpo_Order_Backfill::DEFAULT_DAYS;
@@ -291,15 +291,17 @@ function wc_yotpo_past_orders_row() {
     <div class='yotpo-row'>
       <div class='yotpo-row__text'>
         <label class='yotpo-label' for='yotpo_past_orders_days'>Send past orders</label>
-        <p class='yotpo-help'>Sends orders in the status above from the last 1 to " . Yotpo_Order_Backfill::MAX_DAYS . " days, except those Yotpo already has. Their customers may get a review request.</p>
-        <p class='yotpo-help' id='yotpo-past-orders-count'>" . ($ready ? esc_html(sprintf(_n('%1$d order in the last %2$d days.', '%1$d orders in the last %2$d days.', $count, 'yotpo-social-reviews-for-woocommerce'), $count, $days)) : '') . "</p>" .
+        <p class='yotpo-help'>Sends orders in the status above from the last 1 to " . Yotpo_Order_Backfill::MAX_DAYS . " days, except those Yotpo already has. Your customers may get a review request.</p>" .
         $note .
         ('' !== $status ? "<div class='yotpo-status yotpo-tone--" . esc_attr(Yotpo_Order_Backfill::status_tone()) . "' id='yotpo-past-orders-status'>" . esc_html($status) . "</div>" : '') . "
       </div>
-      <div class='yotpo-row__control yotpo-row__control--nowrap'>
-        <input type='number' class='yotpo-input yotpo-input--days' id='yotpo_past_orders_days' name='yotpo_past_orders_days' value='" . esc_attr($days) . "' min='1' max='" . esc_attr(Yotpo_Order_Backfill::MAX_DAYS) . "' step='1' form='yotpo_past_orders_form' " . disabled(true, !$ready || $running, false) . " />
-        <span class='yotpo-help'>days</span>
-        <input type='submit' form='yotpo_past_orders_form' name='yotpo_past_orders' id='yotpo-past-orders' value='Send past orders' class='yotpo-btn yotpo-btn--outline' " . disabled(true, !$ready || $running, false) . " />
+      <div class='yotpo-row__control yotpo-row__control--stack'>
+        <div class='yotpo-row__control yotpo-row__control--nowrap'>
+          <input type='number' class='yotpo-input yotpo-input--days' id='yotpo_past_orders_days' name='yotpo_past_orders_days' value='" . esc_attr($days) . "' min='1' max='" . esc_attr(Yotpo_Order_Backfill::MAX_DAYS) . "' step='1' form='yotpo_past_orders_form' " . disabled(true, !$ready || $running, false) . " />
+          <span class='yotpo-help'>days</span>
+          <input type='submit' form='yotpo_past_orders_form' name='yotpo_past_orders' id='yotpo-past-orders' value='Send past orders' class='yotpo-btn yotpo-btn--primary' " . disabled(true, !$ready || $running, false) . " />
+        </div>
+        <p class='yotpo-help' id='yotpo-past-orders-count'>" . ($ready ? esc_html(sprintf(_n('%1$d order in the last %2$d days.', '%1$d orders in the last %2$d days.', $count, 'yotpo-social-reviews-for-woocommerce'), $count, $days)) : '') . "</p>
       </div>
     </div>";
 }

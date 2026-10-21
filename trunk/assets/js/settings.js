@@ -136,7 +136,20 @@ function monitorPastOrders() {
 			});
 	}
 
+	// Whole days only, never above the maximum: a keystroke or paste that would go past it is undone,
+	// and the field keeps its last accepted value. Empty and 0 are allowed while typing; the button
+	// checks the minimum.
+	let accepted = days.val();
 	days.on('input', () => {
+		const typed = String(days.val()).replace(/\D/g, '');
+		if (typed !== '' && parseInt(typed, 10) > parseInt(days.attr('max'), 10)) {
+			days.val(accepted);
+			return;
+		}
+		if (typed !== String(days.val())) {
+			days.val(typed);
+		}
+		accepted = typed;
 		latest.count = null;
 		clearTimeout(timer);
 		timer = setTimeout(refresh, 400);
@@ -151,7 +164,7 @@ function monitorPastOrders() {
 		}
 		const orders = latest.days === value && latest.count !== null ? latest.count + ' orders' : 'the orders';
 		const question = 'Send ' + orders + ' from the last ' + value + ' days to Yotpo?\n\n'
-			+ 'Their customers may get a review request, including for older orders. Orders Yotpo already has are skipped.\n\n'
+			+ 'Your customers may get a review request, including for older orders. Orders Yotpo already has are skipped.\n\n'
 			+ 'Other changes on this page are not saved by this button.';
 		if (!window.confirm(question)) {
 			event.preventDefault();
