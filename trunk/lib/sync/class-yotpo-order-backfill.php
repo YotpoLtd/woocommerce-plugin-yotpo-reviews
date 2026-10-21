@@ -18,9 +18,10 @@ defined( 'ABSPATH' ) || exit;
  */
 class Yotpo_Order_Backfill {
 
-	// STATE_OPTION and SWEEP_CHECK are also written out in uninstall.php, which runs without this class loaded.
+	// STATE_OPTION, SWEEP_CHECK and SETTLED_PREFIX are also written out in uninstall.php, which runs without this class loaded.
 	const STATE_OPTION    = 'wc_yotpo_order_backfill';
 	const SWEEP_CHECK     = 'wc_yotpo_order_sweep_check'; // Throttles the check that the daily sweep is scheduled.
+	const SETTLED_PREFIX  = 'wc_yotpo_order_settled_'; // Transient per order (and change of it) the sweep could not send for good; also written out in uninstall.php.
 	const HOOK_PAGE       = 'wc_yotpo_send_past_orders_page';
 	const HOOK_SWEEP      = 'wc_yotpo_order_sweep';
 	const HOOK_SWEEP_PAGE = 'wc_yotpo_order_sweep_page';
@@ -388,7 +389,9 @@ class Yotpo_Order_Backfill {
 	 *
 	 * @param WC_Order[] $orders
 	 * @param array      $counts     Adds to sent, already, skipped, failed, and done (orders finished, in order).
-	 * @param bool       $live_stats Count sent and failed orders in the status line (the sweep) too.
+	 * @param bool       $live_stats Count sent and failed orders in the status line (the sweep) too, and remember
+	 *                               the ones that can't be sent for good, so the next sweep leaves them alone
+	 *                               until they change (settled()).
 	 * @param int        $deadline   Unix time after which no further order is created: $counts['more'] is
 	 *                               set instead, and the caller continues with the orders not done.
 	 *                               At least one order is done first, so a job always makes progress.
@@ -401,7 +404,7 @@ class Yotpo_Order_Backfill {
 		$client = Yotpo_V3_Client::from_settings();
 		$ask    = array();
 		foreach ( $orders as $order ) {
-			if ( ! $order->get_meta( Yotpo_Order_Api::META_ORDER_ID ) ) {
+			if ( ! $order->get_meta( Yotpo_Order_Api::META_ORDER_ID ) && ! ( $live_stats && self::settled( $order ) ) ) {
 				$ask[] = $order;
 			}
 		}
@@ -415,6 +418,11 @@ class Yotpo_Order_Backfill {
 				++$counts['done'];
 				continue;
 			}
+			if ( $live_stats && self::settled( $order ) ) {
+				++$counts['skipped'];
+				++$counts['done'];
+				continue;
+			}
 			if ( $counts['done'] && time() >= $deadline ) {
 				$counts['more'] = true;
 				return null;
@@ -424,6 +432,9 @@ class Yotpo_Order_Backfill {
 			if ( is_wp_error( $result ) ) {
 				if ( Yotpo_V3_Client::is_retryable( $result ) ) {
 					return $result;
+				}
+				if ( $live_stats ) {
+					self::settle( $order );
 				}
 				if ( 'yotpo_order_skipped' === $result->get_error_code() ) {
 					++$counts['skipped'];
@@ -445,6 +456,28 @@ class Yotpo_Order_Backfill {
 			++$counts['done'];
 		}
 		return null;
+	}
+
+	/**
+	 * Remembers an order the sweep could not send for good (rejected by Yotpo, or not sendable, such as
+	 * an order without an email). Until the order changes, later sweeps neither look it up again, nor
+	 * send it again, nor count its failure again. The marker lasts as long as the sweep's window.
+	 */
+	private static function settle( $order ) {
+		set_transient( self::settled_key( $order ), 1, self::SWEEP_DAYS * DAY_IN_SECONDS );
+	}
+
+	private static function settled( $order ) {
+		return (bool) get_transient( self::settled_key( $order ) );
+	}
+
+	/**
+	 * Named after the order and the time it last changed, so a merchant's fix (an email added, an item
+	 * corrected) makes the order eligible again.
+	 */
+	private static function settled_key( $order ) {
+		$modified = $order->get_date_modified();
+		return self::SETTLED_PREFIX . $order->get_id() . '_' . ( $modified ? $modified->getTimestamp() : 0 );
 	}
 
 	/**

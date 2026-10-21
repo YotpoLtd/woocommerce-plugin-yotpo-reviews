@@ -22,6 +22,7 @@ class UninstallTest extends Yotpo_Test_Case {
 		set_transient( Yotpo_Sync_Jobs::PAUSE_TRANSIENT, time() + 60, 60 );
 		set_transient( Yotpo_Sync_Jobs::RECHECK_TRANSIENT, 1, 300 );
 		set_transient( Yotpo_Order_Api::ABSENT_PREFIX . $order->get_id(), 1, 600 );
+		set_transient( Yotpo_Order_Backfill::SETTLED_PREFIX . $order->get_id() . '_' . time(), 1, DAY_IN_SECONDS );
 		update_option( Yotpo_Order_Sync::LOCK_OPTION, '1:x' );
 		update_option( Yotpo_Order_Sync::STATS_OPTION, array( 'last_sent' => time() ) );
 		update_option( Yotpo_Order_Backfill::STATE_OPTION, array( 'status' => 'complete' ) );
@@ -45,6 +46,8 @@ class UninstallTest extends Yotpo_Test_Case {
 		global $wpdb;
 		$absent_rows = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->options} WHERE option_name LIKE %s", '%' . $wpdb->esc_like( Yotpo_Order_Api::ABSENT_PREFIX ) . '%' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$this->assertSame( 0, $absent_rows, 'Order lookup transient rows left behind (value or timeout)' );
+		$settled_rows = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->options} WHERE option_name LIKE %s", '%' . $wpdb->esc_like( Yotpo_Order_Backfill::SETTLED_PREFIX ) . '%' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$this->assertSame( 0, $settled_rows, 'Sweep markers left behind (value or timeout)' );
 		$meta_left = array_filter(
 			array_keys( get_post_meta( $product->get_id() ) ),
 			function ( $key ) {

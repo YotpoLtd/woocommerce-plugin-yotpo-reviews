@@ -301,6 +301,33 @@ class OrderBackfillTest extends Yotpo_Test_Case {
 		$this->assertSame( array( $fulfilled_now->get_id() ), array_keys( $this->orders ) );
 	}
 
+	public function test_the_sweep_leaves_orders_it_could_not_send_for_good_alone_until_they_change() {
+		$rejected = $this->past_order( 2 );
+		$no_email = $this->past_order( 2, 'completed', array( 'email' => '' ) );
+		$this->create_fails = 400;
+
+		$this->sweep();
+
+		$this->assertSame( 1, Yotpo_Order_Sync::totals()['failed'] );
+		$requests = count( $this->calls() );
+		$this->assertGreaterThan( 0, $requests );
+
+		$this->sweep();
+		$this->sweep();
+
+		$this->assertCount( $requests, $this->calls(), 'No lookup and no create for them again' );
+		$this->assertSame( 1, Yotpo_Order_Sync::totals()['failed'], 'The failure is counted once' );
+
+		// Edited since: worth another try.
+		$this->create_fails = null;
+		$rejected->set_customer_note( 'Fixed' );
+		$rejected->save();
+		as_unschedule_all_actions( '', array(), Yotpo_Order_Sync::GROUP );
+		$this->sweep();
+
+		$this->assertArrayHasKey( $rejected->get_id(), $this->orders );
+	}
+
 	public function test_a_sweep_page_that_uses_its_time_budget_goes_on_in_a_new_job() {
 		for ( $i = 0; $i < 3; $i++ ) {
 			$this->past_order( 2 );
