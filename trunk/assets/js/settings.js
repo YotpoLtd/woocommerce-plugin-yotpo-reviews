@@ -101,6 +101,77 @@ function openInfoDialogIfExists() {
 	}
 }
 
+/**
+ * Send past orders: keeps the order count in step with the days typed, and asks before a run starts.
+ * The days field and the button belong to their own form, not the settings form, so the confirmation also
+ * says that other changes on the page are not saved by it.
+ */
+function monitorPastOrders() {
+	const days = jQuery('#yotpo_past_orders_days');
+	const count = jQuery('#yotpo-past-orders-count');
+	const button = jQuery('#yotpo-past-orders');
+	if (!days.length || typeof yotpoPastOrders === 'undefined') {
+		return;
+	}
+	let latest = { days: parseInt(days.val(), 10), count: null };
+	let timer;
+
+	function validDays() {
+		const value = parseInt(days.val(), 10);
+		return value >= 1 && value <= parseInt(days.attr('max'), 10) ? value : null;
+	}
+
+	function refresh() {
+		const value = validDays();
+		if (value === null) {
+			count.text('Enter between 1 and ' + days.attr('max') + ' days.');
+			return;
+		}
+		jQuery.post(yotpoPastOrders.ajaxUrl, { action: 'wc_yotpo_past_orders_count', _ajax_nonce: yotpoPastOrders.nonce, days: value })
+			.done((response) => {
+				if (response && response.success && response.data.days === validDays()) {
+					latest = response.data;
+					count.text(latest.count + (latest.count === 1 ? ' order' : ' orders') + ' in the last ' + latest.days + ' days.');
+				}
+			});
+	}
+
+	// Whole days only, never above the maximum: a keystroke or paste that would go past it is undone,
+	// and the field keeps its last accepted value. Empty and 0 are allowed while typing; the button
+	// checks the minimum.
+	let accepted = days.val();
+	days.on('input', () => {
+		const typed = String(days.val()).replace(/\D/g, '');
+		if (typed !== '' && parseInt(typed, 10) > parseInt(days.attr('max'), 10)) {
+			days.val(accepted);
+			return;
+		}
+		if (typed !== String(days.val())) {
+			days.val(typed);
+		}
+		accepted = typed;
+		latest.count = null;
+		clearTimeout(timer);
+		timer = setTimeout(refresh, 400);
+	});
+
+	button.on('click', (event) => {
+		const value = validDays();
+		if (value === null) {
+			event.preventDefault();
+			refresh();
+			return;
+		}
+		const orders = latest.days === value && latest.count !== null ? latest.count + ' orders' : 'the orders';
+		const question = 'Send ' + orders + ' from the last ' + value + ' days to Yotpo?\n\n'
+			+ 'Your customers may get a review request, including for older orders. Orders Yotpo already has are skipped.\n\n'
+			+ 'Other changes on this page are not saved by this button.';
+		if (!window.confirm(question)) {
+			event.preventDefault();
+		}
+	});
+}
+
 jQuery(document).ready(function () {
 	defineSelectors();
 
@@ -109,5 +180,6 @@ jQuery(document).ready(function () {
 	});
 
 	monitorDynamicElements();
+	monitorPastOrders();
 	openInfoDialogIfExists();
 });

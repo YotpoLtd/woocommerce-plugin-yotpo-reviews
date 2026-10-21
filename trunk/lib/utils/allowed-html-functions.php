@@ -65,9 +65,14 @@ function yotpo_settings_allowed_html() {
       'disabled' => array(),
       'role' => array(),
       'autocomplete' => array(),
+      'min' => array(),
+      'max' => array(),
+      'step' => array(),
+      'form' => array(),
     ),
     'p' => array(
       'class' => array(),
+      'id' => array(),
     ),
     'div' => array(
       'id' => array(),

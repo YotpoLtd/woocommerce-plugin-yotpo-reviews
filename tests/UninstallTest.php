@@ -22,7 +22,12 @@ class UninstallTest extends Yotpo_Test_Case {
 		set_transient( Yotpo_Sync_Jobs::PAUSE_TRANSIENT, time() + 60, 60 );
 		set_transient( Yotpo_Sync_Jobs::RECHECK_TRANSIENT, 1, 300 );
 		set_transient( Yotpo_Order_Api::ABSENT_PREFIX . $order->get_id(), 1, 600 );
+		set_transient( Yotpo_Order_Backfill::SETTLED_PREFIX . $order->get_id() . '_' . time(), 1, DAY_IN_SECONDS );
 		update_option( Yotpo_Order_Sync::LOCK_OPTION, '1:x' );
+		update_option( Yotpo_Order_Sync::STATS_OPTION, array( 'last_sent' => time() ) );
+		update_option( Yotpo_Order_Backfill::STATE_OPTION, array( 'status' => 'complete' ) );
+		Yotpo_Order_Backfill::maybe_schedule_sweep();
+		$this->assertNotEmpty( $this->pending_jobs( null, Yotpo_Order_Sync::GROUP ), 'The daily sweep is scheduled' );
 		Yotpo_Product_Sync::start_full_sync();
 		$this->assertNotEmpty( $this->pending_jobs() );
 
@@ -31,16 +36,18 @@ class UninstallTest extends Yotpo_Test_Case {
 		}
 		include dirname( __DIR__ ) . '/trunk/uninstall.php';
 
-		foreach ( array( 'yotpo_settings', 'wc_yotpo_v3_token', 'wc_yotpo_just_installed', 'native_star_ratings_enabled', Yotpo_Sync_State::STATE_OPTION, Yotpo_Sync_State::LOCK_OPTION, Yotpo_Order_Sync::LOCK_OPTION ) as $option ) {
+		foreach ( array( 'yotpo_settings', 'wc_yotpo_v3_token', 'wc_yotpo_just_installed', 'native_star_ratings_enabled', Yotpo_Sync_State::STATE_OPTION, Yotpo_Sync_State::LOCK_OPTION, Yotpo_Order_Sync::LOCK_OPTION, Yotpo_Order_Sync::STATS_OPTION, Yotpo_Order_Backfill::STATE_OPTION ) as $option ) {
 			$this->assertFalse( get_option( $option ), "Option $option left behind" );
 		}
-		foreach ( array( Yotpo_Sync_Jobs::PAUSE_TRANSIENT, Yotpo_Sync_Jobs::RECHECK_TRANSIENT ) as $transient ) {
+		foreach ( array( Yotpo_Sync_Jobs::PAUSE_TRANSIENT, Yotpo_Sync_Jobs::RECHECK_TRANSIENT, Yotpo_Order_Backfill::SWEEP_CHECK ) as $transient ) {
 			$this->assertFalse( get_transient( $transient ), "Transient $transient left behind" );
 		}
 		$this->assertFalse( get_transient( Yotpo_Order_Api::ABSENT_PREFIX . $order->get_id() ), 'Order lookup transient left behind' );
 		global $wpdb;
 		$absent_rows = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->options} WHERE option_name LIKE %s", '%' . $wpdb->esc_like( Yotpo_Order_Api::ABSENT_PREFIX ) . '%' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$this->assertSame( 0, $absent_rows, 'Order lookup transient rows left behind (value or timeout)' );
+		$settled_rows = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->options} WHERE option_name LIKE %s", '%' . $wpdb->esc_like( Yotpo_Order_Backfill::SETTLED_PREFIX ) . '%' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$this->assertSame( 0, $settled_rows, 'Sweep markers left behind (value or timeout)' );
 		$meta_left = array_filter(
 			array_keys( get_post_meta( $product->get_id() ) ),
 			function ( $key ) {
@@ -51,6 +58,7 @@ class UninstallTest extends Yotpo_Test_Case {
 		$order_meta_left = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE meta_key IN (%s, %s)", Yotpo_Order_Api::META_ORDER_ID, Yotpo_Order_Api::META_UPDATE_HASH ) );
 		$this->assertSame( 0, $order_meta_left, 'Order meta left behind in post meta (the order storage of this test)' );
 		$this->assertSame( array(), $this->pending_jobs(), 'Jobs left queued' );
+		$this->assertSame( array(), $this->pending_jobs( null, Yotpo_Order_Sync::GROUP ), 'Order jobs and the daily sweep left queued' );
 	}
 
 	/**

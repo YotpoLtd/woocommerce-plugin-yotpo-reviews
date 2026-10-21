@@ -199,12 +199,6 @@ class Yotpo {
         return $this->put("/apps/$app_key", $request);
     }
 
-    public function create_purchases(array $purchases_hash) {
-        $request = self::build_request(array('utoken' => 'utoken', 'platform' => 'platform', 'orders' => 'orders'), $purchases_hash);
-        $app_key = $this->get_app_key($purchases_hash);
-        return $this->post("/apps/$app_key/purchases/mass_create", $request);
-    }
-
     public function get_purchases(array $request_hash) {
         $request = self::build_request(array('utoken' => 'utoken', 'since_id' => 'since_id', 'since_date' => 'since_date', 'page' => 'page', 'count' => 'count'), $request_hash);
         if (!array_key_exists('page', $request)) {

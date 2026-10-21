@@ -146,6 +146,21 @@
 	gap: 8px 16px;
 	padding-top: 1px;
 }
+/* A field, its unit and its button stay on one line (Send past orders). */
+.yotpo-row__control--nowrap {
+	flex-wrap: nowrap;
+	gap: 8px;
+}
+/* Controls with a line of text under them (Send past orders and its order count). */
+.yotpo-row__control--stack {
+	flex-direction: column;
+	align-items: stretch;
+	gap: 6px;
+	padding-top: 0;
+}
+.yotpo-row__control--stack > .yotpo-help {
+	margin: 0;
+}
 
 .yotpo-label {
 	display: block;
@@ -203,6 +218,9 @@
 }
 .yotpo-admin input.yotpo-input--short {
 	max-width: 120px;
+}
+.yotpo-admin input.yotpo-input--days {
+	max-width: 80px;
 }
 .yotpo-admin input.yotpo-input--mono {
 	font-family: var(--font-mono);
