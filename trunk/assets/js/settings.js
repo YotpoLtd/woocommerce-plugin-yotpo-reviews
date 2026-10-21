@@ -30,7 +30,7 @@ function defineSelectors() {
 }
 
 function monitorDynamicElements() {
-	monitorWidgetsVersionSelect();
+	applyWidgetVersion();
 	monitorV2WidgetLocation();
 	monitorV3WidgetLocation();
 }
@@ -39,7 +39,7 @@ function changeElementVisibility(widgetSyncRow, visible, duration) {
 	visible ? widgetSyncRow.show(duration) : widgetSyncRow.hide(duration);
 }
 
-function isThisVersionSelected(version) {
+function isStoreOnVersion(version) {
 	if (!(version in PluginVersion)) {
 		return false;
 	}
@@ -47,18 +47,18 @@ function isThisVersionSelected(version) {
 }
 
 function modifyFormPositionsVisibility() {
-	changeElementVisibility(yotpoV3Enablers, isThisVersionSelected(PluginVersion.v3));
-	changeElementVisibility(yotpoV2Enablers, isThisVersionSelected(PluginVersion.v2));
-	changeElementVisibility(yotpoV3Locations, isThisVersionSelected(PluginVersion.v3));
-	changeElementVisibility(yotpoV2Locations, isThisVersionSelected(PluginVersion.v2));
-	isThisVersionSelected(PluginVersion.v3)
+	changeElementVisibility(yotpoV3Enablers, isStoreOnVersion(PluginVersion.v3));
+	changeElementVisibility(yotpoV2Enablers, isStoreOnVersion(PluginVersion.v2));
+	changeElementVisibility(yotpoV3Locations, isStoreOnVersion(PluginVersion.v3));
+	changeElementVisibility(yotpoV2Locations, isStoreOnVersion(PluginVersion.v2));
+	isStoreOnVersion(PluginVersion.v3)
 		? yotpoQNAWidgetTabName.removeClass('yotpo-qna-widget-tab-name--hidden')
 		: yotpoQNAWidgetTabName.addClass('yotpo-qna-widget-tab-name--hidden');
 }
 
-function monitorWidgetsVersionSelect() {
+// The widget version is fixed for the store (a hidden field, not a select): apply it once on load.
+function applyWidgetVersion() {
 	modifyFormPositionsVisibility();
-	yotpoWidgetVersion.change(() => modifyFormPositionsVisibility());
 }
 
 function monitorV2WidgetLocation() {
