@@ -9,8 +9,9 @@ defined( 'ABSPATH' ) || exit;
  *   covers, and every order in the fulfilled status placed in that window is sent, unless Yotpo has it.
  * - The daily sweep: once a day, at a time fixed per store, fulfilled orders changed in the last
  *   SWEEP_DAYS days are sent if Yotpo still lacks them (a job that failed for good, an import that
- *   changed statuses without WooCommerce's hooks). Only orders fulfilled in that window and while
- *   sending was on: an older order that was merely edited is left alone.
+ *   changed statuses without WooCommerce's hooks). With the 'completed' status only orders completed in
+ *   that window and while sending was on: an older order that was merely edited is left alone. (Another
+ *   status has no completion date of its own, so there every order changed in the window counts.)
  *
  * Both look a page up in one request and create only what is missing, so orders Yotpo already has
  * (sent by the live jobs or by 1.x) cost nothing more. Both run in Yotpo_Order_Sync's job group, behind
@@ -325,8 +326,9 @@ class Yotpo_Order_Backfill {
 	}
 
 	/**
-	 * One page of the sweep: the fulfilled orders changed since $since, of which those fulfilled since then
-	 * (their completion date, Yotpo_Order_Api::fulfilled_at()) are considered. Orders with a stored Yotpo ID
+	 * One page of the sweep: the fulfilled orders changed since $since. With the 'completed' status only those
+	 * completed since then (Yotpo_Order_Api::fulfilled_at()) are considered; with another status, which has no
+	 * completion date of its own, all of them are. Orders with a stored Yotpo ID
 	 * were sent and cost no request; the rest are looked up together and the missing ones created. Sent and failed orders count in the status line,
 	 * as the live jobs' do. A retryable error retries the page later; after MAX_ATTEMPTS the sweep ends
 	 * and tomorrow's picks the orders up.
@@ -351,16 +353,21 @@ class Yotpo_Order_Backfill {
 				'type'          => 'shop_order',
 			)
 		);
-		// The query finds orders changed since the window opened; of those only the ones fulfilled in it are
-		// sent. An old order that was merely edited (a note, a refund, a plugin saving it) is not.
-		$fulfilled = array_values(
-			array_filter(
-				$orders,
-				function ( $order ) use ( $since ) {
-					return Yotpo_Order_Api::fulfilled_at( $order ) >= (int) $since;
-				}
-			)
-		);
+		// The query finds orders changed since the window opened. For the 'completed' status, whose completion
+		// date says when the order was fulfilled, only the ones completed in the window are sent: an old order
+		// that was merely edited (a note, a refund, a plugin saving it) is not. Another status has no such date
+		// (a custom status may be reached long after completion), so there the change date alone decides.
+		$fulfilled = $orders;
+		if ( 'completed' === Yotpo_Order_Sync::fulfilled_status() ) {
+			$fulfilled = array_values(
+				array_filter(
+					$orders,
+					function ( $order ) use ( $since ) {
+						return Yotpo_Order_Api::fulfilled_at( $order ) >= (int) $since;
+					}
+				)
+			);
+		}
 		$counts = array( 'sent' => 0, 'already' => 0, 'skipped' => 0, 'failed' => 0, 'done' => 0 );
 		$error  = self::send_missing( array_slice( $fulfilled, (int) $offset ), $counts, true, self::deadline() );
 		if ( $error ) {

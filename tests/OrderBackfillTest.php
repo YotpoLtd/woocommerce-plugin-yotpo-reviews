@@ -319,6 +319,20 @@ class OrderBackfillTest extends Yotpo_Test_Case {
 		$this->assertSame( array( $fulfilled_now->get_id() ), array_keys( $this->orders ) );
 	}
 
+	public function test_the_sweep_finds_an_order_that_reached_another_fulfilled_status_in_the_window() {
+		$this->set_setting( 'yotpo_order_status', 'wc-processing' );
+		$order = $this->past_order( 2, 'processing' );
+		$order->set_date_completed( time() - 20 * DAY_IN_SECONDS ); // Completed long ago, moved to this status just now.
+		$order->save();
+		as_unschedule_all_actions( '', array(), Yotpo_Order_Sync::GROUP );
+		$this->set_date_modified( $order, time() - HOUR_IN_SECONDS );
+		$old = $this->past_order( 10, 'processing' );
+
+		$this->sweep();
+
+		$this->assertSame( array( $order->get_id() ), array_keys( $this->orders ) );
+	}
+
 	public function test_the_sweep_leaves_orders_it_could_not_send_for_good_alone_until_they_change() {
 		$rejected = $this->past_order( 2 );
 		$no_email = $this->past_order( 2, 'completed', array( 'email' => '' ) );
