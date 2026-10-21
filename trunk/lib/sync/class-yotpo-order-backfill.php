@@ -367,7 +367,9 @@ class Yotpo_Order_Backfill {
 
 	/**
 	 * While a 429 pauses the order jobs, queues the job again for after the pause. (Run at the start of a
-	 * page job, which then does nothing else.)
+	 * page job, which then does nothing else.) The new job has the arguments of the running one, which
+	 * Action Scheduler's unique check allows: it looks at pending actions, and the running one is in progress
+	 * (OrderBackfillTest covers it).
 	 *
 	 * @param array $args The running job's arguments.
 	 * @return bool Whether the job was put off.

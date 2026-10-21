@@ -184,6 +184,18 @@ class OrderBackfillTest extends Yotpo_Test_Case {
 		$this->assertSame( Yotpo_Order_Backfill::STATUS_COMPLETE, $state['status'] );
 	}
 
+	public function test_a_page_job_put_off_by_a_429_pause_is_queued_again() {
+		$this->past_order( 3 );
+		Yotpo_Order_Backfill::start( 10 );
+		set_transient( Yotpo_Sync_Jobs::PAUSE_TRANSIENT, time() + 120, 120 );
+
+		$page_jobs = array_keys( $this->order_jobs( Yotpo_Order_Backfill::HOOK_PAGE ) );
+		ActionScheduler_QueueRunner::instance()->process_action( reset( $page_jobs ), 'phpunit' );
+
+		$this->assertSame( array( array( 1, 1, 0 ) ), $this->page_job_args(), 'Queued again, for after the pause, though its arguments are those of the job that put it off' );
+		$this->assertSame( array(), $this->orders, 'Nothing is sent during the pause' );
+	}
+
 	public function test_a_run_whose_job_died_can_be_started_again() {
 		$this->past_order( 3 );
 		Yotpo_Order_Backfill::start( 10 );
@@ -369,6 +381,18 @@ class OrderBackfillTest extends Yotpo_Test_Case {
 
 		$this->assertCount( 3, $this->orders );
 		$this->assertSame( 3, Yotpo_Order_Sync::totals()['sent'], 'No order counted twice' );
+	}
+
+	public function test_a_sweep_page_put_off_by_a_429_pause_is_queued_again() {
+		$this->past_order( 2 );
+		Yotpo_Order_Backfill::run_sweep_job();
+		set_transient( Yotpo_Sync_Jobs::PAUSE_TRANSIENT, time() + 120, 120 );
+
+		$jobs = array_keys( $this->order_jobs( Yotpo_Order_Backfill::HOOK_SWEEP_PAGE ) );
+		ActionScheduler_QueueRunner::instance()->process_action( reset( $jobs ), 'phpunit' );
+
+		$this->assertCount( 1, $this->order_jobs( Yotpo_Order_Backfill::HOOK_SWEEP_PAGE ), 'Queued again, for after the pause' );
+		$this->assertSame( array(), $this->orders );
 	}
 
 	public function test_a_failure_in_the_sweep_shows_in_the_status_line() {
