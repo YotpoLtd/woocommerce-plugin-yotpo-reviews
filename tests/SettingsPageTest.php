@@ -128,7 +128,7 @@ class SettingsPageTest extends Yotpo_Test_Case {
 		$this->assertSame( 30, $state['days'] );
 		$this->assertStringContainsString( 'Sending orders from the last 30 days in the background.', $html );
 		$this->assertStringContainsString( 'Sending past orders: 0 of 0 checked.', $html, 'Progress shows under the button' );
-		$this->assertMatchesRegularExpression( '#id="yotpo-past-orders" value="Send past orders" class="yotpo-btn yotpo-btn--outline"\s+disabled#', $html, 'One run at a time' );
+		$this->assertMatchesRegularExpression( '#id="yotpo-past-orders" value="Send past orders" class="yotpo-btn yotpo-btn--primary"\s+disabled#', $html, 'One run at a time' );
 		$this->assertSame( $before, get_option( 'yotpo_settings' ) );
 		$_REQUEST = array();
 	}
@@ -162,7 +162,7 @@ class SettingsPageTest extends Yotpo_Test_Case {
 		$this->set_setting( 'secret', '' );
 		$html = $this->render();
 		$this->assertMatchesRegularExpression( '#<button type="button" id="yotpo-export-reviews" class="yotpo-btn yotpo-btn--outline"\s+disabled#', $html );
-		$this->assertMatchesRegularExpression( '#name="yotpo_past_orders" id="yotpo-past-orders" value="Send past orders" class="yotpo-btn yotpo-btn--outline"\s+disabled#', $html );
+		$this->assertMatchesRegularExpression( '#name="yotpo_past_orders" id="yotpo-past-orders" value="Send past orders" class="yotpo-btn yotpo-btn--primary"\s+disabled#', $html );
 	}
 
 	public function test_registration_screen_keeps_its_fields() {
