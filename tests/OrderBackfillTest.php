@@ -236,6 +236,15 @@ class OrderBackfillTest extends Yotpo_Test_Case {
 		$this->assertFalse( has_action( 'init', array( 'Yotpo_Order_Backfill', 'maybe_schedule_sweep' ) ), 'Storefront requests do no extra reads' );
 	}
 
+	public function test_turning_sending_on_has_the_sweep_checked_again() {
+		Yotpo_Order_Backfill::maybe_schedule_sweep();
+		$this->assertNotFalse( get_transient( Yotpo_Order_Backfill::SWEEP_CHECK ) );
+
+		Yotpo_Order_Sync::setting_changed( false, true );
+
+		$this->assertFalse( get_transient( Yotpo_Order_Backfill::SWEEP_CHECK ) );
+	}
+
 	public function test_no_sweep_while_sending_is_off() {
 		$this->set_setting( 'order_sync_enabled', false );
 

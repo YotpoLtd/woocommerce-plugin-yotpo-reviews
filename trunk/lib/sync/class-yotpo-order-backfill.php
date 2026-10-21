@@ -36,12 +36,28 @@ class Yotpo_Order_Backfill {
 	const STATUS_COMPLETE = 'complete';
 	const STATUS_STOPPED  = 'stopped';
 
+	const REASON_OFF = 'Stopped: "Send orders to Yotpo" was turned off.';
+
 	public static function init() {
 		add_action( self::HOOK_PAGE, array( __CLASS__, 'run_page_job' ), 10, 3 );
 		add_action( self::HOOK_SWEEP, array( __CLASS__, 'run_sweep_job' ) );
 		add_action( self::HOOK_SWEEP_PAGE, array( __CLASS__, 'run_sweep_page_job' ), 10, 4 );
 		add_action( 'admin_init', array( __CLASS__, 'maybe_schedule_sweep' ), 20 ); // Not init: storefront requests do no extra reads.
 		add_action( 'wp_ajax_wc_yotpo_past_orders_count', array( __CLASS__, 'ajax_count' ) );
+		add_action( 'wc_yotpo_order_sync_setting_changed', array( __CLASS__, 'setting_changed' ), 10, 2 );
+	}
+
+	/**
+	 * wc_yotpo_order_sync_setting_changed (Yotpo_Order_Sync::setting_changed()): turning sending off ends
+	 * a run; turning it on schedules the daily sweep again on the next admin page load. (The off switch
+	 * has already cancelled the queued jobs, the sweep and the run's pages with them.)
+	 */
+	public static function setting_changed( $was_on, $is_on ) {
+		if ( $was_on && ! $is_on ) {
+			self::stop( self::REASON_OFF );
+		} elseif ( ! $was_on && $is_on ) {
+			self::forget_sweep_check();
+		}
 	}
 
 	// ---------------------------------------------------------------------------------------
@@ -125,7 +141,7 @@ class Yotpo_Order_Backfill {
 			return;
 		}
 		if ( ! Yotpo_Order_Sync::enabled() ) {
-			self::stop( 'Stopped: "Send orders to Yotpo" was turned off.' );
+			self::stop( self::REASON_OFF );
 			return;
 		}
 		$paused_for = Yotpo_Sync_Jobs::paused_for();
@@ -297,10 +313,9 @@ class Yotpo_Order_Backfill {
 	}
 
 	/**
-	 * Called when "Send orders to Yotpo" is turned back on: the sweep is scheduled again on the next
-	 * admin page load.
+	 * Forgets that the sweep's schedule was checked, so the next admin page load checks it.
 	 */
-	public static function forget_sweep_check() {
+	private static function forget_sweep_check() {
 		delete_transient( self::SWEEP_CHECK );
 	}
 

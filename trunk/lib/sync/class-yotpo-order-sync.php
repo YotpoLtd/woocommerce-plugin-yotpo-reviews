@@ -63,17 +63,18 @@ class Yotpo_Order_Sync {
 	}
 
 	/**
-	 * Called after the settings are saved: turning orders off cancels the queued order jobs, the daily
-	 * sweep and a Send past orders run (Yotpo_Order_Backfill). Turning them
-	 * back on sends nothing by itself (orders fulfilled meanwhile need Send past orders); the time is kept
-	 * so the daily sweep covers only orders fulfilled while sending was on.
+	 * Called after the settings are saved: turning orders off cancels the queued order jobs, which include
+	 * the daily sweep and the pages of a Send past orders run. Turning them back on sends nothing by
+	 * itself (orders fulfilled meanwhile need Send past orders); the time is kept so the daily sweep
+	 * covers only orders fulfilled while sending was on.
+	 *
+	 * Fires wc_yotpo_order_sync_setting_changed( $was_on, $is_on ) for whatever else follows the switch
+	 * (Yotpo_Order_Backfill ends its run), so this class doesn't depend on its users.
 	 */
 	public static function setting_changed( $was_on, $is_on ) {
 		if ( $was_on && ! $is_on ) {
-			self::cancel_all(); // The daily sweep and a Send past orders run included.
-			Yotpo_Order_Backfill::stop( 'Stopped: "Send orders to Yotpo" was turned off.' );
+			self::cancel_all();
 		} elseif ( ! $was_on && $is_on ) {
-			Yotpo_Order_Backfill::forget_sweep_check();
 			self::update_stats(
 				function ( $stats ) {
 					$stats['enabled_at'] = time();
@@ -81,6 +82,7 @@ class Yotpo_Order_Sync {
 				}
 			);
 		}
+		do_action( 'wc_yotpo_order_sync_setting_changed', (bool) $was_on, (bool) $is_on );
 	}
 
 	// ---------------------------------------------------------------------------------------
