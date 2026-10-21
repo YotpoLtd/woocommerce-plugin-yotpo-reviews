@@ -174,10 +174,10 @@ class SettingsPageTest extends Yotpo_Test_Case {
 		$this->assert_save_keeps_settings();
 	}
 
-	public function test_saved_secret_is_masked_and_shown_while_being_entered() {
+	public function test_saved_secret_is_masked_and_shown_while_keys_are_being_entered() {
 		$this->assertMatchesRegularExpression( '#<input type="password" class="yotpo-input yotpo-input--mono" id="secret" name="yotpo_oauth_token" value="test-secret" readonly autocomplete="off" />#', $this->render() );
 
-		$_POST['log_in_button'] = 'Enter your keys';
+		$this->set_setting( 'app_key', '' );
 		$this->assertMatchesRegularExpression( '#<input type="text" class="yotpo-input yotpo-input--mono" id="secret" name="yotpo_oauth_token" value="test-secret"\s+autocomplete="off" />#', $this->render() );
 	}
 

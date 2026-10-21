@@ -12,9 +12,7 @@ function wc_display_yotpo_admin_page() {
         die('');
     }
     if (wc_yotpo_compatible()) {
-        if (isset($_POST['log_in_button'])) {
-            wc_display_yotpo_settings();
-        } elseif (isset($_POST['yotpo_settings'])) {
+        if (isset($_POST['yotpo_settings'])) {
             check_admin_referer('yotpo_settings_form');
             wc_proccess_yotpo_settings();
             wc_display_yotpo_settings();
@@ -63,16 +61,15 @@ function wc_display_yotpo_settings() {
     $main_widget_tab_name = $yotpo_settings['main_widget_tab_name'];
     $qna_widget_tab_name = $yotpo_settings['qna_widget_tab_name'];
     $no_credentials = empty($app_key) || empty($secret);
-    // The key fields are editable until keys are saved, and after "Enter your keys" (log_in_button).
-    $logging_in = isset($_POST['log_in_button']) || $no_credentials;
-    $read_only = $logging_in ? '' : 'readonly';
+    // The key fields are editable until keys are saved.
+    $read_only = $no_credentials ? '' : 'readonly';
     $credentials_badge = $no_credentials
         ? "<span class='yotpo-badge yotpo-tone--neutral'>Not set up</span>"
         : "<span class='yotpo-badge yotpo-tone--success'>Keys saved</span>";
     // reviews.yotpo.com sends logged-out users to the Yotpo login screen. The old auto-login link put the
     // app secret in the URL (browser history, logs), and www.yotpo.com/?login=true now only opens the marketing site.
     // Accounts are created on Yotpo's site, not in the plugin.
-    $credentials_help = $logging_in
+    $credentials_help = $no_credentials
         ? "<div class='yotpo-callout'>To get your app key and secret token, <a href='https://reviews.yotpo.com/' target='_blank' rel='noopener'>log in to Yotpo</a> and go to your account settings. New to Yotpo? <a href='https://accounts.yotpo.com/#/signup' target='_blank' rel='noopener'>Sign up on yotpo.com</a>.</div>"
         : '';
     if (isset($yotpo_settings['debug_mode']) && $yotpo_settings['debug_mode']) {
@@ -86,7 +83,7 @@ function wc_display_yotpo_settings() {
         $credentials_help .
         yotpo_text_field('app_key', 'yotpo_app_key', $app_key, 'App key', null, $read_only, '', 'yotpo-input--mono') .
         // Masked once saved; shown while the merchant types it in. autocomplete=off keeps password managers out of it.
-        yotpo_text_field('secret', 'yotpo_oauth_token', $secret, 'Secret token', null, $read_only . " autocomplete='off'", '', 'yotpo-input--mono', $logging_in ? 'text' : 'password') . "
+        yotpo_text_field('secret', 'yotpo_oauth_token', $secret, 'Secret token', null, $read_only . " autocomplete='off'", '', 'yotpo-input--mono', $no_credentials ? 'text' : 'password') . "
         <input id='reviews_widget' type='hidden' name='yotpo_reviews_widget_id' value='" . esc_attr($reviews_widget_id) . "' />
         <input id='qna_widget' type='hidden' name='yotpo_qna_widget_id' value='" . esc_attr($qna_widget_id) . "' />
         <input id='star_ratings_widget' type='hidden' name='yotpo_star_ratings_widget_id' value='" . esc_attr($star_ratings_widget_id) . "' />
