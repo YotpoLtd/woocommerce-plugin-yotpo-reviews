@@ -4,16 +4,26 @@ defined( 'ABSPATH' ) || exit;
 
 require __DIR__.'/v3_enablers.php';
 
-// The ids and classes below are what assets/js/settings.js shows and hides when the widget
-// version or location changes.
+// The ids and classes below are what assets/js/settings.js shows and hides for the store's widget
+// version, and when the widget location changes.
+
+/** The widgets page of the Yotpo dashboard, where the merchant sets up V3 widgets. */
+function yotpo_widgets_dashboard_url() {
+  return 'https://reviews.yotpo.com/#/display-reviews/on-site-widgets';
+}
+
+/** The id of the form the "Switch to V3 widgets" button belongs to (see wc_yotpo_switch_to_v3_widgets()). */
+function yotpo_switch_v3_form_id() {
+  return 'yotpo_switch_v3_form';
+}
 
 /**
- * The widget version: no longer a choice. Stores on v3, and every new store, only have v3. A store still
- * on v2 keeps it, so its storefront doesn't change, and gets a notice that v2 widgets are being retired
- * with a one-way switch to v3 (its own form, yotpo_switch_v3_form: see wc_yotpo_switch_to_v3_widgets()).
+ * The widget version notice: the version is no longer a choice. Stores on v3, and every new store, only
+ * have v3. A store still on v2 keeps it, so its storefront doesn't change, and gets a notice that v2
+ * widgets are being retired with a one-way switch to v3 (its own form: see wc_yotpo_switch_to_v3_widgets()).
  * The hidden field, without a name, only tells settings.js which version's fields to show.
  */
-function version_selector($yotpo_settings) {
+function widget_version_notice() {
   $version = use_v3_widgets() ? 'v3' : 'v2';
   $field = "<input type='hidden' id='yotpo-widget-version' value='" . esc_attr($version) . "' />";
   if ('v3' === $version) {
@@ -21,8 +31,8 @@ function version_selector($yotpo_settings) {
   }
   return $field . "
     <div class='yotpo-callout yotpo-tone--warning yotpo-callout--action'>
-      <p><strong>Your store uses V2 widgets, which are being retired.</strong> Switch to V3 widgets to keep your widgets supported. Their design is set in the <a href='https://reviews.yotpo.com/#/display-reviews/on-site-widgets' target='_blank' rel='noopener'>Yotpo dashboard</a>. You can't switch back.</p>
-      <input type='submit' form='yotpo_switch_v3_form' name='yotpo_switch_to_v3' id='yotpo-switch-to-v3' value='Switch to V3 widgets' class='yotpo-btn yotpo-btn--primary' />
+      <p><strong>Your store uses V2 widgets, which are being retired.</strong> Switch to V3 widgets to keep your widgets supported. Their design is set in the <a href='" . esc_url(yotpo_widgets_dashboard_url()) . "' target='_blank' rel='noopener'>Yotpo dashboard</a>. You can't switch back.</p>
+      <input type='submit' form='" . yotpo_switch_v3_form_id() . "' name='yotpo_switch_to_v3' id='yotpo-switch-to-v3' value='Switch to V3 widgets' class='yotpo-btn yotpo-btn--primary' />
     </div>";
 }
 

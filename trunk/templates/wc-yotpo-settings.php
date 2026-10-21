@@ -134,7 +134,7 @@ function wc_display_yotpo_settings() {
     $widgets = yotpo_card(
         'On-site widgets',
         'Choose where Yotpo widgets appear in your store. Their design is set in the Yotpo dashboard.',
-        version_selector($yotpo_settings) .
+        widget_version_notice() .
         v2_locations($yotpo_settings, $main_widget_tab_name) .
         v3_locations($yotpo_settings) .
         yotpo_text_field(
@@ -215,7 +215,7 @@ function wc_display_yotpo_settings() {
             </div>
         </form>
         <form method='post' id='yotpo_past_orders_form'>" . wp_nonce_field('yotpo_settings_form', '_wpnonce', true, false) . "</form>
-        <form method='post' id='yotpo_switch_v3_form'>" . wp_nonce_field('yotpo_settings_form', '_wpnonce', true, false) . "</form>
+        <form method='post' id='" . yotpo_switch_v3_form_id() . "'>" . wp_nonce_field('yotpo_settings_form', '_wpnonce', true, false) . "</form>
         " . $tools . "
         <iframe name='yotpo_export_reviews_frame' style='display: none;'></iframe>
         <form action='' method='get' target='yotpo_export_reviews_frame' style='display: none;'>
@@ -346,7 +346,7 @@ function wc_yotpo_switch_to_v3_widgets() {
         return;
     }
     if (empty($ids['reviews_widget'])) {
-        wc_yotpo_display_message("Your Yotpo account has no V3 Reviews Widget yet, so your store is still on V2 widgets. Set up your widgets in the <a href='https://reviews.yotpo.com/#/display-reviews/on-site-widgets' target='_blank' rel='noopener'>Yotpo dashboard</a>, then switch again.", true);
+        wc_yotpo_display_message("Your Yotpo account has no V3 Reviews Widget yet, so your store is still on V2 widgets. Set up your widgets in the <a href='" . esc_url(yotpo_widgets_dashboard_url()) . "' target='_blank' rel='noopener'>Yotpo dashboard</a>, then switch again.", true);
         return;
     }
     $settings['widget_version'] = 'v3';
