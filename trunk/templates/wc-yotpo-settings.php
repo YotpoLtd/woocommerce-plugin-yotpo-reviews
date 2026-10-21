@@ -360,10 +360,11 @@ function wc_yotpo_switch_to_v3_widgets() {
         $settings['v3_widgets_enables']['star_rating_product'] = !empty($v2['bottom_line_product']);
         $settings['v3_widgets_enables']['star_rating_category'] = !empty($v2['bottom_line_category']);
         $settings['v3_widgets_enables']['qna_product'] = !empty($v2['qna_product']);
+        // v2 put the reviews widget in the footer or a tab; v3 places it automatically. "Other" meant the
+        // merchant placed it in the theme, which v3 calls manual. A merchant who set v3 widgets before keeps
+        // the v3 location they chose.
+        $settings['v3_widget_location'] = 'other' === $settings['v2_widget_location'] ? 'manual' : 'automatic';
     }
-    // v2 put the reviews widget in the footer or a tab; v3 places it automatically. "Other" meant the
-    // merchant placed it in the theme, which v3 calls manual.
-    $settings['v3_widget_location'] = 'other' === $settings['v2_widget_location'] ? 'manual' : 'automatic';
     update_option('yotpo_settings', $settings);
     wc_yotpo_display_message('Your store now uses V3 widgets. Check your product pages, and adjust the widgets below and in the Yotpo dashboard.', false);
 }

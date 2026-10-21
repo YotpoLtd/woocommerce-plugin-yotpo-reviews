@@ -259,10 +259,13 @@ class SettingsPageTest extends Yotpo_Test_Case {
 		$v3 = array_fill_keys( array_keys( wc_yotpo_get_default_settings()['v3_widgets_enables'] ), false );
 		$v3['reviews_carousel_home'] = true;
 		$this->set_setting( 'v3_widgets_enables', $v3 );
+		$this->set_setting( 'v2_widget_location', 'footer' );
+		$this->set_setting( 'v3_widget_location', 'manual' );
 
 		$this->switch_to_v3();
 
 		$this->assertSame( $v3, get_option( 'yotpo_settings' )['v3_widgets_enables'] );
+		$this->assertSame( 'manual', get_option( 'yotpo_settings' )['v3_widget_location'], 'The v3 location the merchant chose is kept' );
 	}
 
 	public function test_switching_is_refused_without_a_v3_reviews_widget() {
