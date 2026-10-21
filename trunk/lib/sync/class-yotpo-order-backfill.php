@@ -131,7 +131,9 @@ class Yotpo_Order_Backfill {
 	 * request, so a job stops after JOB_BUDGET seconds and hands the rest of the page to a new job.
 	 *
 	 * @param int $page    The page of the run's orders.
-	 * @param int $attempt Attempts at this page since it last made progress.
+	 * @param int $attempt This job's attempt at the page, counting consecutive retryable failures: 1 for the first
+	 *                     job of a page and for the continuation after a used-up time budget, +1 for each retry after
+	 *                     a retryable error (even when the failed attempt created orders first).
 	 * @param int $resumed How often this page was continued after using its time budget. Makes each
 	 *                     continuation a job of its own: Action Scheduler drops a job queued with the
 	 *                     arguments of the one that is running.
