@@ -103,9 +103,29 @@ class SettingsPageTest extends Yotpo_Test_Case {
 		$orders = substr( $html, strpos( $html, '>Orders<' ) );
 		$orders = substr( $orders, 0, strpos( $orders, '</section>' ) );
 
-		$this->assertMatchesRegularExpression( '#<input type="number" class="yotpo-input yotpo-input--days" id="yotpo_past_orders_days" name="yotpo_past_orders_days" value="90" min="1" max="180" step="1"\s*/>#', $orders );
+		$this->assertMatchesRegularExpression( '#<input type="number" class="yotpo-input yotpo-input--days" id="yotpo_past_orders_days" name="yotpo_past_orders_days" value="90" min="1" max="180" step="1" form="yotpo_past_orders_form"\s*/>#', $orders );
 		$this->assertStringContainsString( '<p class="yotpo-help" id="yotpo-past-orders-count">1 order in the last 90 days.</p>', $orders );
 		$this->assertSame( 1, substr_count( $html, 'name="yotpo_past_orders"' ), 'Only in the Orders card, not in Tools any more' );
+	}
+
+	public function test_send_past_orders_is_its_own_form_so_enter_still_saves_the_settings() {
+		$html = $this->render();
+		$doc  = new DOMDocument();
+		libxml_use_internal_errors( true );
+		$doc->loadHTML( '<?xml encoding="utf-8"?>' . $html );
+		libxml_clear_errors();
+		$xpath = new DOMXPath( $doc );
+
+		// The form's default button, the one Enter in a field clicks, is the first submit owned by it.
+		$first = $xpath->query( '//form[@id="yotpo_settings_form"]//input[@type="submit" and not(@form)]' )->item( 0 );
+		$this->assertNotNull( $first );
+		$this->assertSame( 'yotpo_settings', $first->getAttribute( 'name' ), 'Save changes is the settings form\'s default button' );
+
+		$button = $xpath->query( '//input[@id="yotpo-past-orders"]' )->item( 0 );
+		$this->assertSame( 'yotpo_past_orders_form', $button->getAttribute( 'form' ) );
+		$days = $xpath->query( '//input[@id="yotpo_past_orders_days"]' )->item( 0 );
+		$this->assertSame( 'yotpo_past_orders_form', $days->getAttribute( 'form' ) );
+		$this->assertSame( 1, $xpath->query( '//form[@id="yotpo_past_orders_form" and @method="post"]//input[@name="_wpnonce"]' )->length, 'The form carries the nonce its handler checks' );
 	}
 
 	public function test_send_past_orders_starts_a_run_and_saves_nothing_else() {

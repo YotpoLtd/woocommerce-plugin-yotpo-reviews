@@ -103,8 +103,8 @@ function openInfoDialogIfExists() {
 
 /**
  * Send past orders: keeps the order count in step with the days typed, and asks before a run starts.
- * The button is a second submit of the settings form, so the confirmation also says that other changes
- * on the page are not saved by it.
+ * The days field and the button belong to their own form, not the settings form, so the confirmation also
+ * says that other changes on the page are not saved by it.
  */
 function monitorPastOrders() {
 	const days = jQuery('#yotpo_past_orders_days');

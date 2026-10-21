@@ -68,6 +68,7 @@ function yotpo_settings_allowed_html() {
       'min' => array(),
       'max' => array(),
       'step' => array(),
+      'form' => array(),
     ),
     'p' => array(
       'class' => array(),

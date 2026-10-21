@@ -31,7 +31,7 @@ function wc_display_yotpo_admin_page() {
                 wc_display_yotpo_register();
             }
         } elseif (isset($_POST['yotpo_past_orders'])) {
-            // A second submit button of the settings form: starts a run and saves nothing else.
+            // Its own form (yotpo_past_orders_form), not the settings form: starts a run and saves nothing else.
             check_admin_referer('yotpo_settings_form');
             $days = isset($_POST['yotpo_past_orders_days']) ? (int) $_POST['yotpo_past_orders_days'] : Yotpo_Order_Backfill::DEFAULT_DAYS;
             $started = Yotpo_Order_Backfill::start($days);
@@ -231,6 +231,7 @@ function wc_display_yotpo_settings($success_type = false) {
                 <input type='submit' name='yotpo_sync_ids' value='Sync' class='yotpo-btn yotpo-btn--outline' id='yotpo_sync_ids' />
             </div>
         </form>
+        <form method='post' id='yotpo_past_orders_form'>" . wp_nonce_field('yotpo_settings_form', '_wpnonce', true, false) . "</form>
         " . $tools . "
         <iframe name='yotpo_export_reviews_frame' style='display: none;'></iframe>
         <form action='' method='get' target='yotpo_export_reviews_frame' style='display: none;'>
@@ -276,9 +277,11 @@ function wc_display_yotpo_settings($success_type = false) {
  */
 /**
  * The Send past orders row of the Orders card: how many days back, the button, the orders that covers,
- * and the last run's progress. Inside the settings form, so its button is a second submit with its own
- * handler (wc_display_yotpo_admin_page()). settings.js updates the count as the days change and asks
- * for confirmation before a run starts.
+ * and the last run's progress. The row sits in the Orders card, inside the settings form, but its days
+ * field and button belong to their own form (yotpo_past_orders_form, rendered after the settings form)
+ * through the form attribute, with their own handler (wc_display_yotpo_admin_page()). The button is
+ * therefore not the settings form's default button: Enter in a settings field still saves. settings.js
+ * updates the count as the days change and asks for confirmation before a run starts.
  */
 function wc_yotpo_past_orders_row() {
     $days = Yotpo_Order_Backfill::DEFAULT_DAYS;
@@ -297,9 +300,9 @@ function wc_yotpo_past_orders_row() {
         ('' !== $status ? "<div class='yotpo-status yotpo-tone--" . esc_attr(Yotpo_Order_Backfill::status_tone()) . "' id='yotpo-past-orders-status'>" . esc_html($status) . "</div>" : '') . "
       </div>
       <div class='yotpo-row__control yotpo-row__control--nowrap'>
-        <input type='number' class='yotpo-input yotpo-input--days' id='yotpo_past_orders_days' name='yotpo_past_orders_days' value='" . esc_attr($days) . "' min='1' max='" . esc_attr(Yotpo_Order_Backfill::MAX_DAYS) . "' step='1' " . disabled(true, !$ready || $running, false) . " />
+        <input type='number' class='yotpo-input yotpo-input--days' id='yotpo_past_orders_days' name='yotpo_past_orders_days' value='" . esc_attr($days) . "' min='1' max='" . esc_attr(Yotpo_Order_Backfill::MAX_DAYS) . "' step='1' form='yotpo_past_orders_form' " . disabled(true, !$ready || $running, false) . " />
         <span class='yotpo-help'>days</span>
-        <input type='submit' name='yotpo_past_orders' id='yotpo-past-orders' value='Send past orders' class='yotpo-btn yotpo-btn--outline' " . disabled(true, !$ready || $running, false) . " />
+        <input type='submit' form='yotpo_past_orders_form' name='yotpo_past_orders' id='yotpo-past-orders' value='Send past orders' class='yotpo-btn yotpo-btn--outline' " . disabled(true, !$ready || $running, false) . " />
       </div>
     </div>";
 }
