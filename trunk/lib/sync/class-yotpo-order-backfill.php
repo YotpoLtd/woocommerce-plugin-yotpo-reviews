@@ -27,15 +27,17 @@ class Yotpo_Order_Backfill {
 	const MAX_DAYS        = Yotpo_Order_Api::MAX_AGE_DAYS;
 	const DEFAULT_DAYS    = 90; // 1.x's fixed window.
 	const SWEEP_DAYS      = 7;
+	const JOB_BUDGET      = 15; // Seconds a page job keeps creating orders before it hands the rest of its page to a new job.
+	const STALL_AFTER     = Yotpo_Sync_Jobs::STALL_AFTER; // Seconds without progress after which a run with no job left counts as dead.
 
 	const STATUS_RUNNING  = 'running';
 	const STATUS_COMPLETE = 'complete';
 	const STATUS_STOPPED  = 'stopped';
 
 	public static function init() {
-		add_action( self::HOOK_PAGE, array( __CLASS__, 'run_page_job' ), 10, 2 );
+		add_action( self::HOOK_PAGE, array( __CLASS__, 'run_page_job' ), 10, 3 );
 		add_action( self::HOOK_SWEEP, array( __CLASS__, 'run_sweep_job' ) );
-		add_action( self::HOOK_SWEEP_PAGE, array( __CLASS__, 'run_sweep_page_job' ), 10, 3 );
+		add_action( self::HOOK_SWEEP_PAGE, array( __CLASS__, 'run_sweep_page_job' ), 10, 4 );
 		add_action( 'init', array( __CLASS__, 'maybe_schedule_sweep' ), 20 );
 		add_action( 'wp_ajax_wc_yotpo_past_orders_count', array( __CLASS__, 'ajax_count' ) );
 	}
@@ -106,9 +108,16 @@ class Yotpo_Order_Backfill {
 
 	/**
 	 * One page of a run. Resumes at the order an interrupted attempt stopped at (state 'offset'), so a
-	 * retry neither sends nor counts an order twice.
+	 * retry neither sends nor counts an order twice. A page is up to PAGE_SIZE creates, each a blocking
+	 * request, so a job stops after JOB_BUDGET seconds and hands the rest of the page to a new job.
+	 *
+	 * @param int $page    The page of the run's orders.
+	 * @param int $attempt Attempts at this page since it last made progress.
+	 * @param int $resumed How often this page was continued after using its time budget. Makes each
+	 *                     continuation a job of its own: Action Scheduler drops a job queued with the
+	 *                     arguments of the one that is running.
 	 */
-	public static function run_page_job( $page, $attempt = 1 ) {
+	public static function run_page_job( $page, $attempt = 1, $resumed = 0 ) {
 		$state = self::state();
 		if ( self::STATUS_RUNNING !== $state['status'] ) {
 			return;
@@ -119,7 +128,7 @@ class Yotpo_Order_Backfill {
 		}
 		$paused_for = Yotpo_Sync_Jobs::paused_for();
 		if ( $paused_for > 0 ) {
-			Yotpo_Sync_Jobs::enqueue( self::HOOK_PAGE, array( (int) $page, (int) $attempt ), Yotpo_Order_Sync::GROUP, $paused_for );
+			Yotpo_Sync_Jobs::enqueue( self::HOOK_PAGE, array( (int) $page, (int) $attempt, (int) $resumed ), Yotpo_Order_Sync::GROUP, $paused_for );
 			return;
 		}
 		$orders = wc_get_orders(
@@ -130,7 +139,7 @@ class Yotpo_Order_Backfill {
 		);
 		$todo   = array_slice( $orders, (int) $state['offset'] );
 		$counts = array( 'sent' => 0, 'already' => 0, 'skipped' => 0, 'failed' => 0, 'done' => 0 );
-		$error  = self::send_missing( $todo, $counts, false );
+		$error  = self::send_missing( $todo, $counts, false, self::deadline() );
 
 		$state             = self::state();
 		$state['checked'] += $counts['done'];
@@ -143,11 +152,18 @@ class Yotpo_Order_Backfill {
 			Yotpo_Sync_Jobs::pause_if_rate_limited( $error, $attempt );
 			if ( $attempt < Yotpo_Sync_Jobs::MAX_ATTEMPTS ) {
 				self::save_state( $state );
-				Yotpo_Sync_Jobs::enqueue( self::HOOK_PAGE, array( (int) $page, $attempt + 1 ), Yotpo_Order_Sync::GROUP, Yotpo_Sync_Jobs::retry_delay( $error, $attempt ) );
+				Yotpo_Sync_Jobs::enqueue( self::HOOK_PAGE, array( (int) $page, $attempt + 1, (int) $resumed ), Yotpo_Order_Sync::GROUP, Yotpo_Sync_Jobs::retry_delay( $error, $attempt ) );
 				return;
 			}
 			self::save_state( $state );
 			self::stop( 'Stopped: ' . $error->get_error_message() . ' Run it again to send the rest; orders already sent are skipped.' );
+			return;
+		}
+		if ( ! empty( $counts['more'] ) ) {
+			// The time budget is used up: the rest of the page goes to a new job, which starts at the next order.
+			$state['offset'] += $counts['done'];
+			self::save_state( $state );
+			Yotpo_Sync_Jobs::enqueue( self::HOOK_PAGE, array( (int) $page, 1, (int) $resumed + 1 ), Yotpo_Order_Sync::GROUP );
 			return;
 		}
 		$state['offset'] = 0;
@@ -162,8 +178,49 @@ class Yotpo_Order_Backfill {
 		ytdbg( wp_json_encode( $state ), 'Order sync: past orders sent,' );
 	}
 
+	/**
+	 * Whether a run is going. A run whose page job died without returning (killed at the PHP time limit,
+	 * a fatal error) has no job left and makes no progress: after STALL_AFTER it is ended here, so the
+	 * merchant can start again instead of finding the button disabled for good.
+	 */
 	public static function running() {
+		self::stop_if_stalled();
 		return self::STATUS_RUNNING === self::state()['status'];
+	}
+
+	private static function stop_if_stalled() {
+		$state = self::state();
+		if ( self::STATUS_RUNNING !== $state['status'] ) {
+			return;
+		}
+		$last_progress = max( isset( $state['last_activity'] ) ? (int) $state['last_activity'] : 0, isset( $state['started'] ) ? (int) $state['started'] : 0 );
+		if ( time() - $last_progress > self::STALL_AFTER && ! self::page_job_left() ) {
+			self::stop( 'Stopped: a background job ended without finishing. Run it again to send the rest; orders already sent are skipped.' );
+			ytdbg( '', 'Order sync: past orders run stalled,' );
+		}
+	}
+
+	/**
+	 * Whether a page job of a run is queued or running. Unknown (no Action Scheduler) counts as yes.
+	 */
+	private static function page_job_left() {
+		if ( ! Yotpo_Sync_Jobs::scheduler_ready() || ! class_exists( 'ActionScheduler' ) ) {
+			return true;
+		}
+		foreach ( array( ActionScheduler_Store::STATUS_PENDING, ActionScheduler_Store::STATUS_RUNNING ) as $status ) {
+			$left = ActionScheduler::store()->query_actions(
+				array(
+					'hook'   => self::HOOK_PAGE,
+					'group'  => Yotpo_Order_Sync::GROUP,
+					'status' => $status,
+				),
+				'count'
+			);
+			if ( (int) $left > 0 ) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/**
@@ -190,6 +247,7 @@ class Yotpo_Order_Backfill {
 	}
 
 	private static function save_state( array $state ) {
+		$state['last_activity'] = time();
 		update_option( self::STATE_OPTION, $state, false );
 	}
 
@@ -262,13 +320,13 @@ class Yotpo_Order_Backfill {
 	 * as the live jobs' do. A retryable error retries the page later; after MAX_ATTEMPTS the sweep ends
 	 * and tomorrow's picks the orders up.
 	 */
-	public static function run_sweep_page_job( $page, $since, $attempt = 1 ) {
+	public static function run_sweep_page_job( $page, $since, $attempt = 1, $offset = 0 ) {
 		if ( ! Yotpo_Order_Sync::enabled() ) {
 			return;
 		}
 		$paused_for = Yotpo_Sync_Jobs::paused_for();
 		if ( $paused_for > 0 ) {
-			Yotpo_Sync_Jobs::enqueue( self::HOOK_SWEEP_PAGE, array( (int) $page, (int) $since, (int) $attempt ), Yotpo_Order_Sync::GROUP, $paused_for );
+			Yotpo_Sync_Jobs::enqueue( self::HOOK_SWEEP_PAGE, array( (int) $page, (int) $since, (int) $attempt, (int) $offset ), Yotpo_Order_Sync::GROUP, $paused_for );
 			return;
 		}
 		$orders = wc_get_orders(
@@ -283,11 +341,12 @@ class Yotpo_Order_Backfill {
 			)
 		);
 		$counts = array( 'sent' => 0, 'already' => 0, 'skipped' => 0, 'failed' => 0, 'done' => 0 );
-		$error  = self::send_missing( $orders, $counts, true );
+		$error  = self::send_missing( array_slice( $orders, (int) $offset ), $counts, true, self::deadline() );
 		if ( $error ) {
 			Yotpo_Sync_Jobs::pause_if_rate_limited( $error, $attempt );
 			if ( $attempt < Yotpo_Sync_Jobs::MAX_ATTEMPTS ) {
-				Yotpo_Sync_Jobs::enqueue( self::HOOK_SWEEP_PAGE, array( (int) $page, (int) $since, $attempt + 1 ), Yotpo_Order_Sync::GROUP, Yotpo_Sync_Jobs::retry_delay( $error, $attempt ) );
+				// Orders created so far store their Yotpo ID, so the retry does not send them again.
+				Yotpo_Sync_Jobs::enqueue( self::HOOK_SWEEP_PAGE, array( (int) $page, (int) $since, $attempt + 1, (int) $offset + $counts['done'] ), Yotpo_Order_Sync::GROUP, Yotpo_Sync_Jobs::retry_delay( $error, $attempt ) );
 			} else {
 				ytdbg( $error->get_error_message(), 'Order sync: daily sweep stopped,' );
 			}
@@ -295,6 +354,11 @@ class Yotpo_Order_Backfill {
 		}
 		if ( $counts['sent'] || $counts['failed'] ) {
 			ytdbg( $counts['sent'] . ' sent, ' . $counts['failed'] . ' failed', 'Order sync: daily sweep page ' . $page . ',' );
+		}
+		if ( ! empty( $counts['more'] ) ) {
+			// The time budget is used up: the rest of the page goes to a new job, which starts at the next order.
+			Yotpo_Sync_Jobs::enqueue( self::HOOK_SWEEP_PAGE, array( (int) $page, (int) $since, 1, (int) $offset + $counts['done'] ), Yotpo_Order_Sync::GROUP );
+			return;
 		}
 		if ( count( $orders ) === self::PAGE_SIZE ) {
 			Yotpo_Sync_Jobs::enqueue( self::HOOK_SWEEP_PAGE, array( (int) $page + 1, (int) $since, 1 ), Yotpo_Order_Sync::GROUP );
@@ -313,9 +377,12 @@ class Yotpo_Order_Backfill {
 	 * @param WC_Order[] $orders
 	 * @param array      $counts     Adds to sent, already, skipped, failed, and done (orders finished, in order).
 	 * @param bool       $live_stats Count sent and failed orders in the status line (the sweep) too.
+	 * @param int        $deadline   Unix time after which no further order is created: $counts['more'] is
+	 *                               set instead, and the caller continues with the orders not done.
+	 *                               At least one order is done first, so a job always makes progress.
 	 * @return WP_Error|null A retryable error, which stops the page at the first order not done.
 	 */
-	private static function send_missing( array $orders, array &$counts, $live_stats ) {
+	private static function send_missing( array $orders, array &$counts, $live_stats, $deadline ) {
 		if ( ! $orders ) {
 			return null;
 		}
@@ -335,6 +402,10 @@ class Yotpo_Order_Backfill {
 				++$counts['already'];
 				++$counts['done'];
 				continue;
+			}
+			if ( $counts['done'] && time() >= $deadline ) {
+				$counts['more'] = true;
+				return null;
 			}
 			$created = false;
 			$result  = Yotpo_Order_Api::create_fulfilled( $client, $order, Yotpo_Order_Api::fulfilled_at( $order ), $created );
@@ -362,6 +433,13 @@ class Yotpo_Order_Backfill {
 			++$counts['done'];
 		}
 		return null;
+	}
+
+	/**
+	 * The time a page job stops creating orders at (filterable: wc_yotpo_order_job_budget, in seconds).
+	 */
+	private static function deadline() {
+		return time() + max( 0, (int) apply_filters( 'wc_yotpo_order_job_budget', self::JOB_BUDGET ) );
 	}
 
 	/**

@@ -24,6 +24,13 @@ class OrderBackfillTest extends Yotpo_Test_Case {
 		$this->orders                 = array();
 		$this->create_fails           = null;
 		$this->creates_before_failing = 0;
+		// A job's time budget must not depend on how fast the machine is; the tests of the budget set their own.
+		add_filter(
+			'wc_yotpo_order_job_budget',
+			function () {
+				return HOUR_IN_SECONDS;
+			}
+		);
 		$this->route_tokens();
 		$this->route_fake_orders();
 		$this->product = $this->create_product();
@@ -155,6 +162,59 @@ class OrderBackfillTest extends Yotpo_Test_Case {
 		$this->assertStringContainsString( 'was turned off', Yotpo_Order_Backfill::status_summary() );
 	}
 
+	public function test_a_page_job_that_uses_its_time_budget_hands_the_rest_of_the_page_on() {
+		for ( $i = 0; $i < 3; $i++ ) {
+			$this->past_order( 3 );
+		}
+		add_filter( 'wc_yotpo_order_job_budget', '__return_zero' ); // Every job stops after one order.
+
+		Yotpo_Order_Backfill::start( 10 );
+		$page_jobs = array_keys( $this->order_jobs( Yotpo_Order_Backfill::HOOK_PAGE ) );
+		ActionScheduler_QueueRunner::instance()->process_action( reset( $page_jobs ), 'phpunit' );
+
+		$this->assertCount( 1, $this->orders, 'One order created, then the job gave up the rest of its page' );
+		$state = Yotpo_Order_Backfill::state();
+		$this->assertSame( array( Yotpo_Order_Backfill::STATUS_RUNNING, 1 ), array( $state['status'], $state['offset'] ) );
+		$this->assertCount( 1, $this->order_jobs( Yotpo_Order_Backfill::HOOK_PAGE ), 'The rest is queued as a job of its own' );
+
+		$this->run_order_jobs();
+
+		$state = Yotpo_Order_Backfill::state();
+		$this->assertCount( 3, $this->orders );
+		$this->assertSame( array( 3, 3, 0, 0 ), array( $state['checked'], $state['sent'], $state['already'], $state['failed'] ), 'No order sent or counted twice' );
+		$this->assertSame( Yotpo_Order_Backfill::STATUS_COMPLETE, $state['status'] );
+	}
+
+	public function test_a_run_whose_job_died_can_be_started_again() {
+		$this->past_order( 3 );
+		Yotpo_Order_Backfill::start( 10 );
+		as_unschedule_all_actions( '', array(), Yotpo_Order_Sync::GROUP ); // The page job died: nothing is queued or running.
+
+		$this->assertTrue( Yotpo_Order_Backfill::running(), 'Not before it has been quiet for a while' );
+
+		$state                  = Yotpo_Order_Backfill::state();
+		$state['started']       = time() - Yotpo_Order_Backfill::STALL_AFTER - 60;
+		$state['last_activity'] = $state['started'];
+		update_option( Yotpo_Order_Backfill::STATE_OPTION, $state );
+
+		$this->assertFalse( Yotpo_Order_Backfill::running() );
+		$this->assertSame( Yotpo_Order_Backfill::STATUS_STOPPED, Yotpo_Order_Backfill::state()['status'] );
+		$this->assertStringContainsString( 'ended without finishing', Yotpo_Order_Backfill::status_summary() );
+		$this->assertTrue( Yotpo_Order_Backfill::start( 10 ) );
+		$this->run_order_jobs();
+		$this->assertSame( 1, Yotpo_Order_Backfill::state()['sent'] );
+	}
+
+	public function test_a_quiet_run_with_a_job_still_queued_is_not_stalled() {
+		Yotpo_Order_Backfill::start( 10 );
+		$state                  = Yotpo_Order_Backfill::state();
+		$state['started']       = time() - Yotpo_Order_Backfill::STALL_AFTER - 60;
+		$state['last_activity'] = $state['started'];
+		update_option( Yotpo_Order_Backfill::STATE_OPTION, $state );
+
+		$this->assertTrue( Yotpo_Order_Backfill::running(), 'Its page job is still queued, for example behind a 429 pause' );
+	}
+
 	// -----------------------------------------------------------------------------------------
 	// Daily sweep
 	// -----------------------------------------------------------------------------------------
@@ -225,6 +285,18 @@ class OrderBackfillTest extends Yotpo_Test_Case {
 		$this->sweep();
 
 		$this->assertArrayNotHasKey( $order->get_id(), $this->orders );
+	}
+
+	public function test_a_sweep_page_that_uses_its_time_budget_goes_on_in_a_new_job() {
+		for ( $i = 0; $i < 3; $i++ ) {
+			$this->past_order( 2 );
+		}
+		add_filter( 'wc_yotpo_order_job_budget', '__return_zero' );
+
+		$this->sweep();
+
+		$this->assertCount( 3, $this->orders );
+		$this->assertSame( 3, Yotpo_Order_Sync::totals()['sent'], 'No order counted twice' );
 	}
 
 	public function test_a_failure_in_the_sweep_shows_in_the_status_line() {
