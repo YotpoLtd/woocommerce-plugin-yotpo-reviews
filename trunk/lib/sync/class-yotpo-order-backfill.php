@@ -40,7 +40,7 @@ class Yotpo_Order_Backfill {
 		add_action( self::HOOK_PAGE, array( __CLASS__, 'run_page_job' ), 10, 3 );
 		add_action( self::HOOK_SWEEP, array( __CLASS__, 'run_sweep_job' ) );
 		add_action( self::HOOK_SWEEP_PAGE, array( __CLASS__, 'run_sweep_page_job' ), 10, 4 );
-		add_action( 'init', array( __CLASS__, 'maybe_schedule_sweep' ), 20 );
+		add_action( 'admin_init', array( __CLASS__, 'maybe_schedule_sweep' ), 20 ); // Not init: storefront requests do no extra reads.
 		add_action( 'wp_ajax_wc_yotpo_past_orders_count', array( __CLASS__, 'ajax_count' ) );
 	}
 
@@ -282,7 +282,7 @@ class Yotpo_Order_Backfill {
 	// ---------------------------------------------------------------------------------------
 
 	/**
-	 * init: makes sure the daily sweep is scheduled while sending is on. The first run is at a random
+	 * admin_init: makes sure the daily sweep is scheduled while sending is on. The first run is at a random
 	 * time of day, and then every 24 hours, so stores don't all call Yotpo at once. The queue is checked
 	 * at most once a day (SWEEP_CHECK). Turning sending off removes it with the other order jobs.
 	 */
@@ -298,7 +298,7 @@ class Yotpo_Order_Backfill {
 
 	/**
 	 * Called when "Send orders to Yotpo" is turned back on: the sweep is scheduled again on the next
-	 * page load.
+	 * admin page load.
 	 */
 	public static function forget_sweep_check() {
 		delete_transient( self::SWEEP_CHECK );
