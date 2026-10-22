@@ -262,6 +262,22 @@ class SettingsPageTest extends Yotpo_Test_Case {
 		$this->assertStringContainsString( 'Could not connect with the new keys, the saved keys were kept: Could not get a Yotpo access token (HTTP 401): invalid secret', $html );
 	}
 
+	public function test_new_keys_yotpo_refuses_keep_a_v2_store_on_its_account() {
+		// A V2 store doesn't look the widgets up when saving, so the keys are checked on their own.
+		$this->set_setting( 'widget_version', 'v2' );
+		$product = $this->create_product();
+		update_post_meta( $product->get_id(), Yotpo_Catalog_Api::META_PRODUCT_ID, 111 );
+		$this->oauth_fails = true;
+
+		$html = $this->save_keys( 'other-app-key', 'wrong-secret' );
+
+		$this->assertSame( self::APP_KEY, get_option( 'yotpo_settings' )['app_key'] );
+		$this->assertSame( 'test-secret', get_option( 'yotpo_settings' )['secret'] );
+		$this->assertSame( '111', get_post_meta( $product->get_id(), Yotpo_Catalog_Api::META_PRODUCT_ID, true ), 'Nothing forgotten' );
+		$this->assertStringContainsString( 'Could not connect with the new keys, the saved keys were kept: Could not get a Yotpo access token (HTTP 401): invalid secret', $html );
+		$this->assertStringNotContainsString( 'This store is now connected', $html );
+	}
+
 	public function test_a_different_account_forgets_what_the_plugin_stored_about_the_old_one() {
 		$product = $this->create_product();
 		foreach ( array( Yotpo_Catalog_Api::META_PRODUCT_ID, Yotpo_Catalog_Api::META_VARIANT_ID, Yotpo_Catalog_Api::META_PRODUCT_HASH, Yotpo_Catalog_Api::META_VARIANT_HASH, Yotpo_Catalog_Api::META_BLOCKLISTED ) as $key ) {

@@ -136,6 +136,16 @@ function wc_yotpo_posted_keys($current_settings) {
   return array($app_key, $secret);
 }
 
+/**
+ * Whether Yotpo accepts these keys, checked with the widget lookup (it needs a Core API token).
+ *
+ * @return WP_Error|null Why not, or null when Yotpo accepted them.
+ */
+function wc_yotpo_refused_keys_error($app_key, $secret) {
+  $response = receive_widget_instances($app_key, $secret);
+  return is_wp_error($response) ? $response : null;
+}
+
 function wc_proccess_yotpo_settings() {
   $current_settings = get_option('yotpo_settings', wc_yotpo_get_default_settings());
   $product_sync_was_on = Yotpo_Product_Sync::setting_on();
@@ -144,15 +154,18 @@ function wc_proccess_yotpo_settings() {
   list($app_key, $secret) = wc_yotpo_posted_keys($current_settings);
   $saved_key = (string) yotpo_get_arr_value($current_settings, 'app_key', '');
   $new_account = '' !== $saved_key && $app_key !== $saved_key;
-  $widgets_ids = get_widgets_instances($app_key, $secret);
-  if (is_wp_error($widgets_ids) && $new_account) {
+  // Yotpo must accept keys of another account before the store switches to it, whatever the widget version:
+  // V2 stores don't look the widgets up when saving, so the widget lookup alone wouldn't tell.
+  $refused = $new_account ? wc_yotpo_refused_keys_error($app_key, $secret) : null;
+  if ($refused) {
     // Yotpo didn't accept the new keys (or couldn't be reached): the store stays on its account.
-    wc_yotpo_display_message('Could not connect with the new keys, the saved keys were kept: ' . esc_html($widgets_ids->get_error_message()), true);
+    wc_yotpo_display_message('Could not connect with the new keys, the saved keys were kept: ' . esc_html($refused->get_error_message()), true);
     $app_key = $saved_key;
     $secret = (string) yotpo_get_arr_value($current_settings, 'secret', '');
     $new_account = false;
-    $widgets_ids = yotpo_get_arr_value($current_settings, 'v3_widgets_ids', []);
-  } elseif (is_wp_error($widgets_ids)) {
+  }
+  $widgets_ids = $refused && use_v3_widgets() ? yotpo_get_arr_value($current_settings, 'v3_widgets_ids', []) : get_widgets_instances($app_key, $secret);
+  if (is_wp_error($widgets_ids)) {
     wc_yotpo_display_message(wc_yotpo_widget_instances_error_message($widgets_ids), true);
     $widgets_ids = yotpo_get_arr_value($current_settings, 'v3_widgets_ids', []);
   }
