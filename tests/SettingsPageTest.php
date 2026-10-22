@@ -371,7 +371,7 @@ class SettingsPageTest extends Yotpo_Test_Case {
 	}
 
 	public function test_a_refused_widget_token_is_replaced_once() {
-		update_option( Yotpo_V3_Client::TOKEN_OPTION, array( 'app_key' => self::APP_KEY, 'token' => 'expired-token' ) );
+		update_option( Yotpo_V3_Client::TOKEN_OPTION, array( 'app_key' => self::APP_KEY, 'secret_hash' => wp_hash( 'test-secret' ), 'token' => 'expired-token' ) );
 		$_POST = $this->submission( $this->render() ) + array( 'yotpo_settings' => 'Save changes' );
 
 		ob_start();
@@ -384,6 +384,24 @@ class SettingsPageTest extends Yotpo_Test_Case {
 			return false !== strpos( $request['url'], '/api/v2/widgets' );
 		} );
 		$this->assertCount( 2, $widget_calls );
+	}
+
+	public function test_a_token_cached_for_another_secret_is_not_reused_so_a_wrong_secret_is_caught_on_save() {
+		// A token for this app key, issued for a different secret than the one being saved.
+		update_option( Yotpo_V3_Client::TOKEN_OPTION, array( 'app_key' => self::APP_KEY, 'secret_hash' => wp_hash( 'old-secret' ), 'token' => $this->current_token ) );
+		$this->oauth_fails = true;
+		$_POST             = $this->submission( $this->render() ) + array( 'yotpo_settings' => 'Save changes' );
+
+		ob_start();
+		wc_proccess_yotpo_settings();
+		ob_end_clean();
+
+		$this->assertCount( 1, $this->token_requests(), 'The secret being saved is exchanged, not answered from the cache' );
+		$this->assertSame( self::WIDGET_IDS, get_option( 'yotpo_settings' )['v3_widgets_ids'], 'The saved IDs are kept when Yotpo refuses the secret' );
+		$widget_calls = array_filter( $this->requests, function ( $request ) {
+			return false !== strpos( $request['url'], '/api/v2/widgets' );
+		} );
+		$this->assertCount( 0, $widget_calls, 'No widget lookup with another secret\'s token' );
 	}
 
 	/** The requests for a Core API access token. */
