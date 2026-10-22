@@ -10,6 +10,7 @@ delete_option('native_star_ratings_enabled');
 // These names must match the constants in Yotpo_V3_Client (TOKEN_OPTION), Yotpo_Sync_State (STATE_OPTION,
 // LOCK_OPTION), Yotpo_Catalog_Api (META_*), Yotpo_Order_Api (META_*, ABSENT_PREFIX), Yotpo_Order_Backfill (STATE_OPTION, SWEEP_CHECK, SETTLED_PREFIX) and Yotpo_Sync_Jobs (GROUP, PAUSE_TRANSIENT, RECHECK_TRANSIENT). This file runs without those classes loaded, so it cannot use them;
 // when a constant changes, change it here too, or uninstall leaves data behind.
+// Yotpo_Account_Switch (a different app key forgets the old account's data) runs the same order table delete and transient sweep as below: change them together.
 delete_option( 'wc_yotpo_v3_token' );
 delete_option( 'wc_yotpo_product_sync' );
 delete_option( 'wc_yotpo_product_sync_lock' );

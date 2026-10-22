@@ -334,7 +334,7 @@ class SettingsPageTest extends Yotpo_Test_Case {
 		$settings = get_option( 'yotpo_settings' );
 		$this->assertSame( array( 'other-app-key', 'other-secret' ), array( $settings['app_key'], $settings['secret'] ) );
 		$this->assertStringContainsString( 'This store is now connected to the Yotpo account with app key other-app-key.', $html );
-		foreach ( Yotpo_Account_Switch::META_KEYS as $key ) {
+		foreach ( array_merge( Yotpo_Account_Switch::PRODUCT_META_KEYS, Yotpo_Account_Switch::ORDER_META_KEYS ) as $key ) {
 			$this->assertSame( '', get_post_meta( $product->get_id(), $key, true ), "Product meta $key kept" );
 		}
 		$order = wc_get_order( $order->get_id() );

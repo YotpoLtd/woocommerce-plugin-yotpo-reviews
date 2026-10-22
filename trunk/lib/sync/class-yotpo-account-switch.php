@@ -12,13 +12,17 @@ defined( 'ABSPATH' ) || exit;
  */
 class Yotpo_Account_Switch {
 
-	/** Post meta (and order meta) the plugin stores per account. */
-	const META_KEYS = array(
+	/** Post meta the plugin stores per product and variation, per account. */
+	const PRODUCT_META_KEYS = array(
 		Yotpo_Catalog_Api::META_PRODUCT_ID,
 		Yotpo_Catalog_Api::META_VARIANT_ID,
 		Yotpo_Catalog_Api::META_PRODUCT_HASH,
 		Yotpo_Catalog_Api::META_VARIANT_HASH,
 		Yotpo_Catalog_Api::META_BLOCKLISTED,
+	);
+
+	/** Order meta the plugin stores per order, per account: in post meta, or in WooCommerce's order tables (HPOS). */
+	const ORDER_META_KEYS = array(
 		Yotpo_Order_Api::META_ORDER_ID,
 		Yotpo_Order_Api::META_UPDATE_HASH,
 	);
@@ -45,26 +49,42 @@ class Yotpo_Account_Switch {
 	}
 
 	private static function forget_meta() {
-		global $wpdb;
-		foreach ( self::META_KEYS as $key ) {
+		foreach ( self::PRODUCT_META_KEYS as $key ) {
 			delete_post_meta_by_key( $key );
 		}
-		$orders_meta = $wpdb->prefix . 'wc_orders_meta';
-		if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $orders_meta ) ) === $orders_meta ) { // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-			$wpdb->query( $wpdb->prepare( "DELETE FROM {$orders_meta} WHERE meta_key IN (%s, %s)", Yotpo_Order_Api::META_ORDER_ID, Yotpo_Order_Api::META_UPDATE_HASH ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		self::forget_order_meta();
+	}
+
+	/** Also flushes WooCommerce's cached orders, which still carry the deleted rows. */
+	private static function forget_order_meta() {
+		foreach ( self::ORDER_META_KEYS as $key ) {
+			delete_post_meta_by_key( $key );
 		}
+		self::forget_order_table_meta();
 		if ( function_exists( 'wp_cache_supports' ) && wp_cache_supports( 'flush_group' ) ) {
-			wp_cache_flush_group( 'orders' ); // WooCommerce's cached orders still carry the deleted rows.
+			wp_cache_flush_group( 'orders' );
 		}
 	}
 
-	/** "Yotpo doesn't have this order" and the sweep's "can't be sent", both about the old account. */
+	/** The same order meta in WooCommerce's own order tables, when the store uses them. Same query as uninstall.php. */
+	private static function forget_order_table_meta() {
+		global $wpdb;
+		$orders_meta = $wpdb->prefix . 'wc_orders_meta';
+		if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $orders_meta ) ) !== $orders_meta ) { // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			return;
+		}
+		$placeholders = implode( ', ', array_fill( 0, count( self::ORDER_META_KEYS ), '%s' ) );
+		$wpdb->query( $wpdb->prepare( "DELETE FROM {$orders_meta} WHERE meta_key IN ({$placeholders})", self::ORDER_META_KEYS ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	}
+
+	/** "Yotpo doesn't have this order" and the sweep's "can't be sent", both about the old account. Same sweep as uninstall.php. */
 	private static function forget_order_transients() {
 		global $wpdb;
+		$transient = '_transient_';
 		foreach ( array( Yotpo_Order_Api::ABSENT_PREFIX, Yotpo_Order_Backfill::SETTLED_PREFIX ) as $prefix ) {
-			$names = $wpdb->get_col( $wpdb->prepare( "SELECT option_name FROM {$wpdb->options} WHERE option_name LIKE %s", $wpdb->esc_like( '_transient_' . $prefix ) . '%' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$names = $wpdb->get_col( $wpdb->prepare( "SELECT option_name FROM {$wpdb->options} WHERE option_name LIKE %s", $wpdb->esc_like( $transient . $prefix ) . '%' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			foreach ( $names as $name ) {
-				delete_transient( substr( $name, strlen( '_transient_' ) ) );
+				delete_transient( substr( $name, strlen( $transient ) ) );
 			}
 		}
 	}
