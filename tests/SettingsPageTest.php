@@ -344,8 +344,10 @@ class SettingsPageTest extends Yotpo_Test_Case {
 		$this->assertFalse( get_transient( Yotpo_Order_Backfill::SETTLED_PREFIX . $order->get_id() . '_1' ) );
 		$this->assertFalse( get_option( Yotpo_Sync_State::STATE_OPTION ), 'The full sync starts again for the new account' );
 		$this->assertFalse( get_option( Yotpo_Order_Backfill::STATE_OPTION ) );
-		$stats = get_option( Yotpo_Order_Sync::STATS_OPTION );
-		$this->assertSame( array( 'enabled_at' ), array_keys( $stats ), 'Counts start over' );
+		$stats = Yotpo_Order_Sync::stats();
+		$this->assertArrayNotHasKey( 'last_sent', $stats, 'Counts start over' );
+		$this->assertSame( array(), $stats['days'] );
+		$this->assertSame( array(), $stats['failures'] );
 		$this->assertGreaterThanOrEqual( time() - 5, $stats['enabled_at'], 'The daily sweep goes back no further than the switch' );
 		$this->assertSame( array(), $this->pending_jobs(), "The old account's product jobs are cancelled" );
 		$this->assertSame( array(), $this->pending_jobs( null, Yotpo_Order_Sync::GROUP ) );

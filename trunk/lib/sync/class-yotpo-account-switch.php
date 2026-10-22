@@ -35,15 +35,11 @@ class Yotpo_Account_Switch {
 			return;
 		}
 		ytdbg( $old_app_key . ' to ' . $new_app_key, 'Yotpo account changed, stored Yotpo IDs forgotten:' );
-		Yotpo_Sync_Jobs::cancel_group( Yotpo_Sync_Jobs::GROUP );
-		Yotpo_Sync_Jobs::cancel_group( Yotpo_Order_Sync::GROUP );
-		delete_option( Yotpo_Sync_State::STATE_OPTION );
-		delete_option( Yotpo_Order_Backfill::STATE_OPTION );
-		// Cancelling the order jobs removed the daily sweep too: have the next admin page load schedule it again.
-		Yotpo_Order_Backfill::forget_sweep_check();
-		delete_transient( Yotpo_Sync_Jobs::PAUSE_TRANSIENT );
-		// A new start for the order counts, and for the sweep's window (it starts at enabled_at).
-		update_option( Yotpo_Order_Sync::STATS_OPTION, array( 'enabled_at' => time() ), false );
+		// Each class forgets its own state.
+		Yotpo_Sync_Jobs::account_switched();
+		Yotpo_Sync_State::forget();
+		Yotpo_Order_Sync::account_switched();
+		Yotpo_Order_Backfill::account_switched();
 		self::forget_meta();
 		self::forget_order_transients();
 	}

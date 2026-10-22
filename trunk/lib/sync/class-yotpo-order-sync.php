@@ -230,6 +230,24 @@ class Yotpo_Order_Sync {
 		Yotpo_Sync_Jobs::cancel_group( self::GROUP );
 	}
 
+	/**
+	 * The store switched to another Yotpo account (Yotpo_Account_Switch): the queued order jobs, the daily
+	 * sweep with them, were about the old one, and the counts start over. The time is the new start of the
+	 * sweep's window, so it goes back no further than the switch.
+	 */
+	public static function account_switched() {
+		self::cancel_all();
+		self::update_stats(
+			function () {
+				return array(
+					'enabled_at' => time(),
+					'days'       => array(),
+					'failures'   => array(),
+				);
+			}
+		);
+	}
+
 	// ---------------------------------------------------------------------------------------
 	// Status line
 	// ---------------------------------------------------------------------------------------
