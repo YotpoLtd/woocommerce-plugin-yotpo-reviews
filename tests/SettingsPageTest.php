@@ -188,11 +188,126 @@ class SettingsPageTest extends Yotpo_Test_Case {
 		$this->assert_save_keeps_settings();
 	}
 
-	public function test_saved_secret_is_masked_and_shown_while_keys_are_being_entered() {
-		$this->assertMatchesRegularExpression( '#<input type="password" class="yotpo-input yotpo-input--mono" id="secret" name="yotpo_oauth_token" value="test-secret" readonly autocomplete="off" />#', $this->render() );
+	public function test_the_saved_secret_never_reaches_the_page() {
+		$html = $this->render();
 
+		$this->assertMatchesRegularExpression( '#<input type="password" class="yotpo-input yotpo-input--mono" id="secret" name="yotpo_oauth_token" value="\*{24}" readonly autocomplete="new-password" />#', $html, 'A password field, holding a mask' );
+		$this->assertStringNotContainsString( 'test-secret', $html );
+	}
+
+	public function test_the_secret_is_shown_while_keys_are_being_entered() {
 		$this->set_setting( 'app_key', '' );
-		$this->assertMatchesRegularExpression( '#<input type="text" class="yotpo-input yotpo-input--mono" id="secret" name="yotpo_oauth_token" value="test-secret"\s+autocomplete="off" />#', $this->render() );
+
+		$html = $this->render();
+
+		$this->assertMatchesRegularExpression( '#<input type="text" class="yotpo-input yotpo-input--mono" id="secret" name="yotpo_oauth_token" value="test-secret"\s+autocomplete="new-password" />#', $html );
+		$this->assertStringNotContainsString( 'yotpo-change-keys', $html, 'The fields are editable already' );
+	}
+
+	public function test_saved_keys_are_changed_with_change_keys() {
+		$html = $this->render();
+
+		$this->assertMatchesRegularExpression( '#<input type="text" class="yotpo-input yotpo-input--mono" id="app_key" name="yotpo_app_key" value="test-app-key" readonly />#', $html );
+		$this->assertStringContainsString( '<button type="button" id="yotpo-change-keys" class="yotpo-btn yotpo-btn--outline">Change keys</button>', $html );
+		$this->assertMatchesRegularExpression( '#<div id="yotpo-change-keys-note" class="yotpo-callout" hidden>A different app key connects this store to another Yotpo account\.#', $html );
+		$script = file_get_contents( dirname( __DIR__ ) . '/trunk/assets/js/settings.js' );
+		$this->assertStringContainsString( "jQuery('#app_key, #secret').prop('readonly', false);", $script );
+		$this->assertStringContainsString( "jQuery('#secret').val('')", $script, 'The mask is cleared before the merchant types' );
+	}
+
+	public function test_a_new_secret_for_the_same_app_key_is_saved_and_keeps_the_stored_ids() {
+		$product = $this->create_product();
+		update_post_meta( $product->get_id(), Yotpo_Catalog_Api::META_PRODUCT_ID, 111 );
+
+		$this->save_keys( self::APP_KEY, 'rotated-secret' );
+
+		$this->assertSame( 'rotated-secret', get_option( 'yotpo_settings' )['secret'] );
+		$this->assertSame( '111', get_post_meta( $product->get_id(), Yotpo_Catalog_Api::META_PRODUCT_ID, true ), 'Same account' );
+	}
+
+	public function test_a_different_app_key_needs_its_secret() {
+		foreach ( array( '', wc_yotpo_saved_secret_mask() ) as $secret ) {
+			$html = $this->save_keys( 'other-app-key', $secret );
+
+			$this->assertSame( self::APP_KEY, get_option( 'yotpo_settings' )['app_key'] );
+			$this->assertSame( 'test-secret', get_option( 'yotpo_settings' )['secret'], 'The mask is never saved as the secret' );
+			$this->assertStringContainsString( 'To connect a different app key, enter its secret token too. The saved keys were kept.', $html );
+		}
+	}
+
+	public function test_an_emptied_secret_field_keeps_the_saved_secret() {
+		$this->save_keys( self::APP_KEY, '' );
+
+		$this->assertSame( 'test-secret', get_option( 'yotpo_settings' )['secret'] );
+	}
+
+	public function test_an_empty_app_key_keeps_the_saved_keys() {
+		$html = $this->save_keys( '', 'some-secret' );
+
+		$this->assertSame( self::APP_KEY, get_option( 'yotpo_settings' )['app_key'] );
+		$this->assertSame( 'test-secret', get_option( 'yotpo_settings' )['secret'] );
+		$this->assertStringContainsString( 'The app key can', $html );
+	}
+
+	public function test_new_keys_yotpo_refuses_keep_the_store_on_its_account() {
+		$product = $this->create_product();
+		update_post_meta( $product->get_id(), Yotpo_Catalog_Api::META_PRODUCT_ID, 111 );
+		$this->oauth_fails = true;
+
+		$html = $this->save_keys( 'other-app-key', 'wrong-secret' );
+
+		$this->assertSame( self::APP_KEY, get_option( 'yotpo_settings' )['app_key'] );
+		$this->assertSame( 'test-secret', get_option( 'yotpo_settings' )['secret'] );
+		$this->assertSame( '111', get_post_meta( $product->get_id(), Yotpo_Catalog_Api::META_PRODUCT_ID, true ) );
+		$this->assertStringContainsString( 'Could not connect with the new keys, the saved keys were kept: Could not get a Yotpo access token (HTTP 401): invalid secret', $html );
+	}
+
+	public function test_a_different_account_forgets_what_the_plugin_stored_about_the_old_one() {
+		$product = $this->create_product();
+		foreach ( array( Yotpo_Catalog_Api::META_PRODUCT_ID, Yotpo_Catalog_Api::META_VARIANT_ID, Yotpo_Catalog_Api::META_PRODUCT_HASH, Yotpo_Catalog_Api::META_VARIANT_HASH, Yotpo_Catalog_Api::META_BLOCKLISTED ) as $key ) {
+			update_post_meta( $product->get_id(), $key, '1' );
+		}
+		$order = $this->create_order( array( array( $product, 1 ) ) );
+		$order->update_meta_data( Yotpo_Order_Api::META_ORDER_ID, 123 );
+		$order->update_meta_data( Yotpo_Order_Api::META_UPDATE_HASH, 'x' );
+		$order->save_meta_data();
+		set_transient( Yotpo_Order_Api::ABSENT_PREFIX . $order->get_id(), 1, 600 );
+		set_transient( Yotpo_Order_Backfill::SETTLED_PREFIX . $order->get_id() . '_1', 1, DAY_IN_SECONDS );
+		update_option( Yotpo_Sync_State::STATE_OPTION, array( 'status' => 'complete', 'app_key' => self::APP_KEY ) );
+		update_option( Yotpo_Order_Sync::STATS_OPTION, array( 'last_sent' => time() - 60, 'enabled_at' => time() - 30 * DAY_IN_SECONDS ) );
+		$this->assertTrue( Yotpo_Order_Backfill::start( 30 ), 'A Send past orders run for the old account' );
+		Yotpo_Order_Backfill::maybe_schedule_sweep();
+		Yotpo_Product_Sync::start_full_sync();
+
+		$html = $this->save_keys( 'other-app-key', 'other-secret' );
+
+		$settings = get_option( 'yotpo_settings' );
+		$this->assertSame( array( 'other-app-key', 'other-secret' ), array( $settings['app_key'], $settings['secret'] ) );
+		$this->assertStringContainsString( 'This store is now connected to the Yotpo account with app key other-app-key.', $html );
+		foreach ( Yotpo_Account_Switch::META_KEYS as $key ) {
+			$this->assertSame( '', get_post_meta( $product->get_id(), $key, true ), "Product meta $key kept" );
+		}
+		$order = wc_get_order( $order->get_id() );
+		$this->assertSame( '', $order->get_meta( Yotpo_Order_Api::META_ORDER_ID ), 'Send past orders and the sweep can send the order to the new account' );
+		$this->assertSame( '', $order->get_meta( Yotpo_Order_Api::META_UPDATE_HASH ) );
+		$this->assertFalse( get_transient( Yotpo_Order_Api::ABSENT_PREFIX . $order->get_id() ) );
+		$this->assertFalse( get_transient( Yotpo_Order_Backfill::SETTLED_PREFIX . $order->get_id() . '_1' ) );
+		$this->assertFalse( get_option( Yotpo_Sync_State::STATE_OPTION ), 'The full sync starts again for the new account' );
+		$this->assertFalse( get_option( Yotpo_Order_Backfill::STATE_OPTION ) );
+		$stats = get_option( Yotpo_Order_Sync::STATS_OPTION );
+		$this->assertSame( array( 'enabled_at' ), array_keys( $stats ), 'Counts start over' );
+		$this->assertGreaterThanOrEqual( time() - 5, $stats['enabled_at'], 'The daily sweep goes back no further than the switch' );
+		$this->assertSame( array(), $this->pending_jobs(), "The old account's product jobs are cancelled" );
+		$this->assertSame( array(), $this->pending_jobs( null, Yotpo_Order_Sync::GROUP ) );
+	}
+
+	public function test_the_full_sync_starts_for_the_new_account() {
+		$this->save_keys( 'other-app-key', 'other-secret' );
+
+		Yotpo_Sync_Jobs::maybe_start_initial_sync();
+
+		$this->assertNotEmpty( $this->pending_jobs() );
+		$this->assertSame( 'other-app-key', Yotpo_Sync_State::get()['app_key'] );
 	}
 
 	public function test_text_values_are_escaped() {
@@ -421,6 +536,14 @@ class SettingsPageTest extends Yotpo_Test_Case {
 	}
 
 	/** The requests for a Core API access token. */
+	/** Saves the settings as rendered, with these keys typed in. Returns the notices. */
+	private function save_keys( $app_key, $secret ) {
+		$_POST = array( 'yotpo_app_key' => $app_key, 'yotpo_oauth_token' => $secret, 'yotpo_settings' => 'Save changes' ) + $this->submission( $this->render() );
+		ob_start();
+		wc_proccess_yotpo_settings();
+		return ob_get_clean();
+	}
+
 	private function token_requests() {
 		return array_values(
 			array_filter(

@@ -97,19 +97,72 @@ function get_v2_widgets_enables() {
   );
 }
 
+/**
+ * What the secret field holds once a secret is saved: the browser shows it as a password, and the saved
+ * secret itself stays out of the page.
+ */
+function wc_yotpo_saved_secret_mask() {
+  return str_repeat('*', 24);
+}
+
+/**
+ * The app key and secret to save. The saved secret never reaches the page, so the field left as it was
+ * (wc_yotpo_saved_secret_mask()) or emptied keeps it, for the same app key. A different app key needs its own secret, and an empty app key is refused:
+ * both keep the saved keys, with a notice.
+ *
+ * @return array{0:string, 1:string} The app key and secret.
+ */
+function wc_yotpo_posted_keys($current_settings) {
+  $saved_key = (string) yotpo_get_arr_value($current_settings, 'app_key', '');
+  $saved_secret = (string) yotpo_get_arr_value($current_settings, 'secret', '');
+  $app_key = trim((string) yotpo_get_arr_value($_POST, 'yotpo_app_key', ''));
+  $secret = trim((string) yotpo_get_arr_value($_POST, 'yotpo_oauth_token', ''));
+  if (wc_yotpo_saved_secret_mask() === $secret) {
+    $secret = '';
+  }
+  if ('' === $saved_key || '' === $saved_secret) {
+    return array($app_key, $secret);
+  }
+  if ('' === $app_key) {
+    wc_yotpo_display_message('The app key can\'t be empty. The saved keys were kept.', true);
+    return array($saved_key, $saved_secret);
+  }
+  if ('' === $secret) {
+    if ($app_key !== $saved_key) {
+      wc_yotpo_display_message('To connect a different app key, enter its secret token too. The saved keys were kept.', true);
+    }
+    return array($saved_key, $saved_secret);
+  }
+  return array($app_key, $secret);
+}
+
 function wc_proccess_yotpo_settings() {
   $current_settings = get_option('yotpo_settings', wc_yotpo_get_default_settings());
   $product_sync_was_on = Yotpo_Product_Sync::setting_on();
   $tags_were_on = Yotpo_Product_Sync::tags_on();
   $order_sync_was_on = Yotpo_Order_Sync::setting_on();
-  $widgets_ids = get_widgets_instances(yotpo_get_arr_value($_POST, 'yotpo_app_key', ''), yotpo_get_arr_value($_POST, 'yotpo_oauth_token', ''));
-  if (is_wp_error($widgets_ids)) {
+  list($app_key, $secret) = wc_yotpo_posted_keys($current_settings);
+  $saved_key = (string) yotpo_get_arr_value($current_settings, 'app_key', '');
+  $new_account = '' !== $saved_key && $app_key !== $saved_key;
+  $widgets_ids = get_widgets_instances($app_key, $secret);
+  if (is_wp_error($widgets_ids) && $new_account) {
+    // Yotpo didn't accept the new keys (or couldn't be reached): the store stays on its account.
+    wc_yotpo_display_message('Could not connect with the new keys, the saved keys were kept: ' . esc_html($widgets_ids->get_error_message()), true);
+    $app_key = $saved_key;
+    $secret = (string) yotpo_get_arr_value($current_settings, 'secret', '');
+    $new_account = false;
+    $widgets_ids = yotpo_get_arr_value($current_settings, 'v3_widgets_ids', []);
+  } elseif (is_wp_error($widgets_ids)) {
     wc_yotpo_display_message(wc_yotpo_widget_instances_error_message($widgets_ids), true);
     $widgets_ids = yotpo_get_arr_value($current_settings, 'v3_widgets_ids', []);
   }
+  if ($new_account) {
+    Yotpo_Account_Switch::app_key_changed($saved_key, $app_key);
+    wc_yotpo_display_message('This store is now connected to the Yotpo account with app key ' . esc_html($app_key) . '. Your product catalog is being sent to it.');
+  }
   $new_settings = array(
-    'app_key' => yotpo_get_arr_value($_POST, 'yotpo_app_key'),
-    'secret' => yotpo_get_arr_value($_POST, 'yotpo_oauth_token'),
+    'app_key' => $app_key,
+    'secret' => $secret,
     'v2_widget_location' => yotpo_get_arr_value($_POST, 'yotpo_v2_widget_location'),
     'v3_widget_location' => yotpo_get_arr_value($_POST, 'yotpo_v3_widget_location'),
     'language_code' => yotpo_get_arr_value($_POST, 'yotpo_widget_language_code'),

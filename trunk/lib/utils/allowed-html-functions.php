@@ -71,6 +71,7 @@ function yotpo_settings_allowed_html() {
       'max' => array(),
       'step' => array(),
       'form' => array(),
+      'placeholder' => array(),
     ),
     'p' => array(
       'class' => array(),
@@ -80,6 +81,7 @@ function yotpo_settings_allowed_html() {
       'id' => array(),
       'class' => array(),
       'style' => array(),
+      'hidden' => array(),
     ),
     'a' => array(
       'href' => array(),

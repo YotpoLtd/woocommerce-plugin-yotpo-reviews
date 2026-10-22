@@ -61,7 +61,7 @@ function wc_display_yotpo_settings() {
     $main_widget_tab_name = $yotpo_settings['main_widget_tab_name'];
     $qna_widget_tab_name = $yotpo_settings['qna_widget_tab_name'];
     $no_credentials = empty($app_key) || empty($secret);
-    // The key fields are editable until keys are saved.
+    // The key fields are editable until keys are saved; after that "Change keys" unlocks them (settings.js).
     $read_only = $no_credentials ? '' : 'readonly';
     $credentials_badge = $no_credentials
         ? "<span class='yotpo-badge yotpo-tone--neutral'>Not set up</span>"
@@ -72,6 +72,12 @@ function wc_display_yotpo_settings() {
     $credentials_help = $no_credentials
         ? "<div class='yotpo-callout'>To get your app key and secret token, <a href='https://reviews.yotpo.com/' target='_blank' rel='noopener'>log in to Yotpo</a> and go to your account settings. New to Yotpo? <a href='https://accounts.yotpo.com/#/signup' target='_blank' rel='noopener'>Sign up on yotpo.com</a>.</div>"
         : '';
+    $change_keys = $no_credentials
+        ? ''
+        : "<div class='yotpo-field'>
+            <button type='button' id='yotpo-change-keys' class='yotpo-btn yotpo-btn--outline'>Change keys</button>
+            <div id='yotpo-change-keys-note' class='yotpo-callout' hidden>A different app key connects this store to another Yotpo account. Your product catalog is sent to it again and new orders go to it. To send it earlier orders, use Send past orders.</div>
+          </div>";
     if (isset($yotpo_settings['debug_mode']) && $yotpo_settings['debug_mode']) {
         $settings_dump = wp_json_encode($yotpo_settings);
         $debug_log = wc_yotpo_read_debug_log();
@@ -82,8 +88,10 @@ function wc_display_yotpo_settings() {
         'The app key and secret token connect this store to your Yotpo account.',
         $credentials_help .
         yotpo_text_field('app_key', 'yotpo_app_key', $app_key, 'App key', null, $read_only, '', 'yotpo-input--mono') .
-        // Masked once saved; shown while the merchant types it in. autocomplete=off keeps password managers out of it.
-        yotpo_text_field('secret', 'yotpo_oauth_token', $secret, 'Secret token', null, $read_only . " autocomplete='off'", '', 'yotpo-input--mono', $no_credentials ? 'text' : 'password') . "
+        // Shown while the merchant types it in. Once saved it never reaches the page: the password field holds a
+        // mask, which keeps the saved secret (wc_yotpo_posted_keys()). new-password keeps password managers from filling it.
+        yotpo_text_field('secret', 'yotpo_oauth_token', $no_credentials ? $secret : wc_yotpo_saved_secret_mask(), 'Secret token', null, $read_only . " autocomplete='new-password'", '', 'yotpo-input--mono', $no_credentials ? 'text' : 'password') .
+        $change_keys . "
         <input id='reviews_widget' type='hidden' name='yotpo_reviews_widget_id' value='" . esc_attr($reviews_widget_id) . "' />
         <input id='qna_widget' type='hidden' name='yotpo_qna_widget_id' value='" . esc_attr($qna_widget_id) . "' />
         <input id='star_ratings_widget' type='hidden' name='yotpo_star_ratings_widget_id' value='" . esc_attr($star_ratings_widget_id) . "' />

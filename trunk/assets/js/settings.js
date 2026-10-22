@@ -187,6 +187,17 @@ function confirmSwitchToV3() {
 	});
 }
 
+// Saved keys are read-only until the merchant chooses to change them; the saved secret is never in the page.
+function unlockKeys() {
+	jQuery('#yotpo-change-keys').on('click', function () {
+		jQuery('#app_key, #secret').prop('readonly', false);
+		jQuery('#secret').val('').attr('placeholder', 'Leave empty to keep the saved secret');
+		jQuery('#yotpo-change-keys-note').prop('hidden', false);
+		jQuery(this).hide();
+		jQuery('#app_key').trigger('focus');
+	});
+}
+
 jQuery(document).ready(function () {
 	defineSelectors();
 
@@ -197,5 +208,6 @@ jQuery(document).ready(function () {
 	monitorDynamicElements();
 	monitorPastOrders();
 	confirmSwitchToV3();
+	unlockKeys();
 	openInfoDialogIfExists();
 });

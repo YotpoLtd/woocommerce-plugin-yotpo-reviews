@@ -54,7 +54,7 @@ function wc_yotpo_can_redirect_after_activation() {
  * The language of the page being shown, as Yotpo's v3 widget loader takes it (its languageCode
  * parameter): the language part of the WordPress locale (fr_FR is fr, de_DE_formal is de), except the
  * regional variants Yotpo has, which keep their region with a hyphen (pt_BR is pt-BR, zh_CN is zh-CN;
- * zh_HK is zh-TW, the traditional script). The loader shows English for a code it doesn't know, so
+ * zh_HK is zh-TW, the traditional script), and Norwegian, which Yotpo calls "no" (nb_NO and nn_NO). The loader shows English for a code it doesn't know, so
  * nothing breaks for a language Yotpo lacks. Multilingual plugins (WPML, Polylang and others) set the
  * locale per page, so the widgets follow the language the visitor browses in.
  *
@@ -78,6 +78,8 @@ function wc_yotpo_widget_language_code($locale = null) {
 	);
 	if (isset($regional[$locale])) {
 		$code = $regional[$locale];
+	} elseif (in_array(substr($locale, 0, 3), array('nb_', 'nn_'), true) || in_array($locale, array('nb', 'nn'), true)) {
+		$code = 'no'; // Norwegian Bokmål and Nynorsk: Yotpo has one Norwegian, "no"; "nb" and "nn" show English.
 	} elseif (0 === strpos($locale, 'pt_')) {
 		$code = 'pt-PT'; // Other Portuguese locales (pt_AO, pt_PT_ao90): Yotpo has no plain "pt".
 	} else {
