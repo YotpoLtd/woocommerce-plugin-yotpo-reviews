@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "matching": "If a path matches more than one tier's globs, the most restrictive tier applies: human-required > review-required > auto-safe.",
+  "tiers": {
+    "human-required": {
+      "description": "Agent CANNOT modify without a human. Release-controlling, credential-handling, irreversible, or self-referential. Every path here must also be owned in CODEOWNERS, so GitHub holds the gate.",
+      "paths": [
+        "trunk/readme.txt",
+        "trunk/wc_yotpo.php",
+        "trunk/uninstall.php",
+        "trunk/lib/yotpo-api/**",
+        ".github/workflows/**",
+        "bin/**",
+        "phpcs.xml.dist",
+        "phpunit.xml.dist",
+        "changelog",
+        "CODEOWNERS",
+        ".claude/**",
+        ".agents/adlc/**"
+      ]
+    },
+    "review-required": {
+      "description": "Retired in ADLC-3: kept empty on purpose. A path is either auto-safe (CI, the code review and the blast-radius gate decide) or human-required (owned in CODEOWNERS, a human merges).",
+      "paths": []
+    },
+    "auto-safe": {
+      "description": "Agent can freely modify. On paths no CODEOWNERS rule owns, auto-merge eligible. An owned path always waits for its code owner.",
+      "paths": [
+        "trunk/classes/**",
+        "trunk/lib/sync/**",
+        "trunk/lib/utils/**",
+        "trunk/lib/widgets/**",
+        "trunk/templates/**",
+        "trunk/assets/**",
+        "tests/**",
+        "test-data/**",
+        "assets/**",
+        "docs/**",
+        "composer.json",
+        "composer.lock",
+        "**/*.md",
+        ".gitignore",
+        ".github/pull_request_template.md"
+      ]
+    }
+  }
+}
