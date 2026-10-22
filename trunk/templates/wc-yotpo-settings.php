@@ -79,7 +79,12 @@ function wc_display_yotpo_settings() {
             <div id='yotpo-change-keys-note' class='yotpo-callout' hidden>A different app key connects this store to another Yotpo account. Your product catalog is sent to it again and new orders go to it. To send it earlier orders, use Send past orders.</div>
           </div>";
     if (isset($yotpo_settings['debug_mode']) && $yotpo_settings['debug_mode']) {
-        $settings_dump = wp_json_encode($yotpo_settings);
+        // The saved secret never reaches the page, the debug dump included.
+        $dumped_settings = $yotpo_settings;
+        if (!empty($dumped_settings['secret'])) {
+            $dumped_settings['secret'] = wc_yotpo_saved_secret_mask();
+        }
+        $settings_dump = wp_json_encode($dumped_settings);
         $debug_log = wc_yotpo_read_debug_log();
     }
 

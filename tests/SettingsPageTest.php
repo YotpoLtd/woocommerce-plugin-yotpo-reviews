@@ -195,6 +195,17 @@ class SettingsPageTest extends Yotpo_Test_Case {
 		$this->assertStringNotContainsString( 'test-secret', $html );
 	}
 
+	public function test_the_saved_secret_is_not_in_the_debug_dump() {
+		$this->set_setting( 'debug_mode', true );
+
+		$html = $this->render();
+
+		$this->assertStringContainsString( '<span class="yotpo-label">Settings</span><pre>', $html, 'The dump is shown' );
+		$this->assertStringContainsString( esc_html( '"app_key":"test-app-key"' ), $html );
+		$this->assertStringNotContainsString( 'test-secret', $html );
+		$this->assertStringContainsString( esc_html( '"secret":"' . wc_yotpo_saved_secret_mask() . '"' ), $html );
+	}
+
 	public function test_the_secret_is_shown_while_keys_are_being_entered() {
 		$this->set_setting( 'app_key', '' );
 
