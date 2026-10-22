@@ -301,6 +301,17 @@ class SettingsPageTest extends Yotpo_Test_Case {
 		$this->assertSame( array(), $this->pending_jobs( null, Yotpo_Order_Sync::GROUP ) );
 	}
 
+	public function test_the_daily_sweep_is_scheduled_again_for_the_new_account() {
+		Yotpo_Order_Backfill::maybe_schedule_sweep();
+		$this->assertCount( 1, $this->pending_jobs( Yotpo_Order_Backfill::HOOK_SWEEP, Yotpo_Order_Sync::GROUP ) );
+
+		$this->save_keys( 'other-app-key', 'other-secret' );
+		$this->assertSame( array(), $this->pending_jobs( Yotpo_Order_Backfill::HOOK_SWEEP, Yotpo_Order_Sync::GROUP ), 'Cancelled with the old account\'s order jobs' );
+
+		Yotpo_Order_Backfill::maybe_schedule_sweep(); // The next admin page load.
+		$this->assertCount( 1, $this->pending_jobs( Yotpo_Order_Backfill::HOOK_SWEEP, Yotpo_Order_Sync::GROUP ) );
+	}
+
 	public function test_the_full_sync_starts_for_the_new_account() {
 		$this->save_keys( 'other-app-key', 'other-secret' );
 

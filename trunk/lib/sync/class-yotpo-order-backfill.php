@@ -289,9 +289,10 @@ class Yotpo_Order_Backfill {
 	}
 
 	/**
-	 * Forgets that the sweep's schedule was checked, so the next admin page load checks it.
+	 * Forgets that the sweep's schedule was checked, so the next admin page load checks it. Also used when
+	 * the store switches to another Yotpo account, which cancels the sweep with the other order jobs.
 	 */
-	private static function forget_sweep_check() {
+	public static function forget_sweep_check() {
 		delete_transient( self::SWEEP_CHECK );
 	}
 
