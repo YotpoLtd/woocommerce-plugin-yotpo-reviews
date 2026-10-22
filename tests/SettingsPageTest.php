@@ -29,11 +29,15 @@ class SettingsPageTest extends Yotpo_Test_Case {
 	/** @var string The access token the fake Core API issued last; the widgets call accepts only it. */
 	private $current_token = 'v3-token-1';
 
+	/** @var bool Whether the fake widgets call refuses every token, even the one just issued. */
+	private $widgets_refused = false;
+
 	public function set_up() {
 		parent::set_up();
 		$this->instances   = self::WIDGET_IDS;
 		$this->oauth_fails   = false;
 		$this->current_token = 'v3-token-1';
+		$this->widgets_refused = false;
 		$this->set_setting( 'v3_widgets_ids', self::WIDGET_IDS );
 		// Saving with v3 widgets fetches the widget IDs from api.yotpo.com/api/v2/widgets, with the Core
 		// API's access token (for any store: the first save of new keys asks for the new store's token).
@@ -42,7 +46,7 @@ class SettingsPageTest extends Yotpo_Test_Case {
 		} );
 		$this->route( 'GET', '#^https://api\.yotpo\.com/api/v2/widgets$#', function ( $request ) {
 			parse_str( (string) wp_parse_url( $request['url'], PHP_URL_QUERY ), $query );
-			if ( ! isset( $query['utoken'] ) || $this->current_token !== $query['utoken'] ) {
+			if ( $this->widgets_refused || ! isset( $query['utoken'] ) || $this->current_token !== $query['utoken'] ) {
 				return $this->respond( 401, array( 'status' => array( 'code' => 401 ) ) );
 			}
 			$names     = array( 'reviews_widget' => 'ReviewsMainWidget', 'qna' => 'QuestionsAndAnswers', 'star_rating' => 'ReviewsStarRatingsWidget', 'reviews_carousel' => 'ReviewsCarousel', 'promoted_products' => 'PromotedProducts', 'reviews_tab' => 'ReviewsTab' );
@@ -335,7 +339,7 @@ class SettingsPageTest extends Yotpo_Test_Case {
 		$html = ob_get_clean();
 
 		$this->assertSame( self::WIDGET_IDS, get_option( 'yotpo_settings' )['v3_widgets_ids'] );
-		$this->assertStringContainsString( 'Yotpo did not accept the app key and secret token', $html );
+		$this->assertStringContainsString( 'Could not get a Yotpo access token (HTTP 401): invalid secret', $html, 'The real cause reaches the admin notice' );
 	}
 
 	public function test_the_first_save_of_new_keys_fetches_the_widget_ids_with_those_keys() {
@@ -353,7 +357,7 @@ class SettingsPageTest extends Yotpo_Test_Case {
 		$this->assertStringContainsString( '/core/v3/stores/new-app-key/access_tokens', $token_requests[0]['url'], 'The keys being saved, not the stored (empty) ones' );
 		$this->assertSame( 'new-secret', $token_requests[0]['body']['secret'] );
 		$this->assertSame( self::WIDGET_IDS, get_option( 'yotpo_settings' )['v3_widgets_ids'], 'No second save needed' );
-		$this->assertStringNotContainsString( 'Yotpo did not accept the app key and secret token', $html );
+		$this->assertStringNotContainsString( 'Could not get a Yotpo access token', $html );
 	}
 
 	public function test_widget_ids_use_the_core_api_token_and_no_legacy_login() {
@@ -402,6 +406,18 @@ class SettingsPageTest extends Yotpo_Test_Case {
 			return false !== strpos( $request['url'], '/api/v2/widgets' );
 		} );
 		$this->assertCount( 0, $widget_calls, 'No widget lookup with another secret\'s token' );
+	}
+
+	public function test_a_widgets_call_refused_after_the_new_token_reports_its_http_status() {
+		$this->widgets_refused = true;
+		$_POST = $this->submission( $this->render() ) + array( 'yotpo_settings' => 'Save changes' );
+
+		ob_start();
+		wc_proccess_yotpo_settings();
+		$html = ob_get_clean();
+
+		$this->assertSame( self::WIDGET_IDS, get_option( 'yotpo_settings' )['v3_widgets_ids'], 'The saved IDs are kept' );
+		$this->assertStringContainsString( 'Yotpo answered the widgets request with HTTP 401', $html );
 	}
 
 	/** The requests for a Core API access token. */

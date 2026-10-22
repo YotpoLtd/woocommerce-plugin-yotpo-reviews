@@ -40,7 +40,7 @@ class Yotpo {
 		foreach ( array( false, true ) as $fresh ) {
 			$token = $client->access_token( $fresh );
 			if ( is_wp_error( $token ) ) {
-				$this->error = 'Yotpo did not accept the app key and secret token';
+				$this->error = $token->get_error_message();
 				return false;
 			}
 			$response = wp_remote_get(
@@ -59,6 +59,11 @@ class Yotpo {
 			if ( 401 !== (int) wp_remote_retrieve_response_code( $response ) ) {
 				break;
 			}
+		}
+		$code = (int) wp_remote_retrieve_response_code( $response );
+		if ( $code < 200 || $code >= 300 ) {
+			$this->error = 'Yotpo answered the widgets request with HTTP ' . $code;
+			return false;
 		}
 		$decoded = json_decode( wp_remote_retrieve_body( $response ), true );
 		return is_array( $decoded ) ? $decoded : false;
