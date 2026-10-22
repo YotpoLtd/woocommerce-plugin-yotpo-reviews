@@ -4,10 +4,10 @@
 #
 # Usage:
 #   bin/php-lint.sh                      # uses `php` on PATH
-#   PHP_BINARIES="php7.4 php8.4" bin/php-lint.sh
+#   PHP_BINARIES="php8.2 php8.5" bin/php-lint.sh
 #
 # On MAMP, for example:
-#   PHP_BINARIES="$(ls -d /Applications/MAMP/bin/php/php{7.4,8.3,8.4,8.5}*/bin/php)" bin/php-lint.sh
+#   PHP_BINARIES="$(ls -d /Applications/MAMP/bin/php/php{8.3,8.4,8.5}*/bin/php)" bin/php-lint.sh
 
 set -u
 cd "$(dirname "$0")/.."

@@ -24,11 +24,11 @@ timestamp: 2026-10-22T00:00:00Z
 
 | Error Message | Meaning | Resolution |
 |--------------|---------|-----------|
-| `PHP 7.4: issues found` from `composer lint` | `bin/php-lint.sh` found a syntax error or deprecation under one of the binaries it ran | Fix the reported file. Reproduce other versions locally with `PHP_BINARIES="php7.4 php8.4" composer lint` |
+| `PHP 8.2: issues found` from `composer lint` | `bin/php-lint.sh` found a syntax error or deprecation under one of the binaries it ran | Fix the reported file. Reproduce other versions locally with `PHP_BINARIES="php8.2 php8.5" composer lint` |
 | `WordPress and WooCommerce are not installed for the tests. Run bin/install-wp-tests.sh first.` | `tests/bootstrap.php` found no WooCommerce in `.wp-tests/` | `composer test:install`. Re-run it after changing `WP_VERSION` or `WC_VERSION` |
 | PHPUnit "This test did not perform any assertions" | `beStrictAboutTestsThatDoNotTestAnything` is on in `phpunit.xml.dist` | Assert something, or assert on the recorded calls via `calls()` |
 | A test fails with an unexpected HTTP request | The test reached a route it never declared; the mock fails instead of letting it hit the network | Declare it with `route()` (`tests/includes/class-yotpo-test-case.php:68`) — or don't make the call |
 | PHPCS flags `PrefixAllGlobals` | A new global function or constant isn't prefixed `wc_yotpo` / `yotpo` | Rename it; the prefixes are set in `phpcs.xml.dist` |
 | PHPCS flags a nonce warning on a settings field | Each field of the save handler is flagged individually; the caller checks the nonce once | Confirm the caller's `check_admin_referer`, then leave it. This is a known standing warning |
-| PHPCompatibility errors after raising a PHP version | `testVersion` in `phpcs.xml.dist` must match the real floor | Change the floor in all three places together: the plugin header `Requires PHP`, `trunk/readme.txt`, and `phpcs.xml.dist` |
-| The two CI jobs (`PHP 7.4`, `PHP 8.3`) disagree | A deprecation or behavior difference between the versions | Both must pass; the matrix is the plugin's minimum and a current version by design |
+| PHPCompatibility errors after raising a PHP version | `testVersion` in `phpcs.xml.dist` must match the real floor | Change the floor in every place together: the plugin header `Requires PHP`, `WC_YOTPO_MIN_PHP_VERSION`, `trunk/readme.txt` (header and Minimum Requirements), `phpcs.xml.dist`, the composer platform, and the CI matrix. `PhpSecurityNoticeTest` checks they agree |
+| The CI jobs (`PHP 8.2` to `PHP 8.5`) disagree | A deprecation or behavior difference between the versions | All must pass; the matrix is every PHP branch the plugin supports, by design |

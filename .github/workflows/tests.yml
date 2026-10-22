@@ -15,8 +15,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # The plugin's minimum (Requires PHP) and a current version.
-        php: ['7.4', '8.3']
+        # Every PHP branch the plugin supports, from its minimum (Requires PHP).
+        php: ['8.2', '8.3', '8.4', '8.5']
 
     services:
       mysql:

@@ -95,3 +95,75 @@ function wc_yotpo_widget_language_code($locale = null) {
 	}
 	return (string) apply_filters('wc_yotpo_widget_language_code', $code, $locale);
 }
+
+/**
+ * The first release of each PHP branch with the fix for CVE-2026-109618 and CVE-2026-109619, critical flaws
+ * in PHP itself (CERT-EU advisory 2026-018). PHP no longer supports the branches before 8.2: they get no fix.
+ */
+function wc_yotpo_php_security_releases() {
+	return array(
+		'8.2' => '8.2.35',
+		'8.3' => '8.3.36',
+		'8.4' => '8.4.27',
+		'8.5' => '8.5.12',
+	);
+}
+
+/**
+ * The PHP release this server should update to for that fix, or '' when its version has it. A branch with
+ * no fix gets the first fixed release of the plugin's minimum, 8.2. Branches after 8.5 are released with the fix.
+ *
+ * Some Linux distributions (Debian, Ubuntu) backport fixes and keep the version number, so a version
+ * reported here may be patched after all: the notice says so, and the wc_yotpo_show_php_security_notice
+ * filter turns it off.
+ */
+function wc_yotpo_php_security_update($version = PHP_VERSION) {
+	$releases = wc_yotpo_php_security_releases();
+	$parts = explode('.', (string) $version);
+	$branch = $parts[0] . '.' . (isset($parts[1]) ? $parts[1] : '0');
+	if (isset($releases[$branch])) {
+		return version_compare($version, $releases[$branch], '<') ? $releases[$branch] : '';
+	}
+	return version_compare($branch, WC_YOTPO_MIN_PHP_VERSION, '<') ? $releases[WC_YOTPO_MIN_PHP_VERSION] : '';
+}
+
+/**
+ * admin_notices: on the Plugins screen and the Yotpo settings, for admins, asks for a PHP update when the
+ * server's version lacks the fix.
+ */
+function wc_yotpo_php_security_notice() {
+	if (wc_yotpo_php_security_notice_screen()) {
+		echo wc_yotpo_php_security_message(PHP_VERSION); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped by wp_kses() there.
+	}
+}
+
+function wc_yotpo_php_security_notice_screen() {
+	if (!current_user_can('manage_options') || !function_exists('get_current_screen')) {
+		return false;
+	}
+	$screen = get_current_screen();
+	return $screen && in_array($screen->id, array('plugins', 'toplevel_page_woocommerce-yotpo-settings-page'), true);
+}
+
+/**
+ * The notice for a server on this PHP version, or '' when it has the fix (or the filter turned it off).
+ */
+function wc_yotpo_php_security_message($version) {
+	$update = wc_yotpo_php_security_update($version);
+	if ('' === $update || !apply_filters('wc_yotpo_show_php_security_notice', true, $version)) {
+		return '';
+	}
+	$advisory = '<a href="https://cert.europa.eu/publications/security-advisories/2026-018" target="_blank" rel="noopener">CVE-2026-109618 and CVE-2026-109619</a>';
+	if (version_compare($version, WC_YOTPO_MIN_PHP_VERSION, '<')) {
+		$message = sprintf(
+			'<strong>Yotpo Product Reviews:</strong> your server runs PHP %1$s, which no longer gets security fixes, including for critical flaws found in October 2026 (%2$s). This version of the plugin needs PHP %3$s or later. Ask your host to update PHP to %4$s or later.',
+			esc_html($version), $advisory, esc_html(WC_YOTPO_MIN_PHP_VERSION), esc_html($update)
+		);
+	} else {
+		$message = sprintf(
+			'<strong>Yotpo Product Reviews:</strong> your server runs PHP %1$s. Releases before %2$s have critical security flaws (%3$s), unless your host applied the fix separately. Ask your host to update PHP to %2$s or later, or to confirm the fix is in place.',
+			esc_html($version), esc_html($update), $advisory
+		);
+	}
+	return '<div class="notice notice-warning"><p>' . wp_kses($message, array('strong' => array(), 'a' => array('href' => array(), 'target' => array(), 'rel' => array()))) . '</p></div>';
+}
