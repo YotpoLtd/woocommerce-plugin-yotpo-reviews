@@ -147,26 +147,35 @@ function wc_yotpo_refused_keys_error($app_key, $secret) {
   return is_wp_error($response) ? $response : null;
 }
 
+/**
+ * The keys to save: the posted ones (wc_yotpo_posted_keys()), unless they differ from the saved keys and
+ * Yotpo refuses them, in which case the store keeps its saved keys, with a notice. Checked whatever the
+ * widget version: V2 stores don't look the widgets up when saving, so the widget lookup alone wouldn't tell.
+ *
+ * @return array{0:string, 1:string, 2:bool} The app key, the secret, and whether Yotpo refused the posted ones.
+ */
+function wc_yotpo_keys_to_save($current_settings) {
+  list($app_key, $secret) = wc_yotpo_posted_keys($current_settings);
+  $saved_key = (string) yotpo_get_arr_value($current_settings, 'app_key', '');
+  $saved_secret = (string) yotpo_get_arr_value($current_settings, 'secret', '');
+  $changed = '' !== $saved_key && ($app_key !== $saved_key || ('' !== $saved_secret && $secret !== $saved_secret));
+  $refused = $changed ? wc_yotpo_refused_keys_error($app_key, $secret) : null;
+  if (!$refused) {
+    return array($app_key, $secret, false);
+  }
+  // Yotpo didn't accept the new keys (or couldn't be reached): the store stays on its account, with its keys.
+  wc_yotpo_display_message('Could not connect with the new keys, the saved keys were kept: ' . esc_html($refused->get_error_message()), true);
+  return array($saved_key, $saved_secret, true);
+}
+
 function wc_proccess_yotpo_settings() {
   $current_settings = get_option('yotpo_settings', wc_yotpo_get_default_settings());
   $product_sync_was_on = Yotpo_Product_Sync::setting_on();
   $tags_were_on = Yotpo_Product_Sync::tags_on();
   $order_sync_was_on = Yotpo_Order_Sync::setting_on();
-  list($app_key, $secret) = wc_yotpo_posted_keys($current_settings);
+  list($app_key, $secret, $refused) = wc_yotpo_keys_to_save($current_settings);
   $saved_key = (string) yotpo_get_arr_value($current_settings, 'app_key', '');
-  $saved_secret = (string) yotpo_get_arr_value($current_settings, 'secret', '');
   $new_account = '' !== $saved_key && $app_key !== $saved_key;
-  $keys_changed = $new_account || ('' !== $saved_key && '' !== $saved_secret && $secret !== $saved_secret);
-  // Yotpo must accept changed keys before they replace working ones, whatever the widget version: V2 stores
-  // don't look the widgets up when saving, so the widget lookup alone wouldn't tell.
-  $refused = $keys_changed ? wc_yotpo_refused_keys_error($app_key, $secret) : null;
-  if ($refused) {
-    // Yotpo didn't accept the new keys (or couldn't be reached): the store stays on its account, with its keys.
-    wc_yotpo_display_message('Could not connect with the new keys, the saved keys were kept: ' . esc_html($refused->get_error_message()), true);
-    $app_key = $saved_key;
-    $secret = $saved_secret;
-    $new_account = false;
-  }
   $widgets_ids = $refused && use_v3_widgets() ? yotpo_get_arr_value($current_settings, 'v3_widgets_ids', []) : get_widgets_instances($app_key, $secret);
   if (is_wp_error($widgets_ids)) {
     wc_yotpo_display_message(wc_yotpo_widget_instances_error_message($widgets_ids), true);
