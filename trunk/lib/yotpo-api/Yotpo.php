@@ -37,35 +37,50 @@ class Yotpo {
 			return false;
 		}
 		$client = new Yotpo_V3_Client( $this->app_key, $this->secret );
-		foreach ( array( false, true ) as $fresh ) {
-			$token = $client->access_token( $fresh );
-			if ( is_wp_error( $token ) ) {
-				$this->error = $token->get_error_message();
-				return false;
-			}
-			$response = wp_remote_get(
-				add_query_arg( array( 'app_key' => rawurlencode( $this->app_key ), 'utoken' => rawurlencode( $token ) ), self::WIDGETS_URL ),
-				array(
-					'timeout'   => self::TIMEOUT,
-					'headers'   => array( 'User-Agent' => 'Yotpo-Php' ),
-					// Verify TLS certificates (WordPress ships its own CA bundle): the request carries an access token.
-					'sslverify' => true,
-				)
-			);
-			if ( is_wp_error( $response ) ) {
-				$this->error = $response->get_error_message();
-				return false;
-			}
-			if ( 401 !== (int) wp_remote_retrieve_response_code( $response ) ) {
-				break;
-			}
+
+		// First with the cached token; if Yotpo refuses it, once more with a new one.
+		$response = $this->fetch_widgets( $client, false );
+		if ( is_array( $response ) && 401 === $response['code'] ) {
+			$response = $this->fetch_widgets( $client, true );
 		}
-		$code = (int) wp_remote_retrieve_response_code( $response );
-		if ( $code < 200 || $code >= 300 ) {
-			$this->error = 'Yotpo answered the widgets request with HTTP ' . $code;
+		if ( false === $response ) {
 			return false;
 		}
-		$decoded = json_decode( wp_remote_retrieve_body( $response ), true );
+		if ( $response['code'] < 200 || $response['code'] >= 300 ) {
+			$this->error = 'Yotpo answered the widgets request with HTTP ' . $response['code'];
+			return false;
+		}
+		$decoded = json_decode( $response['body'], true );
 		return is_array( $decoded ) ? $decoded : false;
+	}
+
+	/**
+	 * One widgets request with the access token (a new one when $fresh).
+	 *
+	 * @return array{code:int, body:string}|false The answer, or false when there was no token or no answer ($error says why).
+	 */
+	private function fetch_widgets( Yotpo_V3_Client $client, $fresh ) {
+		$token = $client->access_token( $fresh );
+		if ( is_wp_error( $token ) ) {
+			$this->error = $token->get_error_message();
+			return false;
+		}
+		$response = wp_remote_get(
+			add_query_arg( array( 'app_key' => rawurlencode( $this->app_key ), 'utoken' => rawurlencode( $token ) ), self::WIDGETS_URL ),
+			array(
+				'timeout'   => self::TIMEOUT,
+				'headers'   => array( 'User-Agent' => 'Yotpo-Php' ),
+				// Verify TLS certificates (WordPress ships its own CA bundle): the request carries an access token.
+				'sslverify' => true,
+			)
+		);
+		if ( is_wp_error( $response ) ) {
+			$this->error = $response->get_error_message();
+			return false;
+		}
+		return array(
+			'code' => (int) wp_remote_retrieve_response_code( $response ),
+			'body' => wp_remote_retrieve_body( $response ),
+		);
 	}
 }
