@@ -20,17 +20,25 @@ class SettingsPageTest extends Yotpo_Test_Case {
 		require_once dirname( __DIR__ ) . '/trunk/lib/yotpo-api/Yotpo.php';
 	}
 
+	/** @var array The widget instances the fake legacy API returns, by field name. */
+	private $instances = self::WIDGET_IDS;
+
+	/** @var bool Whether the fake legacy API refuses the app key and secret. */
+	private $oauth_fails = false;
+
 	public function set_up() {
 		parent::set_up();
+		$this->instances   = self::WIDGET_IDS;
+		$this->oauth_fails = false;
 		$this->set_setting( 'v3_widgets_ids', self::WIDGET_IDS );
 		// Saving with v3 widgets fetches the widget IDs from Yotpo's V1 API.
 		$this->route( 'POST', '#^https://api\.yotpo\.com/oauth/token$#', function () {
-			return $this->respond( 200, array( 'access_token' => 'v1-token' ) );
+			return $this->oauth_fails ? $this->respond( 401, array( 'error' => 'invalid_client' ) ) : $this->respond( 200, array( 'access_token' => 'v1-token' ) );
 		} );
 		$this->route( 'GET', '#^https://api\.yotpo\.com/api/v2/widgets$#', function () {
 			$names     = array( 'reviews_widget' => 'ReviewsMainWidget', 'qna' => 'QuestionsAndAnswers', 'star_rating' => 'ReviewsStarRatingsWidget', 'reviews_carousel' => 'ReviewsCarousel', 'promoted_products' => 'PromotedProducts', 'reviews_tab' => 'ReviewsTab' );
 			$instances = array();
-			foreach ( self::WIDGET_IDS as $field => $id ) {
+			foreach ( $this->instances as $field => $id ) {
 				$instances[] = array( 'widget_type_name' => $names[ $field ], 'widget_instance_id' => $id );
 			}
 			return $this->respond( 200, array( 'widget_instances' => $instances ) );
@@ -166,10 +174,10 @@ class SettingsPageTest extends Yotpo_Test_Case {
 		$this->assert_save_keeps_settings();
 	}
 
-	public function test_saved_secret_is_masked_and_shown_while_being_entered() {
+	public function test_saved_secret_is_masked_and_shown_while_keys_are_being_entered() {
 		$this->assertMatchesRegularExpression( '#<input type="password" class="yotpo-input yotpo-input--mono" id="secret" name="yotpo_oauth_token" value="test-secret" readonly autocomplete="off" />#', $this->render() );
 
-		$_POST['log_in_button'] = 'Enter your keys';
+		$this->set_setting( 'app_key', '' );
 		$this->assertMatchesRegularExpression( '#<input type="text" class="yotpo-input yotpo-input--mono" id="secret" name="yotpo_oauth_token" value="test-secret"\s+autocomplete="off" />#', $this->render() );
 	}
 
@@ -185,13 +193,150 @@ class SettingsPageTest extends Yotpo_Test_Case {
 		$this->assertMatchesRegularExpression( '#name="yotpo_past_orders" id="yotpo-past-orders" value="Send past orders" class="yotpo-btn yotpo-btn--primary"\s+disabled#', $html );
 	}
 
-	public function test_registration_screen_keeps_its_fields() {
+	public function test_without_keys_the_settings_ask_for_them_and_link_to_sign_up_on_yotpo() {
+		$this->set_setting( 'app_key', '' );
+		$this->set_setting( 'secret', '' );
+
+		$html = $this->admin_page();
+
+		$this->assertMatchesRegularExpression( '#<input type="text" class="yotpo-input yotpo-input--mono" id="app_key" name="yotpo_app_key" value=""\s*/>#', $html, 'Editable, not read-only' );
+		$this->assertStringContainsString( '<a href="https://accounts.yotpo.com/#/signup" target="_blank" rel="noopener">Sign up on yotpo.com</a>', $html );
+		$this->assertStringNotContainsString( 'yotpo_register', $html, 'No sign-up form in the plugin' );
+	}
+
+	public function test_v3_stores_have_no_widget_version_choice() {
+		$html = $this->render();
+
+		$this->assertStringContainsString( "<input type=\"hidden\" id=\"yotpo-widget-version\" value=\"v3\" />", $html );
+		$this->assertStringNotContainsString( 'name="yotpo_widget_version"', $html );
+		$this->assertStringNotContainsString( 'Switch to V3 widgets', $html );
+	}
+
+	public function test_v2_stores_keep_v2_with_a_notice_and_a_one_way_switch() {
+		$this->set_setting( 'widget_version', 'v2' );
+
+		$html = $this->render();
+
+		$this->assertStringContainsString( 'Your store uses V2 widgets, which are being retired.', $html );
+		$this->assertStringNotContainsString( 'next year', $html, 'No end date yet' );
+		$this->assertMatchesRegularExpression( '#<input type="submit" form="yotpo_switch_v3_form" name="yotpo_switch_to_v3" id="yotpo-switch-to-v3" value="Switch to V3 widgets"#', $html );
+		$this->assertStringContainsString( "<form method=\"post\" id=\"yotpo_switch_v3_form\">", $html );
+		$this->assert_save_keeps_settings();
+	}
+
+	public function test_saving_cannot_change_the_widget_version() {
+		$_POST = $this->submission( $this->render() ) + array( 'yotpo_settings' => 'Save changes', 'yotpo_widget_version' => 'v2' );
+
 		ob_start();
-		wc_display_yotpo_register();
+		wc_proccess_yotpo_settings();
+		ob_end_clean();
+
+		$this->assertSame( 'v3', get_option( 'yotpo_settings' )['widget_version'] );
+	}
+
+	public function test_switching_to_v3_keeps_the_widgets_the_store_showed() {
+		$this->set_setting( 'widget_version', 'v2' );
+		$this->set_setting( 'v2_widget_location', 'other' );
+		$this->set_setting( 'v2_widgets_enables', array( 'qna_product' => false, 'bottom_line_product' => true, 'bottom_line_category' => true ) );
+		$this->set_setting( 'v3_widgets_enables', array_fill_keys( array_keys( wc_yotpo_get_default_settings()['v3_widgets_enables'] ), false ) );
+		$this->set_setting( 'v3_widgets_ids', array() );
+
+		$html     = $this->switch_to_v3();
+		$settings = get_option( 'yotpo_settings' );
+
+		$this->assertSame( 'v3', $settings['widget_version'] );
+		$this->assertSame( self::WIDGET_IDS, $settings['v3_widgets_ids'] );
+		$enabled = array_keys( array_filter( $settings['v3_widgets_enables'] ) );
+		sort( $enabled );
+		$this->assertSame( array( 'reviews_widget_product', 'star_rating_category', 'star_rating_product' ), $enabled );
+		$this->assertSame( 'manual', $settings['v3_widget_location'], 'v2 "Other" meant placed in the theme' );
+		$this->assertStringContainsString( 'Your store now uses V3 widgets.', $html );
+		$this->assertStringNotContainsString( 'Switch to V3 widgets', $html, 'No way back' );
+	}
+
+	public function test_switching_keeps_v3_widgets_the_merchant_set_before() {
+		$this->set_setting( 'widget_version', 'v2' );
+		$v3 = array_fill_keys( array_keys( wc_yotpo_get_default_settings()['v3_widgets_enables'] ), false );
+		$v3['reviews_carousel_home'] = true;
+		$this->set_setting( 'v3_widgets_enables', $v3 );
+		$this->set_setting( 'v2_widget_location', 'footer' );
+		$this->set_setting( 'v3_widget_location', 'manual' );
+
+		$this->switch_to_v3();
+
+		$this->assertSame( $v3, get_option( 'yotpo_settings' )['v3_widgets_enables'] );
+		$this->assertSame( 'manual', get_option( 'yotpo_settings' )['v3_widget_location'], 'The v3 location the merchant chose is kept' );
+	}
+
+	public function test_switching_is_refused_without_a_v3_reviews_widget() {
+		$this->set_setting( 'widget_version', 'v2' );
+		$this->instances = array( 'qna' => '469702' );
+
+		$html = $this->switch_to_v3();
+
+		$this->assertSame( 'v2', get_option( 'yotpo_settings' )['widget_version'] );
+		$this->assertStringContainsString( 'Your Yotpo account has no V3 Reviews Widget yet', $html );
+		$this->assertStringContainsString( '<a href="https://reviews.yotpo.com/#/display-reviews/on-site-widgets"', $html, 'The link survives the message filter' );
+	}
+
+	public function test_switching_is_refused_when_yotpo_refuses_the_keys() {
+		$this->set_setting( 'widget_version', 'v2' );
+		$this->oauth_fails = true;
+
+		$html = $this->switch_to_v3();
+
+		$this->assertSame( 'v2', get_option( 'yotpo_settings' )['widget_version'] );
+		$this->assertStringContainsString( 'Could not fetch the widgets', $html );
+	}
+
+	public function test_saving_with_keys_yotpo_refuses_keeps_the_widget_ids_without_a_php_warning() {
+		$this->oauth_fails = true;
+		$_POST             = $this->submission( $this->render() ) + array( 'yotpo_settings' => 'Save changes' );
+
+		ob_start();
+		wc_proccess_yotpo_settings();
 		$html = ob_get_clean();
-		foreach ( array( 'yotpo_user_email', 'yotpo_user_name', 'yotpo_user_password', 'yotpo_user_confirm_password', 'yotpo_register', 'log_in_button' ) as $name ) {
-			$this->assertStringContainsString( 'name="' . $name . '"', $html );
+
+		$this->assertSame( self::WIDGET_IDS, get_option( 'yotpo_settings' )['v3_widgets_ids'] );
+		$this->assertStringContainsString( 'Yotpo did not accept the app key and secret token', $html );
+	}
+
+	public function test_the_first_save_of_new_keys_fetches_the_widget_ids_with_those_keys() {
+		$this->set_setting( 'app_key', '' );
+		$this->set_setting( 'secret', '' );
+		$this->set_setting( 'v3_widgets_ids', array() );
+		$_POST = array( 'yotpo_app_key' => 'new-app-key', 'yotpo_oauth_token' => 'new-secret', 'yotpo_settings' => 'Save changes' ) + $this->submission( $this->render() );
+
+		ob_start();
+		wc_proccess_yotpo_settings();
+		$html = ob_get_clean();
+
+		$token_requests = array_values( array_filter( $this->requests, function ( $request ) {
+			return 'POST' === $request['method'] && 'https://api.yotpo.com/oauth/token' === $request['path'];
+		} ) );
+		$this->assertCount( 1, $token_requests );
+		$this->assertSame( 'new-app-key', $token_requests[0]['body']['client_id'], 'The keys being saved, not the stored (empty) ones' );
+		$this->assertSame( 'new-secret', $token_requests[0]['body']['client_secret'] );
+		$this->assertSame( self::WIDGET_IDS, get_option( 'yotpo_settings' )['v3_widgets_ids'], 'No second save needed' );
+		$this->assertStringNotContainsString( 'Yotpo did not accept the app key and secret token', $html );
+	}
+
+	/** The admin page as WordPress shows it, after a POST of $post with the settings nonce. */
+	private function admin_page( array $post = array() ) {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		if ( $post ) {
+			$_POST    = $post + array( '_wpnonce' => wp_create_nonce( 'yotpo_settings_form' ) );
+			$_REQUEST = $_POST;
 		}
+		ob_start();
+		wc_display_yotpo_admin_page();
+		$html     = ob_get_clean();
+		$_REQUEST = array();
+		return $html;
+	}
+
+	private function switch_to_v3() {
+		return $this->admin_page( array( 'yotpo_switch_to_v3' => 'Switch to V3 widgets' ) );
 	}
 
 	/**

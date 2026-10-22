@@ -116,7 +116,8 @@ class ProductTagsTest extends Yotpo_Test_Case {
 
 	public function test_saving_the_settings_starts_a_full_sync_when_the_tags_are_turned_on() {
 		require_once dirname( __DIR__ ) . '/trunk/templates/wc-yotpo-settings.php';
-		$_POST = array( 'yotpo_app_key' => self::APP_KEY, 'yotpo_oauth_token' => 'test-secret', 'yotpo_widget_version' => 'v2', 'product_sync_enabled' => '1', 'product_sync_tags' => '1', 'yotpo_order_status' => 'wc-completed' );
+		$this->set_setting( 'widget_version', 'v2' ); // No widget lookup on save: this test is about the tags.
+		$_POST = array( 'yotpo_app_key' => self::APP_KEY, 'yotpo_oauth_token' => 'test-secret', 'product_sync_enabled' => '1', 'product_sync_tags' => '1', 'yotpo_order_status' => 'wc-completed' );
 		ob_start();
 		wc_proccess_yotpo_settings();
 		ob_end_clean();

@@ -19,9 +19,14 @@ function get_yotpo_widget_field_name($widget_type_name) {
   }
 }
 
-function receive_widget_instances() {
-  $yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_default_settings());
-  $yotpo_api = new Yotpo($yotpo_settings['app_key'], $yotpo_settings['secret']);
+// Reads the widget instances with the given app key and secret, or with the stored ones when none are given.
+function receive_widget_instances($app_key = null, $secret = null) {
+  if (null === $app_key && null === $secret) {
+    $yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_default_settings());
+    $app_key = $yotpo_settings['app_key'];
+    $secret = $yotpo_settings['secret'];
+  }
+  $yotpo_api = new Yotpo($app_key, $secret);
   $response = $yotpo_api->get_widget_instances();
   if (!is_array($response) || !isset($response['widget_instances']) || !is_array($response['widget_instances'])) {
     $reason = !empty($yotpo_api->error) ? $yotpo_api->error : 'unexpected response from the Yotpo API';
@@ -33,8 +38,9 @@ function receive_widget_instances() {
 
 // Returns the widget IDs keyed by field name, or a WP_Error when the Yotpo API could not be reached
 // or answered unexpectedly (e.g. a TLS certificate problem). Callers must keep the stored IDs on error.
-function get_widget_instances() {
-  $response = receive_widget_instances();
+// Uses the given app key and secret, or the stored ones when none are given.
+function get_widget_instances($app_key = null, $secret = null) {
+  $response = receive_widget_instances($app_key, $secret);
   if (is_wp_error($response)) {
     return $response;
   }
@@ -49,8 +55,9 @@ function wc_yotpo_widget_instances_error_message($error) {
   return 'Could not fetch the widgets\' IDs from Yotpo, the saved IDs were kept: ' . esc_html($error->get_error_message());
 }
 
-function get_widgets_instances() {
-  return yotpo_get_arr_value($_POST, 'yotpo_widget_version') === 'v3' ? get_widget_instances() : array(
+// $app_key and $secret are the ones being saved: the lookup must not use the previously stored keys.
+function get_widgets_instances($app_key = null, $secret = null) {
+  return use_v3_widgets() ? get_widget_instances($app_key, $secret) : array(
     'reviews_widget' => yotpo_get_arr_value($_POST, 'yotpo_reviews_widget_id'),
     'qna' => yotpo_get_arr_value($_POST, 'yotpo_qna_widget_id'),
     'star_rating' => yotpo_get_arr_value($_POST, 'yotpo_star_ratings_widget_id'),
@@ -90,7 +97,7 @@ function wc_proccess_yotpo_settings() {
   $product_sync_was_on = Yotpo_Product_Sync::setting_on();
   $tags_were_on = Yotpo_Product_Sync::tags_on();
   $order_sync_was_on = Yotpo_Order_Sync::setting_on();
-  $widgets_ids = get_widgets_instances();
+  $widgets_ids = get_widgets_instances(yotpo_get_arr_value($_POST, 'yotpo_app_key', ''), yotpo_get_arr_value($_POST, 'yotpo_oauth_token', ''));
   if (is_wp_error($widgets_ids)) {
     wc_yotpo_display_message(wc_yotpo_widget_instances_error_message($widgets_ids), true);
     $widgets_ids = yotpo_get_arr_value($current_settings, 'v3_widgets_ids', []);
@@ -103,7 +110,8 @@ function wc_proccess_yotpo_settings() {
     'language_code' => yotpo_get_arr_value($_POST, 'yotpo_widget_language_code'),
     'main_widget_tab_name' => yotpo_get_arr_value($_POST, 'yotpo_main_widget_tab_name'),
     'qna_widget_tab_name' => yotpo_get_arr_value($_POST, 'yotpo_qna_widget_tab_name'),
-    'widget_version' => yotpo_get_arr_value($_POST, 'yotpo_widget_version'),
+    // Not a choice any more: saving keeps the version, and only "Switch to V3 widgets" changes it, one way.
+    'widget_version' => use_v3_widgets() ? 'v3' : 'v2',
     'v3_widgets_ids' => $widgets_ids,
     'v3_widgets_enables' => get_v3_widgets_enables(),
     'v2_widgets_enables' => get_v2_widgets_enables(),
@@ -125,45 +133,4 @@ function wc_proccess_yotpo_settings() {
       update_option('woocommerce_enable_review_rating', 'no');
     }
   }
-}
-
-function wc_display_yotpo_register() {
-  $email = isset($_POST['yotpo_user_email']) ? sanitize_email($_POST['yotpo_user_email']) : '';
-  $user_name = isset($_POST['yotpo_user_name']) ? sanitize_user($_POST['yotpo_user_name']) : '';
-  $fields = "
-      <div class='yotpo-field'>
-        <label class='yotpo-label' for='yotpo_user_email'>Email address</label>
-        <input type='email' class='yotpo-input' id='yotpo_user_email' name='yotpo_user_email' value='" . esc_attr($email) . "' />
-      </div>
-      <div class='yotpo-field'>
-        <label class='yotpo-label' for='yotpo_user_name'>Name</label>
-        <input type='text' class='yotpo-input' id='yotpo_user_name' name='yotpo_user_name' value='" . esc_attr($user_name) . "' />
-      </div>
-      <div class='yotpo-field'>
-        <label class='yotpo-label' for='yotpo_user_password'>Password</label>
-        <input type='password' class='yotpo-input' id='yotpo_user_password' name='yotpo_user_password' />
-      </div>
-      <div class='yotpo-field'>
-        <label class='yotpo-label' for='yotpo_user_confirm_password'>Confirm password</label>
-        <input type='password' class='yotpo-input' id='yotpo_user_confirm_password' name='yotpo_user_confirm_password' />
-      </div>
-      <div class='yotpo-field'>
-        <input type='submit' name='yotpo_register' value='Register' class='yotpo-btn yotpo-btn--primary' />
-      </div>
-      <p class='yotpo-terms'>By registering I accept the <a href='https://www.yotpo.com/terms-of-service' target='_blank' rel='noopener'>Terms of Use</a> and recognize that a 'Powered by Yotpo' link will appear on the bottom of my Yotpo widget.</p>";
-  $register_html = "<div class='wrap yotpo-admin'>"
-    . yotpo_page_header('Collect and show product reviews, ratings and Q&amp;A from Yotpo.') . "
-    <form method='post'>" . wp_nonce_field('yotpo_registration_form', '_wpnonce', true, false)
-      . yotpo_card('Create your Yotpo account', 'Fill out the form below and click Register to get started with Yotpo.', $fields) . "
-    </form>
-    <form method='post'>"
-      . yotpo_card(
-        'Already have a Yotpo account?',
-        'Enter your app key and secret token to connect this store.',
-        "<div class='yotpo-field'><input type='submit' name='log_in_button' value='Enter your keys' class='yotpo-btn yotpo-btn--outline' /></div>
-        <p class='yotpo-help'>Learn <a href='https://support.yotpo.com/docs/woocommerce-installing-yotpo#step-4-import-your-existing-reviews' target='_blank' rel='noopener'>how to export your existing reviews</a> into Yotpo.</p>"
-      ) . "
-    </form>
-  </div>";
-  echo wp_kses($register_html, yotpo_allowed_register_html());
 }

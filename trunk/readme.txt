@@ -31,8 +31,8 @@ Yotpo product reviews and ratings drive sales and help you better understand you
 
 1. Install Yotpo Product Reviews either via the WordPress.org plugin directory, or by uploading the files to your server
 2. After activating Yotpo Product Reviews, click on the Yotpo link in the left hand side bar of your Wordpress admin.
-3. You will now need to register an account with Yotpo or log in with your existing account.
-4. Customize the different settings on the Yotpo Settings page and click update when done.
+3. Enter the app key and secret token from your Yotpo account. Don't have one yet? [Sign up on yotpo.com](https://accounts.yotpo.com/#/signup).
+4. Customize the different settings on the Yotpo Settings page and click Save changes when done.
 5. That's it.  You're ready to go!
 
 For full installation guide, [please click here](https://support.yotpo.com/docs/woocommerce-installing-yotpo)

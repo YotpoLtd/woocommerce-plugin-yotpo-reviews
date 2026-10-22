@@ -12,9 +12,7 @@ function wc_display_yotpo_admin_page() {
         die('');
     }
     if (wc_yotpo_compatible()) {
-        if (isset($_POST['log_in_button'])) {
-            wc_display_yotpo_settings();
-        } elseif (isset($_POST['yotpo_settings'])) {
+        if (isset($_POST['yotpo_settings'])) {
             check_admin_referer('yotpo_settings_form');
             wc_proccess_yotpo_settings();
             wc_display_yotpo_settings();
@@ -22,14 +20,6 @@ function wc_display_yotpo_admin_page() {
             check_admin_referer('yotpo_settings_form');
             wc_proccess_yotpo_widgets_ids_synchronisation();
             wc_display_yotpo_settings();
-        } elseif (isset($_POST['yotpo_register'])) {
-            check_admin_referer('yotpo_registration_form');
-            $success = wc_proccess_yotpo_register();
-            if ($success) {
-                wc_display_yotpo_settings($success);
-            } else {
-                wc_display_yotpo_register();
-            }
         } elseif (isset($_POST['yotpo_past_orders'])) {
             // Its own form (yotpo_past_orders_form), not the settings form: starts a run and saves nothing else.
             check_admin_referer('yotpo_settings_form');
@@ -45,19 +35,18 @@ function wc_display_yotpo_admin_page() {
             check_admin_referer('yotdbg-clear');
             wc_yotpo_clear_debug_log();
             wc_display_yotpo_settings();
+        } elseif (isset($_POST['yotpo_switch_to_v3'])) {
+            check_admin_referer('yotpo_settings_form');
+            wc_yotpo_switch_to_v3_widgets();
+            wc_display_yotpo_settings();
         } else {
-            $yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_default_settings());
-            if (empty($yotpo_settings['app_key']) && empty($yotpo_settings['secret'])) {
-                wc_display_yotpo_register();
-            } else {
-                wc_display_yotpo_settings();
-            }
+            wc_display_yotpo_settings();
         }
     } else {
         echo '<h1>Yotpo plugin requires PHP ' . esc_html(WC_YOTPO_MIN_PHP_VERSION) . ' or above.</h1><br>';
     }
 }
-function wc_display_yotpo_settings($success_type = false) {
+function wc_display_yotpo_settings() {
     $yotpo_settings = get_option('yotpo_settings', wc_yotpo_get_default_settings());
     $app_key = $yotpo_settings['app_key'];
     $secret = $yotpo_settings['secret'];
@@ -71,23 +60,17 @@ function wc_display_yotpo_settings($success_type = false) {
     $language_code = $yotpo_settings['language_code'];
     $main_widget_tab_name = $yotpo_settings['main_widget_tab_name'];
     $qna_widget_tab_name = $yotpo_settings['qna_widget_tab_name'];
-    if (empty($yotpo_settings['app_key'])) {
-        if ($success_type == 'b2c') {
-            wc_yotpo_display_message('We have sent you a confirmation email. Please check and click on the link to get your app key and secret token to fill out below.', true);
-        } else {
-            wc_yotpo_display_message('Set your API key in order the Yotpo plugin to work correctly', false);
-        }
-    }
-    $logging_in = isset($_POST['log_in_button']) || $success_type == 'b2c';
-    $read_only = $logging_in ? '' : 'readonly';
     $no_credentials = empty($app_key) || empty($secret);
+    // The key fields are editable until keys are saved.
+    $read_only = $no_credentials ? '' : 'readonly';
     $credentials_badge = $no_credentials
         ? "<span class='yotpo-badge yotpo-tone--neutral'>Not set up</span>"
         : "<span class='yotpo-badge yotpo-tone--success'>Keys saved</span>";
     // reviews.yotpo.com sends logged-out users to the Yotpo login screen. The old auto-login link put the
     // app secret in the URL (browser history, logs), and www.yotpo.com/?login=true now only opens the marketing site.
-    $credentials_help = isset($_POST['log_in_button'])
-        ? "<div class='yotpo-callout'>To get your app key and secret token, <a href='https://reviews.yotpo.com/' target='_blank' rel='noopener'>log in to Yotpo</a> and go to your account settings.</div>"
+    // Accounts are created on Yotpo's site, not in the plugin.
+    $credentials_help = $no_credentials
+        ? "<div class='yotpo-callout'>To get your app key and secret token, <a href='https://reviews.yotpo.com/' target='_blank' rel='noopener'>log in to Yotpo</a> and go to your account settings. New to Yotpo? <a href='https://accounts.yotpo.com/#/signup' target='_blank' rel='noopener'>Sign up on yotpo.com</a>.</div>"
         : '';
     if (isset($yotpo_settings['debug_mode']) && $yotpo_settings['debug_mode']) {
         $settings_dump = wp_json_encode($yotpo_settings);
@@ -100,7 +83,7 @@ function wc_display_yotpo_settings($success_type = false) {
         $credentials_help .
         yotpo_text_field('app_key', 'yotpo_app_key', $app_key, 'App key', null, $read_only, '', 'yotpo-input--mono') .
         // Masked once saved; shown while the merchant types it in. autocomplete=off keeps password managers out of it.
-        yotpo_text_field('secret', 'yotpo_oauth_token', $secret, 'Secret token', null, $read_only . " autocomplete='off'", '', 'yotpo-input--mono', $logging_in ? 'text' : 'password') . "
+        yotpo_text_field('secret', 'yotpo_oauth_token', $secret, 'Secret token', null, $read_only . " autocomplete='off'", '', 'yotpo-input--mono', $no_credentials ? 'text' : 'password') . "
         <input id='reviews_widget' type='hidden' name='yotpo_reviews_widget_id' value='" . esc_attr($reviews_widget_id) . "' />
         <input id='qna_widget' type='hidden' name='yotpo_qna_widget_id' value='" . esc_attr($qna_widget_id) . "' />
         <input id='star_ratings_widget' type='hidden' name='yotpo_star_ratings_widget_id' value='" . esc_attr($star_ratings_widget_id) . "' />
@@ -151,7 +134,7 @@ function wc_display_yotpo_settings($success_type = false) {
     $widgets = yotpo_card(
         'On-site widgets',
         'Choose where Yotpo widgets appear in your store. Their design is set in the Yotpo dashboard.',
-        version_selector($yotpo_settings) .
+        widget_version_notice() .
         v2_locations($yotpo_settings, $main_widget_tab_name) .
         v3_locations($yotpo_settings) .
         yotpo_text_field(
@@ -232,6 +215,7 @@ function wc_display_yotpo_settings($success_type = false) {
             </div>
         </form>
         <form method='post' id='yotpo_past_orders_form'>" . wp_nonce_field('yotpo_settings_form', '_wpnonce', true, false) . "</form>
+        <form method='post' id='" . yotpo_switch_v3_form_id() . "'>" . wp_nonce_field('yotpo_settings_form', '_wpnonce', true, false) . "</form>
         " . $tools . "
         <iframe name='yotpo_export_reviews_frame' style='display: none;'></iframe>
         <form action='' method='get' target='yotpo_export_reviews_frame' style='display: none;'>
@@ -332,8 +316,8 @@ function wc_proccess_yotpo_widgets_ids_synchronisation() {
         wc_yotpo_display_message(wc_yotpo_widget_instances_error_message($widgets_instances), true);
         return;
     }
+    // The widget version is not changed here: only wc_yotpo_switch_to_v3_widgets() changes it, one way.
     $new_settings = array_replace_recursive(get_option('yotpo_settings', wc_yotpo_get_default_settings()));
-    $new_settings['widget_version'] = $_POST['yotpo_widget_version'];
     $new_settings['v3_widgets_ids']['reviews_widget'] = $widgets_instances['reviews_widget'];
     $new_settings['v3_widgets_ids']['qna'] = $widgets_instances['qna'];
     $new_settings['v3_widgets_ids']['star_rating'] = $widgets_instances['star_rating'];
@@ -344,81 +328,42 @@ function wc_proccess_yotpo_widgets_ids_synchronisation() {
         ? wc_yotpo_display_message('Widgets\' IDs have been synchronised')
         : wc_yotpo_display_message('Widgets\' IDs have not been synchronised', false);
 }
-function wc_proccess_yotpo_register() {
-    $errors = array();
-    if ($_POST['yotpo_user_email'] === '') {
-        array_push($errors, 'Provide valid email address');
+/**
+ * Moves a store on v2 widgets to v3, for good: the "Switch to V3 widgets" button. The store's v3 widget
+ * IDs are read from Yotpo first. Without a Reviews Widget there, the switch would leave product pages
+ * without reviews, so it is refused and the merchant is sent to the Yotpo dashboard. A store that never
+ * set v3 widgets on or off gets the ones it showed on v2: the reviews widget, and the star ratings and
+ * Q&A where v2 showed them.
+ */
+function wc_yotpo_switch_to_v3_widgets() {
+    $settings = get_option('yotpo_settings', wc_yotpo_get_default_settings());
+    if ('v3' === $settings['widget_version']) {
+        return;
     }
-    if (strlen($_POST['yotpo_user_password']) < 6 || strlen($_POST['yotpo_user_password']) > 128) {
-        array_push($errors, 'Password must be at least 6 characters');
+    $ids = get_widget_instances();
+    if (is_wp_error($ids)) {
+        wc_yotpo_display_message(wc_yotpo_widget_instances_error_message($ids), true);
+        return;
     }
-    if ($_POST['yotpo_user_password'] != $_POST['yotpo_user_confirm_password']) {
-        array_push($errors, 'Passwords are not identical');
+    if (empty($ids['reviews_widget'])) {
+        wc_yotpo_display_message("Your Yotpo account has no V3 Reviews Widget yet, so your store is still on V2 widgets. Set up your widgets in the <a href='" . esc_url(yotpo_widgets_dashboard_url()) . "' target='_blank' rel='noopener'>Yotpo dashboard</a>, then switch again.", true);
+        return;
     }
-    if ($_POST['yotpo_user_name'] === '') {
-        array_push($errors, 'Name is missing');
+    $settings['widget_version'] = 'v3';
+    $settings['v3_widgets_ids'] = array_merge(yotpo_get_arr_value($settings, 'v3_widgets_ids', array()), $ids);
+    if (!in_array(true, (array) $settings['v3_widgets_enables'], true)) {
+        $v2 = $settings['v2_widgets_enables'];
+        $settings['v3_widgets_enables']['reviews_widget_product'] = true;
+        $settings['v3_widgets_enables']['star_rating_product'] = !empty($v2['bottom_line_product']);
+        $settings['v3_widgets_enables']['star_rating_category'] = !empty($v2['bottom_line_category']);
+        $settings['v3_widgets_enables']['qna_product'] = !empty($v2['qna_product']);
+        // v2 put the reviews widget in the footer or a tab; v3 places it automatically. "Other" meant the
+        // merchant placed it in the theme, which v3 calls manual. A merchant who set v3 widgets before keeps
+        // the v3 location they chose.
+        $settings['v3_widget_location'] = 'other' === $settings['v2_widget_location'] ? 'manual' : 'automatic';
     }
-    if (count($errors) == 0) {
-        $yotpo_api = new Yotpo();
-        $shop_url = get_bloginfo('url');
-        $user = array(
-            'email' => $_POST['yotpo_user_email'],
-            'display_name' => $_POST['yotpo_user_name'],
-            'first_name' => '',
-            'password' => $_POST['yotpo_user_password'],
-            'last_name' => '',
-            'website_name' => $shop_url,
-            'support_url' => $shop_url,
-            'callback_url' => $shop_url,
-            'url' => $shop_url);
-        try {
-            $response = $yotpo_api->create_user($user, true);
-            if (!empty($response['status']) && !empty($response['status']['code'])) {
-                if ($response['status']['code'] == 200) {
-                    $app_key = $response['response']['app_key'];
-                    $secret = $response['response']['secret'];
-                    $yotpo_api->set_app_key($app_key);
-                    $yotpo_api->set_secret($secret);
-                    $shop_domain = wp_parse_url($shop_url, PHP_URL_HOST);
-                    $account_platform_response = $yotpo_api->create_account_platform(array('shop_domain' => wc_yotpo_get_shop_domain(),
-                        'utoken' => $response['response']['token'],
-                        'platform_type_id' => 12));
-                    if (!empty($response['status']) && !empty($response['status']['code']) && $response['status']['code'] == 200) {
-                        $current_settings = get_option('yotpo_settings', wc_yotpo_get_default_settings());
-                        $current_settings['app_key'] = $app_key;
-                        $current_settings['secret'] = $secret;
-                        update_option('yotpo_settings', $current_settings);
-                        return true;
-                    } elseif ($response['status']['code'] >= 400) {
-                        if (!empty($response['status']['message'])) {
-                            wc_yotpo_display_message($response['status']['message'], true);
-                        }
-                    }
-                } elseif ($response['status']['code'] >= 400) {
-                    if (!empty($response['status']['message'])) {
-                        if (is_array($response['status']['message']) && !empty($response['status']['message']['email'])) {
-                            if (is_array($response['status']['message']['email'])) {
-                                wc_yotpo_display_message($response['status']['message']['email'][0], false);
-                            } else {
-                                wc_yotpo_display_message($response['status']['message']['email'], false);
-                            }
-                        } else {
-                            wc_yotpo_display_message($response['status']['message'], true);
-                        }
-                    }
-                }
-            } else {
-                if ($response == 'b2c') {
-                    return $response;
-                }
-            }
-        } catch (Exception $e) {
-            wc_yotpo_display_message($e->getMessage(), true);
-        }
-    } else {
-        wc_yotpo_display_message($errors, false);
-    }
-    return false;
+    update_option('yotpo_settings', $settings);
+    wc_yotpo_display_message('Your store now uses V3 widgets. Check your product pages, and adjust the widgets below and in the Yotpo dashboard.', false);
 }
 function wc_yotpo_display_message($messages = array(), $is_error = false) {
     $class = $is_error ? 'error' : 'updated fade';

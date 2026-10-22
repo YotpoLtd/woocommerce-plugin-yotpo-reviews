@@ -15,13 +15,15 @@ function yotpo_message_allowed_html() {
   return array(
     'div' => array('id' => array(), 'class' => array()),
     'p' => array(),
-    'strong' => array()
+    'strong' => array(),
+    'a' => array('href' => array(), 'target' => array(), 'rel' => array()),
   );
 }
 
 // The markup of the settings page (templates/wc-yotpo-settings.php, templates/reusables/).
 function yotpo_settings_allowed_html() {
   return array(
+    'strong' => array(),
     'form' => array(
       'method' => array(),
       'id' => array(),
@@ -113,32 +115,6 @@ function yotpo_settings_allowed_html() {
       'id' => array(),
       'class' => array(),
     ),
-  );
-}
-
-// The registration screen (wc_display_yotpo_register).
-function yotpo_allowed_register_html() {
-  $allowed = yotpo_settings_allowed_html();
-  return array(
-    'div' => $allowed['div'],
-    'section' => $allowed['section'],
-    'h1' => $allowed['h1'],
-    'h2' => $allowed['h2'],
-    'hr' => $allowed['hr'],
-    'img' => $allowed['img'],
-    'form' => array(
-      'method' => array(),
-    ),
-    'label' => $allowed['label'],
-    'input' => array(
-      'type' => array(),
-      'id' => array(),
-      'name' => array(),
-      'value' => array(),
-      'class' => array(),
-    ),
-    'a' => $allowed['a'],
-    'p' => $allowed['p'],
   );
 }
 

@@ -30,7 +30,7 @@ function defineSelectors() {
 }
 
 function monitorDynamicElements() {
-	monitorWidgetsVersionSelect();
+	applyWidgetVersion();
 	monitorV2WidgetLocation();
 	monitorV3WidgetLocation();
 }
@@ -39,7 +39,7 @@ function changeElementVisibility(widgetSyncRow, visible, duration) {
 	visible ? widgetSyncRow.show(duration) : widgetSyncRow.hide(duration);
 }
 
-function isThisVersionSelected(version) {
+function isStoreOnVersion(version) {
 	if (!(version in PluginVersion)) {
 		return false;
 	}
@@ -47,18 +47,18 @@ function isThisVersionSelected(version) {
 }
 
 function modifyFormPositionsVisibility() {
-	changeElementVisibility(yotpoV3Enablers, isThisVersionSelected(PluginVersion.v3));
-	changeElementVisibility(yotpoV2Enablers, isThisVersionSelected(PluginVersion.v2));
-	changeElementVisibility(yotpoV3Locations, isThisVersionSelected(PluginVersion.v3));
-	changeElementVisibility(yotpoV2Locations, isThisVersionSelected(PluginVersion.v2));
-	isThisVersionSelected(PluginVersion.v3)
+	changeElementVisibility(yotpoV3Enablers, isStoreOnVersion(PluginVersion.v3));
+	changeElementVisibility(yotpoV2Enablers, isStoreOnVersion(PluginVersion.v2));
+	changeElementVisibility(yotpoV3Locations, isStoreOnVersion(PluginVersion.v3));
+	changeElementVisibility(yotpoV2Locations, isStoreOnVersion(PluginVersion.v2));
+	isStoreOnVersion(PluginVersion.v3)
 		? yotpoQNAWidgetTabName.removeClass('yotpo-qna-widget-tab-name--hidden')
 		: yotpoQNAWidgetTabName.addClass('yotpo-qna-widget-tab-name--hidden');
 }
 
-function monitorWidgetsVersionSelect() {
+// The widget version is fixed for the store (a hidden field, not a select): apply it once on load.
+function applyWidgetVersion() {
 	modifyFormPositionsVisibility();
-	yotpoWidgetVersion.change(() => modifyFormPositionsVisibility());
 }
 
 function monitorV2WidgetLocation() {
@@ -172,6 +172,21 @@ function monitorPastOrders() {
 	});
 }
 
+/**
+ * Switch to V3 widgets (stores still on v2): one way, so it asks first. The button belongs to its own form,
+ * so other changes on the page are not saved by it.
+ */
+function confirmSwitchToV3() {
+	jQuery('#yotpo-switch-to-v3').on('click', (event) => {
+		const question = 'Switch this store to V3 widgets?\n\n'
+			+ 'Your product pages will show the V3 widgets set up in your Yotpo dashboard. You can\'t switch back.\n\n'
+			+ 'Other changes on this page are not saved by this button.';
+		if (!window.confirm(question)) {
+			event.preventDefault();
+		}
+	});
+}
+
 jQuery(document).ready(function () {
 	defineSelectors();
 
@@ -181,5 +196,6 @@ jQuery(document).ready(function () {
 
 	monitorDynamicElements();
 	monitorPastOrders();
+	confirmSwitchToV3();
 	openInfoDialogIfExists();
 });
