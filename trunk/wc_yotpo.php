@@ -316,8 +316,7 @@ function wc_yotpo_get_product_data($product) {
 	if($settings['yotpo_language_as_site'] == true) {
 		$lang = explode('-', get_bloginfo('language'));
 		if(strlen($lang[0]) == 2) {
-			// Norwegian Bokmål and Nynorsk (nb-NO, nn-NO): Yotpo's Norwegian is "no".
-			$product_data['lang'] = in_array($lang[0], array('nb', 'nn'), true) ? 'no' : $lang[0];
+			$product_data['lang'] = wc_yotpo_language_code_for_subtag($lang[0]); // nb-NO and nn-NO are Yotpo's "no".
 		}
 	}
 	$specs_data = get_specs_data($product);
