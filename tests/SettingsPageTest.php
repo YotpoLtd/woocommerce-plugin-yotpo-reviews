@@ -287,6 +287,15 @@ class SettingsPageTest extends Yotpo_Test_Case {
 		$this->assertStringContainsString( 'Could not connect with the new keys, the saved keys were kept: Could not get a Yotpo access token (HTTP 401): invalid secret', $html );
 	}
 
+	public function test_a_new_secret_yotpo_refuses_does_not_replace_the_working_one() {
+		$this->oauth_fails = true;
+
+		$html = $this->save_keys( self::APP_KEY, 'mistyped-secret' );
+
+		$this->assertSame( array( self::APP_KEY, 'test-secret' ), array( get_option( 'yotpo_settings' )['app_key'], get_option( 'yotpo_settings' )['secret'] ) );
+		$this->assertStringContainsString( 'Could not connect with the new keys, the saved keys were kept: Could not get a Yotpo access token (HTTP 401): invalid secret', $html );
+	}
+
 	public function test_new_keys_yotpo_refuses_keep_a_v2_store_on_its_account() {
 		// A V2 store doesn't look the widgets up when saving, so the keys are checked on their own.
 		$this->set_setting( 'widget_version', 'v2' );
