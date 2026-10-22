@@ -1,7 +1,7 @@
 <?php
 /**
  * The widgets' language. v2 widgets get data-lang; v3 widgets get the loader's languageCode, from the
- * page's WordPress locale when "Match the site language" is on (Yotpo's codes: fr, pt-BR, zh-CN; a code it
+ * page's WordPress locale when "Match each page's language" is on (Yotpo's codes: fr, pt-BR, zh-CN; a code it
  * doesn't know shows English).
  */
 class WidgetLanguageTest extends Yotpo_Test_Case {
@@ -50,20 +50,20 @@ class WidgetLanguageTest extends Yotpo_Test_Case {
 	public function test_v3_widgets_load_in_the_page_language() {
 		$this->set_locale( 'fr_FR' );
 
-		$this->assertSame( 'fr', $this->loader_settings()['language_code'] );
+		$this->assertSame( 'fr', $this->loader_settings()['loader_language_code'] );
 	}
 
 	public function test_a_multilingual_page_changes_the_language() {
 		$this->set_locale( 'pt_BR' ); // As WPML or Polylang set it on a Portuguese page.
 
-		$this->assertSame( 'pt-BR', $this->loader_settings()['language_code'] );
+		$this->assertSame( 'pt-BR', $this->loader_settings()['loader_language_code'] );
 	}
 
 	public function test_with_match_each_pages_language_off_the_language_set_in_yotpo_is_used() {
 		$this->set_setting( 'widget_language_from_page', false );
 		$this->set_locale( 'fr_FR' );
 
-		$this->assertSame( '', $this->loader_settings()['language_code'], 'No languageCode: the loader uses the account language' );
+		$this->assertSame( '', $this->loader_settings()['loader_language_code'], 'No languageCode: the loader uses the account language' );
 	}
 
 	public function test_v3_page_language_ignores_the_v2_site_language_switch() {
@@ -71,7 +71,7 @@ class WidgetLanguageTest extends Yotpo_Test_Case {
 		$this->set_setting( 'widget_language_from_page', false );
 		$this->set_locale( 'fr_FR' );
 
-		$this->assertSame( '', $this->loader_settings()['language_code'] );
+		$this->assertSame( '', $this->loader_settings()['loader_language_code'] );
 	}
 
 	public function test_stores_upgrading_from_1x_keep_the_language_set_in_yotpo() {
@@ -83,7 +83,7 @@ class WidgetLanguageTest extends Yotpo_Test_Case {
 		$this->set_locale( 'de_DE' );
 
 		$this->assertFalse( get_option( 'yotpo_settings' )['widget_language_from_page'] );
-		$this->assertSame( '', $this->loader_settings()['language_code'], 'Their widgets keep the language set in Yotpo after the update' );
+		$this->assertSame( '', $this->loader_settings()['loader_language_code'], 'Their widgets keep the language set in Yotpo after the update' );
 	}
 
 	public function test_new_stores_get_each_pages_language() {
@@ -99,7 +99,7 @@ class WidgetLanguageTest extends Yotpo_Test_Case {
 		$this->set_setting( 'language_code', 'de' );
 		$this->set_setting( 'yotpo_language_as_site', false );
 
-		$this->assertSame( '', $this->loader_settings()['language_code'] );
+		$this->assertSame( '', $this->loader_settings()['loader_language_code'] );
 		$this->assertSame( 'de', wc_yotpo_get_product_data( $this->create_product() )['lang'], 'v2 widgets keep data-lang' );
 	}
 
@@ -110,7 +110,7 @@ class WidgetLanguageTest extends Yotpo_Test_Case {
 		$script = wp_scripts()->registered['yquery'];
 		$this->assertSame( filemtime( dirname( __DIR__ ) . '/trunk/assets/js/v3HeaderScript.js' ), $script->ver, 'Browsers get the new file after an update' );
 		$source = file_get_contents( dirname( __DIR__ ) . '/trunk/assets/js/v3HeaderScript.js' );
-		$this->assertStringContainsString( '"?languageCode=" + encodeURIComponent(yotpo_settings.language_code)', $source );
+		$this->assertStringContainsString( '"?languageCode=" + encodeURIComponent(yotpo_settings.loader_language_code)', $source );
 	}
 
 	/** The settings the storefront script gets (wp_localize_script), as an array. */

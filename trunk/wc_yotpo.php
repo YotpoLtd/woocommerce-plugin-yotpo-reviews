@@ -263,8 +263,9 @@ function wc_yotpo_load_js() {
 		$v3_widgets_ids = yotpo_get_arr_value($settings, 'v3_widgets_ids', []);
 		wp_localize_script('yquery', 'yotpo_settings', array(
 			'app_key' => $settings['app_key'],
-			// v3 widgets in the page's language ("Match the site language"); none: the language set in Yotpo.
-			'language_code' => use_v3_widgets() && !empty($settings['widget_language_from_page']) ? wc_yotpo_widget_language_code() : '',
+			// The v3 loader's languageCode: the page's language when "Match each page's language"
+			// (widget_language_from_page) is on; none: the language set in Yotpo. Not the v2 'language_code' setting.
+			'loader_language_code' => use_v3_widgets() && !empty($settings['widget_language_from_page']) ? wc_yotpo_widget_language_code() : '',
 			'reviews_widget_id' => yotpo_get_arr_value($v3_widgets_ids, 'reviews_widget'),
 			'qna_widget_id' => yotpo_get_arr_value($v3_widgets_ids, 'qna'),
 			'star_ratings_widget_id' => yotpo_get_arr_value($v3_widgets_ids, 'star_rating')
