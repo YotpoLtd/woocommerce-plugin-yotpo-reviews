@@ -258,3 +258,17 @@ Version 1.11.1
 1) Fixed (GitHub #69): settings saved by an older version lack the keys added since, and reading a missing key failed after updating. Every read of yotpo_settings now fills missing keys, nested ones too: every switch off (so no widget appears by itself), v2 widgets, the product sync on. Saved values win.
 2) Fixed (GitHub #26): the one-time redirect to the settings after activation ran on every request, so a shopper's or a background request could be redirected. It now happens once, for an admin in wp-admin; a bulk activation uses it up. Uninstall also deletes wc_yotpo_just_installed and native_star_ratings_enabled.
 3) Fixed (GitHub #76, #37): the links to the supported widget languages and to importing reviews.
+
+2026-10-22
+---
+Version 2.0.0
+1) Requires PHP 8.2 (Requires PHP, WC_YOTPO_MIN_PHP_VERSION, readme.txt, composer platform, phpcs testVersion; CI runs 8.2 to 8.5). PHP no longer gives 7.4 to 8.1 security fixes.
+2) New: a warning on the Plugins screen and the Yotpo settings when the server's PHP lacks the fix for CVE-2026-109618 and CVE-2026-109619 (CERT-EU advisory 2026-018): below 8.2.35, 8.3.36, 8.4.27 or 8.5.12, and every version before 8.2. Hosts that backport the fix can turn it off with the wc_yotpo_show_php_security_notice filter.
+3) Orders go to Yotpo through the Core API (V3), in background jobs (Action Scheduler, priority 5, sharing the product sync's 429 pause), once each, with their fulfillment, when they reach the status that sends review requests. Every line is in the fulfillment; fully refunded lines get suppress_review_request. Each order is looked up first, so orders 1.x sent are found and not sent again. Cancelled and fully refunded orders send a cancellation, which cancels their scheduled review requests. The legacy order calls are removed.
+4) New Orders card: "Send orders to Yotpo" (on by default, also for settings saved by 1.x) with its status line, and the status that sends review requests, now any WooCommerce status.
+5) Send past orders on V3: 1 to 180 days (default 90), with the order count, in background pages of 100 that resume where they stopped. A daily sweep at a random time sends fulfilled orders changed in the last 7 days that Yotpo lacks.
+6) The widget version choice is removed: V3 for new stores; V2 stores keep V2, with a notice and a one-way "Switch to V3 widgets". The in-plugin sign-up is removed; the Connection card links to sign-up on yotpo.com.
+7) Widget IDs are read from api.yotpo.com/api/v2/widgets with the Core API's access token; the legacy /oauth/token login is gone. V3 widgets get "Match each page's language" (languageCode on the loader; on for new installs, off for stores updating from 1.x). Norwegian (nb, nn) maps to Yotpo's "no", for V3 and V2.
+8) wc_yotpo_show_custom_widgets() renders the instance IDs from the new wc_yotpo_custom_widget_instances filter, none by default. It rendered a hardcoded instance (540894) of a single Yotpo account.
+9) Saved keys can be changed ("Change keys"). The saved secret never reaches the page (a mask, also in the debug dump), and keys Yotpo refuses are not saved. A different app key forgets the old account's product and order Yotpo IDs, queued jobs and order counts; the full catalog sync starts for the new account and the daily sweep goes back no further than the switch.
+10) Fixed: the storefront script had no version, so browsers could keep the previous one after an update.

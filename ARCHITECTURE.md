@@ -170,9 +170,11 @@ already use it. Record one with `docs/adr/0000-template.md` and add its row abov
   (`class-yotpo-v3-client.php:16`); a full-sync page holds at most the API's lookup maximum
   (`class-yotpo-sync-jobs.php:14`). A page job stops creating orders after 15 seconds and hands the
   rest of its page to a new job.
-- **Compatibility:** PHP 7.4 and WordPress 6.0 are the floor, declared in three places that must
-  agree — the plugin header, `readme.txt`, and `phpcs.xml.dist`'s `testVersion` /
-  `minimum_wp_version`. WooCommerce HPOS is declared compatible.
+- **Compatibility:** PHP 8.2 and WordPress 6.0 are the floor. The PHP floor is declared in the plugin
+  header and `WC_YOTPO_MIN_PHP_VERSION`, `readme.txt`, the `composer.json` platform, `phpcs.xml.dist`'s
+  `testVersion` and the CI matrix; `PhpSecurityNoticeTest` fails when they disagree. The WordPress floor
+  is in the plugin header, `readme.txt` and `phpcs.xml.dist`'s `minimum_wp_version`. WooCommerce HPOS is
+  declared compatible.
 - **Distribution:** the WordPress.org slug `yotpo-social-reviews-for-woocommerce` is permanent, and
   `Stable tag` must point at an existing SVN tag or WordPress.org serves `trunk` instead.
 

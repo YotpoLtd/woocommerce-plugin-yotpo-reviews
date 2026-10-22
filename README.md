@@ -54,7 +54,7 @@ GitHub `master` is the source of truth. The plugin code that ships is `trunk/`; 
 
 Only `trunk/` (plugin code) and the listing images (`assets/`) reach WordPress.org. Everything else at the repo root (`composer.json`, `phpcs.xml.dist`, `phpunit.xml.dist`, `bin/`, `tests/`, `test-data/`, `.github/`) is development tooling.
 
-Install the tools once (requires PHP 7.4+ and Composer):
+Install the tools once (requires PHP 8.2+ and Composer):
 
     composer install
 
@@ -62,9 +62,9 @@ Run these before opening a PR:
 
 | Check | Command | What it catches |
 |---|---|---|
-| Tests | `composer test` | Product sync, orders, settings page and uninstall behavior. See [Tests](#tests) below. Also run on every PR by GitHub Actions (PHP 7.4 and 8.3) |
-| PHP lint | `composer lint` | Syntax errors and deprecations. Set `PHP_BINARIES` to test several PHP versions, e.g. `PHP_BINARIES="php7.4 php8.4" composer lint` |
-| PHPCS | `composer phpcs` | Security (escaping, nonces, sanitization), PHP 7.4+ compatibility, unprefixed globals. Rules are in `phpcs.xml.dist` |
+| Tests | `composer test` | Product sync, orders, settings page and uninstall behavior. See [Tests](#tests) below. Also run on every PR by GitHub Actions (PHP 8.2, 8.3, 8.4 and 8.5) |
+| PHP lint | `composer lint` | Syntax errors and deprecations. Set `PHP_BINARIES` to test several PHP versions, e.g. `PHP_BINARIES="php8.2 php8.5" composer lint` |
+| PHPCS | `composer phpcs` | Security (escaping, nonces, sanitization), PHP 8.2+ compatibility, unprefixed globals. Rules are in `phpcs.xml.dist` |
 | Plugin Check | `wp plugin check yotpo-social-reviews-for-woocommerce` | WordPress.org directory requirements (readme headers, direct file access, etc.). Run inside a WordPress install with the [Plugin Check](https://wordpress.org/plugins/plugin-check/) plugin active |
 
 ## Tests

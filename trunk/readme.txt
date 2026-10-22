@@ -3,8 +3,8 @@ Contributors: Yotpo
 Tags: reviews, social reviews, woocommerce, woocommerce reviews, woocommerce product reviews
 Requires at least: 6.0
 Tested up to: 7.1
-Requires PHP: 7.4
-Stable tag: 1.11.1
+Requires PHP: 8.2
+Stable tag: 2.0.0
 License: GPLv2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -26,7 +26,7 @@ Yotpo product reviews and ratings drive sales and help you better understand you
 = Minimum Requirements =
 
 * WordPress 6.0 or greater
-* PHP version 7.4 or greater
+* PHP version 8.2 or greater
 * WooCommerce 3.0 or greater
 
 1. Install Yotpo Product Reviews either via the WordPress.org plugin directory, or by uploading the files to your server
@@ -252,7 +252,28 @@ For full installation guide, [please click here](https://support.yotpo.com/docs/
 * Fixed: the settings page's links to the supported widget languages and to importing reviews
 * Uninstalling also removes the plugin's activation options
 
+= 2.0.0 - 22/10/2026 =
+* Requires PHP 8.2. PHP no longer gives versions 7.4 to 8.1 security fixes
+* New: a warning on the Plugins screen and the Yotpo settings when the server's PHP version lacks the fix for CVE-2026-109618 and CVE-2026-109619, critical flaws in PHP itself
+* Orders are sent to Yotpo through the Yotpo Core API (V3), in background jobs, once each, when they reach the status that sends review requests. Orders an earlier version already sent are found in Yotpo and not sent again
+* Fully refunded order lines get no review request. Cancelling or fully refunding an order cancels its scheduled review requests
+* New Orders card in the settings: "Send orders to Yotpo" (on by default) with its status, and the order status that sends review requests, which can now be any WooCommerce status, custom ones included
+* Send past orders moved to the Orders card: choose 1 to 180 days, see how many orders that covers, and follow the run. Orders already in Yotpo are skipped
+* New: once a day, orders from the last 7 days that Yotpo is missing are sent
+* V3 widgets: new setting "Match each page's language" (on for new installs, off after updating), so multilingual sites show each page's language
+* Norwegian sites now get Yotpo's Norwegian widgets, which showed in English
+* The widget version choice is gone: new stores use V3 widgets. Stores on V2 widgets keep them, with a one-way "Switch to V3 widgets"
+* Signing up for Yotpo now happens on yotpo.com. The sign-up form in the plugin is removed
+* Saved keys can be changed with "Change keys". The saved secret token no longer appears in the page source, and keys Yotpo doesn't accept are not saved
+* Saving a different app key connects the store to that Yotpo account: the product catalog is sent to it again
+* wc_yotpo_show_custom_widgets() now shows only the widgets listed with the new wc_yotpo_custom_widget_instances filter. Until now it showed a widget of a single Yotpo account
+* The widget IDs are read with the Core API's access token. The plugin no longer uses Yotpo's legacy login or order calls
+* Fixed: browsers could keep the previous storefront script after an update
+
 == Upgrade Notice ==
+
+= 2.0.0 =
+Requires PHP 8.2. Orders now go to Yotpo through the Core API, set up in the new Orders card. If your theme calls wc_yotpo_show_custom_widgets(), list your widget IDs with the new wc_yotpo_custom_widget_instances filter.
 
 = 1.11.1 =
 Fixes errors after updating from an old version of the plugin, and a redirect to the Yotpo settings that could reach shoppers right after activation. Also fixes two help links.

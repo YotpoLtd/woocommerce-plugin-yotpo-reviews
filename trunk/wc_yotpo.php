@@ -3,11 +3,11 @@
 	Plugin Name: Yotpo Product Reviews
 	Description: Collect and display product reviews and ratings to showcase social proof and build trust.
 	Author: Yotpo
-	Version: 1.11.1
+	Version: 2.0.0
 	Author URI: http://www.yotpo.com?utm_source=yotpo_plugin_woocommerce&utm_medium=plugin_page_link&utm_campaign=woocommerce_plugin_page_link
 	Plugin URI: http://www.yotpo.com?utm_source=yotpo_plugin_woocommerce&utm_medium=plugin_page_link&utm_campaign=woocommerce_plugin_page_link
 	Requires at least: 6.0
-	Requires PHP: 7.4
+	Requires PHP: 8.2
 	Requires Plugins: woocommerce
 	WC requires at least: 3.0
 	WC tested up to: 11.2
@@ -17,14 +17,17 @@
 defined( 'ABSPATH' ) || exit;
 
 // Single source of truth for the minimum supported PHP version, used by wc_yotpo_compatible().
-// The "Requires PHP" header above and readme.txt only document this same value; keep them in sync.
-define( 'WC_YOTPO_MIN_PHP_VERSION', '7.4' );
+// The "Requires PHP" header above, readme.txt, the composer.json platform, phpcs.xml.dist testVersion and the CI matrix
+// only document this same value; keep them in sync (PhpSecurityNoticeTest::test_the_minimum_php_version_is_the_same_everywhere checks it).
+define( 'WC_YOTPO_MIN_PHP_VERSION', '8.2' );
 
 register_activation_hook(   __FILE__, 'wc_yotpo_activation' );
 register_uninstall_hook( __FILE__, 'wc_yotpo_uninstall' );
 register_deactivation_hook( __FILE__, 'wc_yotpo_deactivate' );
 add_action('plugins_loaded', 'wc_yotpo_init');
 add_action('admin_init', 'wc_yotpo_redirect');
+// Outside wc_yotpo_init(): shown with or without WooCommerce.
+add_action('admin_notices', 'wc_yotpo_php_security_notice');
 // Settings saved by an older version lack the keys added since: fill them in on every read.
 add_filter('option_yotpo_settings', 'wc_yotpo_fill_missing_settings');
 add_action( 'before_woocommerce_init', 'wc_declare_hops_support' );

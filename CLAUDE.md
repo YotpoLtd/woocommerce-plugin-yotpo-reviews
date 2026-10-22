@@ -8,7 +8,7 @@ and attributed. It ships to WordPress.org as `yotpo-social-reviews-for-woocommer
 permanent). Owned by team `orbits` (`CODEOWNERS`).
 
 ## Stack
-- Language: PHP 7.4+ (`WC_YOTPO_MIN_PHP_VERSION`, `trunk/wc_yotpo.php:21`)
+- Language: PHP 8.2+ (`WC_YOTPO_MIN_PHP_VERSION`, `trunk/wc_yotpo.php:21`)
 - Framework: none — plain WordPress plugin. WordPress ≥ 6.0, WooCommerce ≥ 3.0
 - Runtime: the merchant's WordPress install; background work runs on WooCommerce's Action Scheduler
 - Package manager: Composer, for **dev tooling only** — nothing is vendored into the shipped plugin
@@ -56,7 +56,7 @@ composer test:install
 WP_TESTS_DB_HOST=localhost WP_TESTS_DB_PASSWORD=... composer test
 
 # Lint
-composer lint          # PHP syntax + deprecations; PHP_BINARIES="php7.4 php8.4" for several versions
+composer lint          # PHP syntax + deprecations; PHP_BINARIES="php8.2 php8.5" for several versions
 composer phpcs         # security, DB, PHP-compatibility sniffs over trunk/
 
 # Run locally
