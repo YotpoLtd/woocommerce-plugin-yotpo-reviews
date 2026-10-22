@@ -112,10 +112,6 @@ function wc_yotpo_php_security_releases() {
 /**
  * The PHP release this server should update to for that fix, or '' when its version has it. A branch with
  * no fix gets the first fixed release of the plugin's minimum, 8.2. Branches after 8.5 are released with the fix.
- *
- * Some Linux distributions (Debian, Ubuntu) backport fixes and keep the version number, so a version
- * reported here may be patched after all: the notice says so, and the wc_yotpo_show_php_security_notice
- * filter turns it off.
  */
 function wc_yotpo_php_security_update($version = PHP_VERSION) {
 	$releases = wc_yotpo_php_security_releases();
@@ -147,6 +143,10 @@ function wc_yotpo_php_security_notice_screen() {
 
 /**
  * The notice for a server on this PHP version, or '' when it has the fix (or the filter turned it off).
+ *
+ * Some Linux distributions (Debian, Ubuntu) backport fixes and keep the version number, so a version
+ * reported by wc_yotpo_php_security_update() may be patched after all: the notice says so, and the
+ * wc_yotpo_show_php_security_notice filter turns it off.
  */
 function wc_yotpo_php_security_message($version) {
 	$update = wc_yotpo_php_security_update($version);
