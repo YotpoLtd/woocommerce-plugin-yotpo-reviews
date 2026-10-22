@@ -48,44 +48,54 @@ class Yotpo_Account_Switch {
 		self::forget_order_transients();
 	}
 
+	/**
+	 * One DELETE per table rather than a call per key, row or transient: the settings save waits for it, and
+	 * a large store has many rows. The object cache doesn't know about the rows deleted behind its back, so
+	 * the groups that carried them are flushed.
+	 */
 	private static function forget_meta() {
-		foreach ( self::PRODUCT_META_KEYS as $key ) {
-			delete_post_meta_by_key( $key );
-		}
-		self::forget_order_meta();
-	}
-
-	/** Also flushes WooCommerce's cached orders, which still carry the deleted rows. */
-	private static function forget_order_meta() {
-		foreach ( self::ORDER_META_KEYS as $key ) {
-			delete_post_meta_by_key( $key );
-		}
-		self::forget_order_table_meta();
-		if ( function_exists( 'wp_cache_supports' ) && wp_cache_supports( 'flush_group' ) ) {
-			wp_cache_flush_group( 'orders' );
-		}
-	}
-
-	/** The same order meta in WooCommerce's own order tables, when the store uses them. Same query as uninstall.php. */
-	private static function forget_order_table_meta() {
 		global $wpdb;
-		$orders_meta = $wpdb->prefix . 'wc_orders_meta';
-		if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $orders_meta ) ) !== $orders_meta ) { // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-			return;
+		$keys = array_merge( self::PRODUCT_META_KEYS, self::ORDER_META_KEYS );
+		self::delete_meta_rows( $wpdb->postmeta, $keys );
+		$orders_meta = $wpdb->prefix . 'wc_orders_meta'; // WooCommerce's own order tables (HPOS), when the store uses them. Same query as uninstall.php.
+		if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $orders_meta ) ) === $orders_meta ) { // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			self::delete_meta_rows( $orders_meta, self::ORDER_META_KEYS );
 		}
-		$placeholders = implode( ', ', array_fill( 0, count( self::ORDER_META_KEYS ), '%s' ) );
-		$wpdb->query( $wpdb->prepare( "DELETE FROM {$orders_meta} WHERE meta_key IN ({$placeholders})", self::ORDER_META_KEYS ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// 'orders': WooCommerce's cached orders still carry the deleted rows.
+		self::flush_cache_groups( array( 'post_meta', 'orders' ) );
 	}
 
-	/** "Yotpo doesn't have this order" and the sweep's "can't be sent", both about the old account. Same sweep as uninstall.php. */
+	private static function delete_meta_rows( $table, array $keys ) {
+		global $wpdb;
+		$placeholders = implode( ', ', array_fill( 0, count( $keys ), '%s' ) );
+		$wpdb->query( $wpdb->prepare( "DELETE FROM {$table} WHERE meta_key IN ({$placeholders})", $keys ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+	}
+
+	/**
+	 * "Yotpo doesn't have this order" and the sweep's "can't be sent", both about the old account: the
+	 * transients and their timeout rows, found by prefix. Same sweep as uninstall.php.
+	 */
 	private static function forget_order_transients() {
 		global $wpdb;
-		$transient = '_transient_';
+		$patterns = array();
 		foreach ( array( Yotpo_Order_Api::ABSENT_PREFIX, Yotpo_Order_Backfill::SETTLED_PREFIX ) as $prefix ) {
-			$names = $wpdb->get_col( $wpdb->prepare( "SELECT option_name FROM {$wpdb->options} WHERE option_name LIKE %s", $wpdb->esc_like( $transient . $prefix ) . '%' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-			foreach ( $names as $name ) {
-				delete_transient( substr( $name, strlen( $transient ) ) );
+			foreach ( array( '_transient_', '_transient_timeout_' ) as $kind ) {
+				$patterns[] = $wpdb->esc_like( $kind . $prefix ) . '%';
 			}
+		}
+		$where = implode( ' OR ', array_fill( 0, count( $patterns ), 'option_name LIKE %s' ) );
+		$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->options} WHERE {$where}", $patterns ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+		self::flush_cache_groups( array( 'options' ) );
+	}
+
+	/** Flushes the given object cache groups, or the whole cache when it can't flush a group. */
+	private static function flush_cache_groups( array $groups ) {
+		if ( ! function_exists( 'wp_cache_supports' ) || ! wp_cache_supports( 'flush_group' ) ) {
+			wp_cache_flush();
+			return;
+		}
+		foreach ( $groups as $group ) {
+			wp_cache_flush_group( $group );
 		}
 	}
 }
