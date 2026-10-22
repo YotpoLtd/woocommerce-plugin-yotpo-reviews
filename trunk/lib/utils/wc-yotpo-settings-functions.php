@@ -97,12 +97,15 @@ function get_v2_widgets_enables() {
   );
 }
 
+// Length of the mask: only a fixed placeholder, so it says nothing about the saved secret's length.
+const WC_YOTPO_SECRET_MASK_LENGTH = 24;
+
 /**
  * What the secret field holds once a secret is saved: the browser shows it as a password, and the saved
  * secret itself stays out of the page.
  */
 function wc_yotpo_saved_secret_mask() {
-  return str_repeat('*', 24);
+  return str_repeat('*', WC_YOTPO_SECRET_MASK_LENGTH);
 }
 
 /**

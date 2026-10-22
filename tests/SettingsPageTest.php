@@ -191,7 +191,7 @@ class SettingsPageTest extends Yotpo_Test_Case {
 	public function test_the_saved_secret_never_reaches_the_page() {
 		$html = $this->render();
 
-		$this->assertMatchesRegularExpression( '#<input type="password" class="yotpo-input yotpo-input--mono" id="secret" name="yotpo_oauth_token" value="\*{24}" readonly autocomplete="new-password" />#', $html, 'A password field, holding a mask' );
+		$this->assertMatchesRegularExpression( '#<input type="password" class="yotpo-input yotpo-input--mono" id="secret" name="yotpo_oauth_token" value="' . preg_quote( wc_yotpo_saved_secret_mask(), '#' ) . '" readonly autocomplete="new-password" />#', $html, 'A password field, holding a mask' );
 		$this->assertStringNotContainsString( 'test-secret', $html );
 	}
 
