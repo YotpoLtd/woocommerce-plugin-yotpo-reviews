@@ -183,7 +183,6 @@ function wc_proccess_yotpo_settings() {
   }
   if ($new_account) {
     Yotpo_Account_Switch::app_key_changed($saved_key, $app_key);
-    wc_yotpo_display_message('This store is now connected to the Yotpo account with app key ' . esc_html($app_key) . '. Your product catalog is being sent to it.');
   }
   $new_settings = array(
     'app_key' => $app_key,
@@ -207,6 +206,10 @@ function wc_proccess_yotpo_settings() {
     'order_sync_enabled' => isset($_POST['order_sync_enabled']),
     'debug_mode' => isset($_POST['debug_mode']) ? true : false);
   update_option('yotpo_settings', $new_settings);
+  if ($new_account) {
+    // The full catalog sync starts for the new account only when product sync is on in what was just saved.
+    wc_yotpo_display_message('This store is now connected to the Yotpo account with app key ' . esc_html($app_key) . '.' . (Yotpo_Product_Sync::enabled() ? ' Your product catalog is being sent to it.' : ''));
+  }
   Yotpo_Product_Sync::setting_changed($product_sync_was_on, $new_settings['product_sync_enabled']);
   Yotpo_Product_Sync::tags_setting_changed($tags_were_on, $new_settings['product_sync_tags'], $product_sync_was_on, $new_settings['product_sync_enabled']);
   Yotpo_Order_Sync::setting_changed($order_sync_was_on, $new_settings['order_sync_enabled']);

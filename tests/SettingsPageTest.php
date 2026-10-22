@@ -362,6 +362,16 @@ class SettingsPageTest extends Yotpo_Test_Case {
 		$this->assertCount( 1, $this->pending_jobs( Yotpo_Order_Backfill::HOOK_SWEEP, Yotpo_Order_Sync::GROUP ) );
 	}
 
+	public function test_the_switch_notice_mentions_the_catalog_only_when_product_sync_is_on() {
+		$html = $this->save_keys( 'other-app-key', 'other-secret' );
+		$this->assertStringContainsString( 'This store is now connected to the Yotpo account with app key other-app-key. Your product catalog is being sent to it.', $html );
+
+		$this->set_setting( 'product_sync_enabled', false );
+		$html = $this->save_keys( 'third-app-key', 'third-secret' );
+		$this->assertStringContainsString( 'This store is now connected to the Yotpo account with app key third-app-key.', $html );
+		$this->assertStringNotContainsString( 'Your product catalog is being sent to it.', $html );
+	}
+
 	public function test_the_full_sync_starts_for_the_new_account() {
 		$this->save_keys( 'other-app-key', 'other-secret' );
 
