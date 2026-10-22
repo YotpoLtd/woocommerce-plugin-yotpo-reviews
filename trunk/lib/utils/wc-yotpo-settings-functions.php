@@ -97,19 +97,99 @@ function get_v2_widgets_enables() {
   );
 }
 
+// Length of the mask: only a fixed placeholder, so it says nothing about the saved secret's length.
+const WC_YOTPO_SECRET_MASK_LENGTH = 24;
+
+/**
+ * What the secret field holds once a secret is saved: the browser shows it as a password, and the saved
+ * secret itself stays out of the page.
+ */
+function wc_yotpo_saved_secret_mask() {
+  return str_repeat('*', WC_YOTPO_SECRET_MASK_LENGTH);
+}
+
+/**
+ * The app key and secret to save. The saved secret never reaches the page, so the field left as it was
+ * (wc_yotpo_saved_secret_mask()) or emptied keeps it, for the same app key. A different app key needs its own secret, and an empty app key is refused:
+ * both keep the saved keys, with a notice.
+ *
+ * @return array{0:string, 1:string} The app key and secret.
+ */
+function wc_yotpo_posted_keys($current_settings) {
+  $saved_key = (string) yotpo_get_arr_value($current_settings, 'app_key', '');
+  $saved_secret = (string) yotpo_get_arr_value($current_settings, 'secret', '');
+  $app_key = trim((string) yotpo_get_arr_value($_POST, 'yotpo_app_key', ''));
+  $secret = trim((string) yotpo_get_arr_value($_POST, 'yotpo_oauth_token', ''));
+  if (wc_yotpo_saved_secret_mask() === $secret) {
+    $secret = '';
+  }
+  if ('' === $saved_key || '' === $saved_secret) {
+    // Keys are still being entered; a secret saved without its app key stays unless a new one is typed.
+    return array($app_key, '' === $secret ? $saved_secret : $secret);
+  }
+  if ('' === $app_key) {
+    wc_yotpo_display_message('The app key can\'t be empty. The saved keys were kept.', true);
+    return array($saved_key, $saved_secret);
+  }
+  if ('' === $secret) {
+    if ($app_key !== $saved_key) {
+      wc_yotpo_display_message('To connect a different app key, enter its secret token too. The saved keys were kept.', true);
+    }
+    return array($saved_key, $saved_secret);
+  }
+  return array($app_key, $secret);
+}
+
+/**
+ * Whether Yotpo accepts these keys, checked with the widget lookup (it needs a Core API token).
+ *
+ * @return WP_Error|null Why not, or null when Yotpo accepted them.
+ */
+function wc_yotpo_refused_keys_error($app_key, $secret) {
+  $response = receive_widget_instances($app_key, $secret);
+  return is_wp_error($response) ? $response : null;
+}
+
+/**
+ * The keys to save: the posted ones (wc_yotpo_posted_keys()), unless they differ from the saved keys and
+ * Yotpo refuses them, in which case the store keeps its saved keys, with a notice. Checked whatever the
+ * widget version: V2 stores don't look the widgets up when saving, so the widget lookup alone wouldn't tell.
+ *
+ * @return array{0:string, 1:string, 2:bool} The app key, the secret, and whether Yotpo refused the posted ones.
+ */
+function wc_yotpo_keys_to_save($current_settings) {
+  list($app_key, $secret) = wc_yotpo_posted_keys($current_settings);
+  $saved_key = (string) yotpo_get_arr_value($current_settings, 'app_key', '');
+  $saved_secret = (string) yotpo_get_arr_value($current_settings, 'secret', '');
+  $changed = '' !== $saved_key && ($app_key !== $saved_key || ('' !== $saved_secret && $secret !== $saved_secret));
+  $refused = $changed ? wc_yotpo_refused_keys_error($app_key, $secret) : null;
+  if (!$refused) {
+    return array($app_key, $secret, false);
+  }
+  // Yotpo didn't accept the new keys (or couldn't be reached): the store stays on its account, with its keys.
+  wc_yotpo_display_message('Could not connect with the new keys, the saved keys were kept: ' . esc_html($refused->get_error_message()), true);
+  return array($saved_key, $saved_secret, true);
+}
+
 function wc_proccess_yotpo_settings() {
   $current_settings = get_option('yotpo_settings', wc_yotpo_get_default_settings());
   $product_sync_was_on = Yotpo_Product_Sync::setting_on();
   $tags_were_on = Yotpo_Product_Sync::tags_on();
   $order_sync_was_on = Yotpo_Order_Sync::setting_on();
-  $widgets_ids = get_widgets_instances(yotpo_get_arr_value($_POST, 'yotpo_app_key', ''), yotpo_get_arr_value($_POST, 'yotpo_oauth_token', ''));
+  list($app_key, $secret, $refused) = wc_yotpo_keys_to_save($current_settings);
+  $saved_key = (string) yotpo_get_arr_value($current_settings, 'app_key', '');
+  $new_account = '' !== $saved_key && $app_key !== $saved_key;
+  $widgets_ids = $refused && use_v3_widgets() ? yotpo_get_arr_value($current_settings, 'v3_widgets_ids', []) : get_widgets_instances($app_key, $secret);
   if (is_wp_error($widgets_ids)) {
     wc_yotpo_display_message(wc_yotpo_widget_instances_error_message($widgets_ids), true);
     $widgets_ids = yotpo_get_arr_value($current_settings, 'v3_widgets_ids', []);
   }
+  if ($new_account) {
+    Yotpo_Account_Switch::app_key_changed($saved_key, $app_key);
+  }
   $new_settings = array(
-    'app_key' => yotpo_get_arr_value($_POST, 'yotpo_app_key'),
-    'secret' => yotpo_get_arr_value($_POST, 'yotpo_oauth_token'),
+    'app_key' => $app_key,
+    'secret' => $secret,
     'v2_widget_location' => yotpo_get_arr_value($_POST, 'yotpo_v2_widget_location'),
     'v3_widget_location' => yotpo_get_arr_value($_POST, 'yotpo_v3_widget_location'),
     'language_code' => yotpo_get_arr_value($_POST, 'yotpo_widget_language_code'),
@@ -129,6 +209,10 @@ function wc_proccess_yotpo_settings() {
     'order_sync_enabled' => isset($_POST['order_sync_enabled']),
     'debug_mode' => isset($_POST['debug_mode']) ? true : false);
   update_option('yotpo_settings', $new_settings);
+  if ($new_account) {
+    // The full catalog sync starts for the new account only when product sync is on in what was just saved.
+    wc_yotpo_display_message('This store is now connected to the Yotpo account with app key ' . esc_html($app_key) . '.' . (Yotpo_Product_Sync::enabled() ? ' Your product catalog is being sent to it.' : ''));
+  }
   Yotpo_Product_Sync::setting_changed($product_sync_was_on, $new_settings['product_sync_enabled']);
   Yotpo_Product_Sync::tags_setting_changed($tags_were_on, $new_settings['product_sync_tags'], $product_sync_was_on, $new_settings['product_sync_enabled']);
   Yotpo_Order_Sync::setting_changed($order_sync_was_on, $new_settings['order_sync_enabled']);

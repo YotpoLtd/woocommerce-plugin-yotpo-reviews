@@ -555,6 +555,15 @@ class Yotpo_Sync_Jobs {
 	}
 
 	/**
+	 * The store switched to another Yotpo account (Yotpo_Account_Switch): the queued sync jobs were about
+	 * the old one, and a pause after its rate limit doesn't apply to the new one.
+	 */
+	public static function account_switched() {
+		self::cancel_all();
+		delete_transient( self::PAUSE_TRANSIENT );
+	}
+
+	/**
 	 * Cancels every queued job of an Action Scheduler group. Shared with Yotpo_Order_Sync.
 	 */
 	public static function cancel_group( $group ) {

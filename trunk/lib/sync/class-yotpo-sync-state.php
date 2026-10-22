@@ -100,6 +100,19 @@ class Yotpo_Sync_State {
 	}
 
 	/**
+	 * Forgets the sync state, so the next full sync starts from nothing: it was about another Yotpo
+	 * account (Yotpo_Account_Switch).
+	 */
+	public static function forget() {
+		Yotpo_Option_Lock::run(
+			self::LOCK_OPTION,
+			function () {
+				delete_option( self::STATE_OPTION );
+			}
+		);
+	}
+
+	/**
 	 * Asks for another full sync once this one is complete (Yotpo_Sync_Jobs::request_full_sync()).
 	 * start() clears it, since the new state has no such flag.
 	 */

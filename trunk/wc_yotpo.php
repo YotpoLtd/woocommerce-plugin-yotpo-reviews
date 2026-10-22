@@ -54,6 +54,7 @@ require plugin_dir_path( __FILE__ ) . 'lib/sync/class-yotpo-option-lock.php';
 require plugin_dir_path( __FILE__ ) . 'lib/sync/class-yotpo-sync-state.php';
 require plugin_dir_path( __FILE__ ) . 'lib/sync/class-yotpo-sync-jobs.php';
 require plugin_dir_path( __FILE__ ) . 'lib/sync/class-yotpo-product-sync.php';
+require plugin_dir_path( __FILE__ ) . 'lib/sync/class-yotpo-account-switch.php';
 
 function wc_yotpo_init() {
 	// Everything below relies on WooCommerce; without it the storefront hooks fatal on is_product().
@@ -315,7 +316,7 @@ function wc_yotpo_get_product_data($product) {
 	if($settings['yotpo_language_as_site'] == true) {
 		$lang = explode('-', get_bloginfo('language'));
 		if(strlen($lang[0]) == 2) {
-			$product_data['lang'] = $lang[0];
+			$product_data['lang'] = wc_yotpo_language_code_for_subtag($lang[0]); // nb-NO and nn-NO are Yotpo's "no".
 		}
 	}
 	$specs_data = get_specs_data($product);

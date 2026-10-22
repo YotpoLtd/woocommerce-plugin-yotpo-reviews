@@ -26,6 +26,9 @@ class WidgetLanguageTest extends Yotpo_Test_Case {
 			'zh_CN'        => 'zh-CN',
 			'zh_TW'        => 'zh-TW',
 			'zh_HK'        => 'zh-TW',
+			'nb_NO'        => 'no',
+			'nn_NO'        => 'no',
+			'nb'           => 'no',
 			''             => '',
 		);
 		foreach ( $expected as $locale => $code ) {
@@ -101,6 +104,17 @@ class WidgetLanguageTest extends Yotpo_Test_Case {
 
 		$this->assertSame( '', $this->loader_settings()['loader_language_code'] );
 		$this->assertSame( 'de', wc_yotpo_get_product_data( $this->create_product() )['lang'], 'v2 widgets keep data-lang' );
+	}
+
+	public function test_v2_site_language_maps_norwegian() {
+		$this->set_setting( 'widget_version', 'v2' );
+		$this->set_setting( 'yotpo_language_as_site', true );
+		$product = $this->create_product();
+		foreach ( array( 'nb_NO' => 'no', 'nn_NO' => 'no', 'fr_FR' => 'fr' ) as $locale => $code ) {
+			$this->set_locale( $locale );
+			$this->assertSame( $code, wc_yotpo_get_product_data( $product )['lang'], $locale );
+			remove_all_filters( 'locale' );
+		}
 	}
 
 	public function test_the_loader_script_adds_the_language_and_is_versioned() {
