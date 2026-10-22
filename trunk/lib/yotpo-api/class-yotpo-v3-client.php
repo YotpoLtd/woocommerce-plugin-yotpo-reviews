@@ -93,13 +93,35 @@ class Yotpo_V3_Client {
 	}
 
 	/**
-	 * The cached access token, or a new one exchanged for the API secret.
+	 * The access token, for the one call outside the Core API that takes it: the widget instances
+	 * (Yotpo::get_widget_instances()), which accept it as their utoken.
+	 *
+	 * @param bool $fresh Drop the cached token first (after the token was refused).
+	 * @return string|WP_Error
+	 */
+	public function access_token( $fresh = false ) {
+		if ( $fresh ) {
+			delete_option( self::TOKEN_OPTION );
+		}
+		return $this->token();
+	}
+
+	/**
+	 * The cached access token, or a new one exchanged for the API secret. The cached token is only
+	 * reused for the app key and the secret it was issued for, so a changed or wrong secret is exchanged
+	 * (and refused by Yotpo if it is wrong) instead of passing on another secret's token.
 	 *
 	 * @return string|WP_Error
 	 */
 	private function token() {
 		$stored = get_option( self::TOKEN_OPTION );
-		if ( is_array( $stored ) && ! empty( $stored['token'] ) && isset( $stored['app_key'] ) && $stored['app_key'] === $this->app_key ) {
+		if (
+			is_array( $stored )
+			&& ! empty( $stored['token'] )
+			&& isset( $stored['app_key'], $stored['secret_hash'] )
+			&& $stored['app_key'] === $this->app_key
+			&& hash_equals( (string) $stored['secret_hash'], $this->secret_hash() )
+		) {
 			return $stored['token'];
 		}
 
@@ -122,8 +144,24 @@ class Yotpo_V3_Client {
 		}
 
 		// Not autoloaded: only sync jobs need it.
-		update_option( self::TOKEN_OPTION, array( 'app_key' => $this->app_key, 'token' => $decoded['access_token'] ), false );
+		update_option(
+			self::TOKEN_OPTION,
+			array(
+				'app_key'     => $this->app_key,
+				'secret_hash' => $this->secret_hash(),
+				'token'       => $decoded['access_token'],
+			),
+			false
+		);
 		return $decoded['access_token'];
+	}
+
+	/**
+	 * A salted hash of the API secret: tells which secret a cached token was issued for without
+	 * storing the secret again.
+	 */
+	private function secret_hash() {
+		return wp_hash( $this->secret );
 	}
 
 	/**

@@ -46,7 +46,12 @@ function get_widget_instances($app_key = null, $secret = null) {
   }
   $ids_object = array();
   foreach($response['widget_instances'] as $val) {
-    $ids_object[get_yotpo_widget_field_name($val['widget_type_name'])] = $val['widget_instance_id'];
+    // Only the widgets the plugin shows: an account also has others (galleries, an SEO page), which
+    // were stored under an empty key.
+    $field = isset($val['widget_type_name']) ? get_yotpo_widget_field_name($val['widget_type_name']) : null;
+    if ($field && isset($val['widget_instance_id'])) {
+      $ids_object[$field] = $val['widget_instance_id'];
+    }
   }
   return $ids_object;
 }
@@ -117,6 +122,7 @@ function wc_proccess_yotpo_settings() {
     'v2_widgets_enables' => get_v2_widgets_enables(),
     'yotpo_order_status' => yotpo_get_arr_value($_POST, 'yotpo_order_status'),
     'yotpo_language_as_site' => isset($_POST['yotpo_language_as_site']) ? true : false,
+    'widget_language_from_page' => isset($_POST['widget_language_from_page']),
     'disable_native_review_system' => isset($_POST['disable_native_review_system']) ? true : false,
     'product_sync_enabled' => isset($_POST['product_sync_enabled']),
     'product_sync_tags' => isset($_POST['product_sync_tags']),
