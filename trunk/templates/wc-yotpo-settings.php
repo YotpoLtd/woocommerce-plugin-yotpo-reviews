@@ -61,6 +61,7 @@ function wc_display_yotpo_settings() {
     $main_widget_tab_name = $yotpo_settings['main_widget_tab_name'];
     $qna_widget_tab_name = $yotpo_settings['qna_widget_tab_name'];
     $no_credentials = empty($app_key) || empty($secret);
+    $secret_saved = '' !== (string) $secret;
     // The key fields are editable until keys are saved; after that "Change keys" unlocks them (settings.js).
     $read_only = $no_credentials ? '' : 'readonly';
     $credentials_badge = $no_credentials
@@ -93,9 +94,9 @@ function wc_display_yotpo_settings() {
         'The app key and secret token connect this store to your Yotpo account.',
         $credentials_help .
         yotpo_text_field('app_key', 'yotpo_app_key', $app_key, 'App key', null, $read_only, '', 'yotpo-input--mono') .
-        // Shown while the merchant types it in. Once saved it never reaches the page: the password field holds a
-        // mask, which keeps the saved secret (wc_yotpo_posted_keys()). new-password keeps password managers from filling it.
-        yotpo_text_field('secret', 'yotpo_oauth_token', $no_credentials ? $secret : wc_yotpo_saved_secret_mask(), 'Secret token', null, $read_only . " autocomplete='new-password'", '', 'yotpo-input--mono', $no_credentials ? 'text' : 'password') .
+        // A saved secret never reaches the page, with or without an app key: the password field holds a mask,
+        // which keeps the saved secret (wc_yotpo_posted_keys()). new-password keeps password managers from filling it.
+        yotpo_text_field('secret', 'yotpo_oauth_token', $secret_saved ? wc_yotpo_saved_secret_mask() : '', 'Secret token', null, $read_only . " autocomplete='new-password'", '', 'yotpo-input--mono', $secret_saved ? 'password' : 'text') .
         $change_keys . "
         <input id='reviews_widget' type='hidden' name='yotpo_reviews_widget_id' value='" . esc_attr($reviews_widget_id) . "' />
         <input id='qna_widget' type='hidden' name='yotpo_qna_widget_id' value='" . esc_attr($qna_widget_id) . "' />

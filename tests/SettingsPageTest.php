@@ -206,13 +206,27 @@ class SettingsPageTest extends Yotpo_Test_Case {
 		$this->assertStringContainsString( esc_html( '"secret":"' . wc_yotpo_saved_secret_mask() . '"' ), $html );
 	}
 
-	public function test_the_secret_is_shown_while_keys_are_being_entered() {
+	public function test_the_secret_is_entered_in_the_open_only_while_none_is_saved() {
+		$this->set_setting( 'app_key', '' );
+		$this->set_setting( 'secret', '' );
+
+		$html = $this->render();
+
+		$this->assertMatchesRegularExpression( '#<input type="text" class="yotpo-input yotpo-input--mono" id="secret" name="yotpo_oauth_token" value=""\s+autocomplete="new-password" />#', $html );
+		$this->assertStringNotContainsString( 'yotpo-change-keys', $html, 'The fields are editable already' );
+	}
+
+	public function test_a_secret_saved_without_an_app_key_stays_out_of_the_page_too() {
 		$this->set_setting( 'app_key', '' );
 
 		$html = $this->render();
 
-		$this->assertMatchesRegularExpression( '#<input type="text" class="yotpo-input yotpo-input--mono" id="secret" name="yotpo_oauth_token" value="test-secret"\s+autocomplete="new-password" />#', $html );
+		$this->assertMatchesRegularExpression( '#<input type="password" class="yotpo-input yotpo-input--mono" id="secret" name="yotpo_oauth_token" value="' . preg_quote( wc_yotpo_saved_secret_mask(), '#' ) . '"\s+autocomplete="new-password" />#', $html, 'A password field, editable' );
+		$this->assertStringNotContainsString( 'test-secret', $html );
 		$this->assertStringNotContainsString( 'yotpo-change-keys', $html, 'The fields are editable already' );
+
+		$this->save_keys( 'typed-app-key', wc_yotpo_saved_secret_mask() );
+		$this->assertSame( array( 'typed-app-key', 'test-secret' ), array( get_option( 'yotpo_settings' )['app_key'], get_option( 'yotpo_settings' )['secret'] ), 'The mask keeps the saved secret' );
 	}
 
 	public function test_saved_keys_are_changed_with_change_keys() {

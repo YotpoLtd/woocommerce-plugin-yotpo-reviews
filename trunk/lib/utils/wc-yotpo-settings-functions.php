@@ -121,7 +121,8 @@ function wc_yotpo_posted_keys($current_settings) {
     $secret = '';
   }
   if ('' === $saved_key || '' === $saved_secret) {
-    return array($app_key, $secret);
+    // Keys are still being entered; a secret saved without its app key stays unless a new one is typed.
+    return array($app_key, '' === $secret ? $saved_secret : $secret);
   }
   if ('' === $app_key) {
     wc_yotpo_display_message('The app key can\'t be empty. The saved keys were kept.', true);
