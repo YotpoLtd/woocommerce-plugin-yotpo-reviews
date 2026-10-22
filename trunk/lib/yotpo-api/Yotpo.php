@@ -5,8 +5,7 @@ defined( 'ABSPATH' ) || exit;
 /**
  * The instance IDs of the store's v3 widgets, read when the settings are saved with v3 widgets and when
  * a store switches to them. The Core API has no widget endpoint, so this calls api.yotpo.com/api/v2/widgets,
- * which takes the Core API's access token as its utoken (Yotpo_V3_Client::access_token()). The plugin
- * makes no other call outside the Core API, and no longer logs in to Yotpo's legacy API.
+ * which takes the Core API's access token as its utoken (Yotpo_V3_Client::access_token()).
  */
 class Yotpo {
 
