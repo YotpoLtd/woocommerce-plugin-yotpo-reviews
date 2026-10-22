@@ -39,6 +39,9 @@ function wc_yotpo_get_default_settings() {
       'bottom_line_category' => false,
     ),
     'yotpo_language_as_site' => true,
+    // v3 widgets in the language of each page. On for new stores; missing for stores upgrading from 1.x,
+    // so it reads as off there and their widgets keep the language set in Yotpo.
+    'widget_language_from_page' => true,
     'yotpo_order_status' => 'wc-completed',
     'disable_native_review_system' => true,
     'product_sync_enabled' => true,

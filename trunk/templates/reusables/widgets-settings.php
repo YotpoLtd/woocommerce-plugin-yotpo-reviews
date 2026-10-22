@@ -194,3 +194,50 @@ function v2_enablers($yotpo_settings) {
     </div>
   ";
 }
+
+/**
+ * The widgets' language, in the widgets card.
+ *
+ * - v2 widgets take the language from the plugin (data-lang): the widget language code, or the site's
+ *   language with "Match the site language" (yotpo_language_as_site).
+ * - v3 widgets take it from the loader's languageCode parameter (v3HeaderScript.js): with "Match each
+ *   page's language" (widget_language_from_page) on, the language of the page being shown
+ *   (wc_yotpo_widget_language_code()), so a site in several languages (WPML, Polylang) shows each page's;
+ *   with it off, the language set in Yotpo. It is a setting of its own, off for stores upgrading from 1.x:
+ *   yotpo_language_as_site was on for many of them and did nothing for v3 widgets, so reusing it would
+ *   have changed their widgets' language on update.
+ *
+ * The fields that don't apply to the store's widgets stay in the form, hidden, so saving keeps them.
+ */
+function wc_yotpo_widget_language_settings($yotpo_settings, $language_code) {
+  $v2_fields = yotpo_text_field(
+    'yotpo_widget_language_code',
+    'yotpo_widget_language_code',
+    $language_code,
+    'Widget language',
+    "The language code for the widgets, such as en or fr. <a href='https://support.yotpo.com/docs/translating-yotpo-reviews' target='_blank' rel='noopener'>Supported languages</a>",
+    "maxlength='5'",
+    '',
+    'yotpo-input--short'
+  ) .
+  yotpo_switch_row(
+    'yotpo_language_as_site',
+    'yotpo_language_as_site',
+    checked(1, $yotpo_settings['yotpo_language_as_site'], false),
+    'Match the site language',
+    'For multilingual sites: show the widgets in each visitor\'s site language.'
+  );
+  $v3_field = yotpo_switch_row(
+    'widget_language_from_page',
+    'widget_language_from_page',
+    checked(true, !empty($yotpo_settings['widget_language_from_page']), false),
+    "Match each page's language",
+    "Shows the widgets in the language of each page, including on multilingual sites (WPML, Polylang). When off, the widgets use the language set in Yotpo, under Account Settings &gt; General Settings &gt; Language. <a href='https://support.yotpo.com/docs/translating-yotpo-reviews' target='_blank' rel='noopener'>Languages and translations in Yotpo</a>"
+  );
+  if (!use_v3_widgets()) {
+    return "<div id='yotpo-v2-language'>" . $v2_fields . "</div>
+    <div id='yotpo-v3-language' style='display:none'>" . $v3_field . "</div>";
+  }
+  return "<div id='yotpo-v3-language'>" . $v3_field . "</div>
+    <div id='yotpo-v2-language' style='display:none'>" . $v2_fields . "</div>";
+}

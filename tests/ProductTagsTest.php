@@ -219,7 +219,7 @@ class ProductTagsTest extends Yotpo_Test_Case {
 	public function test_settings_page_shows_the_tags_switch() {
 		require_once dirname( __DIR__ ) . '/trunk/templates/wc-yotpo-settings.php';
 		require_once dirname( __DIR__ ) . '/trunk/lib/yotpo-api/Yotpo.php';
-		$this->route( 'POST', '#^https://api\.yotpo\.com/oauth/token$#', function () {
+		$this->route( 'POST', '#/access_tokens$#', function () {
 			return $this->respond( 500 );
 		} );
 		ob_start();

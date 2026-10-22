@@ -23,24 +23,34 @@ class SettingsPageTest extends Yotpo_Test_Case {
 	/** @var array The widget instances the fake legacy API returns, by field name. */
 	private $instances = self::WIDGET_IDS;
 
-	/** @var bool Whether the fake legacy API refuses the app key and secret. */
+	/** @var bool Whether the fake Core API refuses the app key and secret. */
 	private $oauth_fails = false;
+
+	/** @var string The access token the fake Core API issued last; the widgets call accepts only it. */
+	private $current_token = 'v3-token-1';
 
 	public function set_up() {
 		parent::set_up();
 		$this->instances   = self::WIDGET_IDS;
-		$this->oauth_fails = false;
+		$this->oauth_fails   = false;
+		$this->current_token = 'v3-token-1';
 		$this->set_setting( 'v3_widgets_ids', self::WIDGET_IDS );
-		// Saving with v3 widgets fetches the widget IDs from Yotpo's V1 API.
-		$this->route( 'POST', '#^https://api\.yotpo\.com/oauth/token$#', function () {
-			return $this->oauth_fails ? $this->respond( 401, array( 'error' => 'invalid_client' ) ) : $this->respond( 200, array( 'access_token' => 'v1-token' ) );
+		// Saving with v3 widgets fetches the widget IDs from api.yotpo.com/api/v2/widgets, with the Core
+		// API's access token (for any store: the first save of new keys asks for the new store's token).
+		$this->route( 'POST', '#(^|/core/v3/stores/[^/]+)/access_tokens$#', function () {
+			return $this->oauth_fails ? $this->respond( 401, array( 'errors' => array( array( 'message' => 'invalid secret' ) ) ) ) : $this->respond( 200, array( 'access_token' => $this->current_token ) );
 		} );
-		$this->route( 'GET', '#^https://api\.yotpo\.com/api/v2/widgets$#', function () {
+		$this->route( 'GET', '#^https://api\.yotpo\.com/api/v2/widgets$#', function ( $request ) {
+			parse_str( (string) wp_parse_url( $request['url'], PHP_URL_QUERY ), $query );
+			if ( ! isset( $query['utoken'] ) || $this->current_token !== $query['utoken'] ) {
+				return $this->respond( 401, array( 'status' => array( 'code' => 401 ) ) );
+			}
 			$names     = array( 'reviews_widget' => 'ReviewsMainWidget', 'qna' => 'QuestionsAndAnswers', 'star_rating' => 'ReviewsStarRatingsWidget', 'reviews_carousel' => 'ReviewsCarousel', 'promoted_products' => 'PromotedProducts', 'reviews_tab' => 'ReviewsTab' );
 			$instances = array();
 			foreach ( $this->instances as $field => $id ) {
 				$instances[] = array( 'widget_type_name' => $names[ $field ], 'widget_instance_id' => $id );
 			}
+			$instances[] = array( 'widget_type_name' => 'ReviewsSeoPage', 'widget_instance_id' => '528395' ); // Not one the plugin shows.
 			return $this->respond( 200, array( 'widget_instances' => $instances ) );
 		} );
 	}
@@ -56,7 +66,7 @@ class SettingsPageTest extends Yotpo_Test_Case {
 
 	public function test_saving_the_page_with_every_option_flipped_keeps_every_setting() {
 		$settings = get_option( 'yotpo_settings' );
-		foreach ( array( 'yotpo_language_as_site', 'disable_native_review_system', 'product_sync_enabled', 'product_sync_tags', 'order_sync_enabled' ) as $key ) {
+		foreach ( array( 'yotpo_language_as_site', 'disable_native_review_system', 'product_sync_enabled', 'product_sync_tags', 'order_sync_enabled', 'widget_language_from_page' ) as $key ) {
 			$settings[ $key ] = empty( $settings[ $key ] );
 		}
 		foreach ( array( 'v3_widgets_enables', 'v2_widgets_enables' ) as $group ) {
@@ -204,6 +214,33 @@ class SettingsPageTest extends Yotpo_Test_Case {
 		$this->assertStringNotContainsString( 'yotpo_register', $html, 'No sign-up form in the plugin' );
 	}
 
+	public function test_v3_stores_choose_between_the_page_language_and_yotpos() {
+		$html    = $this->render();
+		$widgets = substr( $html, strpos( $html, '>On-site widgets<' ) );
+		$widgets = substr( $widgets, 0, strpos( $widgets, '</section>' ) );
+
+		$this->assertMatchesRegularExpression( '#<div id="yotpo-v3-language">.*id="widget_language_from_page" name="widget_language_from_page" value="1" checked="checked"#s', $widgets );
+		$this->assertStringContainsString( "Match each page's language", $widgets );
+		$this->assertStringContainsString( 'Shows the widgets in the language of each page', $widgets );
+		$this->assertStringContainsString( 'Account Settings &gt; General Settings &gt; Language', $widgets );
+		$this->assertMatchesRegularExpression( '#<div id="yotpo-v2-language" style="display:none">.*id="yotpo_widget_language_code".*id="yotpo_language_as_site"#s', $widgets, 'The v2 fields are hidden, still in the form' );
+		$this->assertStringNotContainsString( '>Language<', $html, 'No Language card of its own' );
+		$this->assert_save_keeps_settings();
+	}
+
+	public function test_v2_stores_set_the_widget_language_in_the_widgets_card() {
+		$this->set_setting( 'widget_version', 'v2' );
+		$this->set_setting( 'language_code', 'fr' );
+
+		$html    = $this->render();
+		$widgets = substr( $html, strpos( $html, '>On-site widgets<' ) );
+		$widgets = substr( $widgets, 0, strpos( $widgets, '</section>' ) );
+
+		$this->assertStringContainsString( '<div id="yotpo-v2-language">', $widgets );
+		$this->assertMatchesRegularExpression( '#id="yotpo_widget_language_code" name="yotpo_widget_language_code" value="fr"#', $widgets );
+		$this->assertStringNotContainsString( 'V3 widgets show the language set in Yotpo', $widgets );
+	}
+
 	public function test_v3_stores_have_no_widget_version_choice() {
 		$html = $this->render();
 
@@ -311,14 +348,54 @@ class SettingsPageTest extends Yotpo_Test_Case {
 		wc_proccess_yotpo_settings();
 		$html = ob_get_clean();
 
-		$token_requests = array_values( array_filter( $this->requests, function ( $request ) {
-			return 'POST' === $request['method'] && 'https://api.yotpo.com/oauth/token' === $request['path'];
-		} ) );
+		$token_requests = $this->token_requests();
 		$this->assertCount( 1, $token_requests );
-		$this->assertSame( 'new-app-key', $token_requests[0]['body']['client_id'], 'The keys being saved, not the stored (empty) ones' );
-		$this->assertSame( 'new-secret', $token_requests[0]['body']['client_secret'] );
+		$this->assertStringContainsString( '/core/v3/stores/new-app-key/access_tokens', $token_requests[0]['url'], 'The keys being saved, not the stored (empty) ones' );
+		$this->assertSame( 'new-secret', $token_requests[0]['body']['secret'] );
 		$this->assertSame( self::WIDGET_IDS, get_option( 'yotpo_settings' )['v3_widgets_ids'], 'No second save needed' );
 		$this->assertStringNotContainsString( 'Yotpo did not accept the app key and secret token', $html );
+	}
+
+	public function test_widget_ids_use_the_core_api_token_and_no_legacy_login() {
+		$_POST = $this->submission( $this->render() ) + array( 'yotpo_settings' => 'Save changes' );
+
+		ob_start();
+		wc_proccess_yotpo_settings();
+		ob_end_clean();
+
+		$this->assertSame( self::WIDGET_IDS, get_option( 'yotpo_settings' )['v3_widgets_ids'] );
+		$this->assertCount( 1, $this->token_requests() );
+		foreach ( $this->requests as $request ) {
+			$this->assertStringNotContainsString( 'oauth/token', $request['url'], 'No legacy login' );
+		}
+	}
+
+	public function test_a_refused_widget_token_is_replaced_once() {
+		update_option( Yotpo_V3_Client::TOKEN_OPTION, array( 'app_key' => self::APP_KEY, 'token' => 'expired-token' ) );
+		$_POST = $this->submission( $this->render() ) + array( 'yotpo_settings' => 'Save changes' );
+
+		ob_start();
+		wc_proccess_yotpo_settings();
+		ob_end_clean();
+
+		$this->assertSame( self::WIDGET_IDS, get_option( 'yotpo_settings' )['v3_widgets_ids'] );
+		$this->assertCount( 1, $this->token_requests(), 'One new token after the stored one was refused' );
+		$widget_calls = array_filter( $this->requests, function ( $request ) {
+			return false !== strpos( $request['url'], '/api/v2/widgets' );
+		} );
+		$this->assertCount( 2, $widget_calls );
+	}
+
+	/** The requests for a Core API access token. */
+	private function token_requests() {
+		return array_values(
+			array_filter(
+				$this->requests,
+				function ( $request ) {
+					return 'POST' === $request['method'] && preg_match( '#/access_tokens$#', $request['path'] );
+				}
+			)
+		);
 	}
 
 	/** The admin page as WordPress shows it, after a POST of $post with the settings nonce. */

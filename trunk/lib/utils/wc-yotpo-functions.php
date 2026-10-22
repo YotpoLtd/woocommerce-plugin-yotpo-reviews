@@ -49,3 +49,40 @@ function wc_yotpo_redirect() {
 function wc_yotpo_can_redirect_after_activation() {
 	return ! wp_doing_ajax() && current_user_can( 'manage_options' );
 }
+
+/**
+ * The language of the page being shown, as Yotpo's v3 widget loader takes it (its languageCode
+ * parameter): the language part of the WordPress locale (fr_FR is fr, de_DE_formal is de), except the
+ * regional variants Yotpo has, which keep their region with a hyphen (pt_BR is pt-BR, zh_CN is zh-CN;
+ * zh_HK is zh-TW, the traditional script). The loader shows English for a code it doesn't know, so
+ * nothing breaks for a language Yotpo lacks. Multilingual plugins (WPML, Polylang and others) set the
+ * locale per page, so the widgets follow the language the visitor browses in.
+ *
+ * Filterable as wc_yotpo_widget_language_code, for example to map a locale differently.
+ *
+ * @param string|null $locale A WordPress locale; the current page's when null.
+ * @return string A language code such as fr or pt-BR, or '' when there is no locale.
+ */
+function wc_yotpo_widget_language_code($locale = null) {
+	if (null === $locale) {
+		$locale = function_exists('determine_locale') ? determine_locale() : get_locale();
+	}
+	$locale = (string) $locale;
+	$regional = array(
+		'pt_BR' => 'pt-BR',
+		'pt_PT' => 'pt-PT',
+		'zh_CN' => 'zh-CN',
+		'zh_SG' => 'zh-CN',
+		'zh_TW' => 'zh-TW',
+		'zh_HK' => 'zh-TW',
+	);
+	if (isset($regional[$locale])) {
+		$code = $regional[$locale];
+	} elseif (0 === strpos($locale, 'pt_')) {
+		$code = 'pt-PT'; // Other Portuguese locales (pt_AO, pt_PT_ao90): Yotpo has no plain "pt".
+	} else {
+		$parts = explode('_', $locale);
+		$code = strtolower($parts[0]);
+	}
+	return (string) apply_filters('wc_yotpo_widget_language_code', $code, $locale);
+}

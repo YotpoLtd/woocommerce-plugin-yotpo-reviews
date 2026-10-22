@@ -93,6 +93,20 @@ class Yotpo_V3_Client {
 	}
 
 	/**
+	 * The access token, for the one call outside the Core API that takes it: the widget instances
+	 * (Yotpo::get_widget_instances()), which accept it as their utoken.
+	 *
+	 * @param bool $fresh Drop the cached token first (after the token was refused).
+	 * @return string|WP_Error
+	 */
+	public function access_token( $fresh = false ) {
+		if ( $fresh ) {
+			delete_option( self::TOKEN_OPTION );
+		}
+		return $this->token();
+	}
+
+	/**
 	 * The cached access token, or a new one exchanged for the API secret.
 	 *
 	 * @return string|WP_Error

@@ -147,29 +147,8 @@ function wc_display_yotpo_settings() {
             'yotpo-widget-tab-name yotpo-qna-widget-tab-name'
         ) .
         v3_enablers($yotpo_settings) .
-        v2_enablers($yotpo_settings)
-    );
-
-    $language = yotpo_card(
-        'Language',
-        '',
-        yotpo_text_field(
-            'yotpo_widget_language_code',
-            'yotpo_widget_language_code',
-            $language_code,
-            'Widget language',
-            "The 2-letter language code for the widgets, such as en or fr. <a href='https://support.yotpo.com/docs/languages-yotpo-supports-for-widgets' target='_blank' rel='noopener'>Supported languages</a>",
-            "maxlength='5'",
-            '',
-            'yotpo-input--short'
-        ) .
-        yotpo_switch_row(
-            'yotpo_language_as_site',
-            'yotpo_language_as_site',
-            checked(1, $yotpo_settings['yotpo_language_as_site'], false),
-            'Match the site language',
-            'For multilingual sites: show the widgets in each visitor\'s site language.'
-        )
+        v2_enablers($yotpo_settings) .
+        wc_yotpo_widget_language_settings($yotpo_settings, $language_code)
     );
 
     $reviews = yotpo_card(
@@ -202,7 +181,7 @@ function wc_display_yotpo_settings() {
     <div class='wrap yotpo-admin'>
         " . yotpo_page_header('Customize how the widgets look, and your review request emails, in the <a href=\'https://reviews.yotpo.com/\' target=\'_blank\' rel=\'noopener\'>Yotpo dashboard</a>.') . "
         <form method='post' id='yotpo_settings_form'>" . wp_nonce_field('yotpo_settings_form', '_wpnonce', true, false) .
-            $connection . $catalog . $orders . $widgets . $language . $reviews . "
+            $connection . $catalog . $orders . $widgets . $reviews . "
             <div id='yotpodbg' style='display: none;'>" .
                 yotpo_switch_row('debug_mode', 'debug_mode', checked(1, $yotpo_settings['debug_mode'], false), 'Debug mode', 'Writes all plugin actions to a private log file under <i>wp-content/uploads/yotpo-social-reviews-for-woocommerce/</i> and shows the log and all settings on this page.') . "
             </div>
