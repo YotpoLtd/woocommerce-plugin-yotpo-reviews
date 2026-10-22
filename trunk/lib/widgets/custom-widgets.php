@@ -14,16 +14,16 @@ defined( 'ABSPATH' ) || exit;
  * Until 2.0.0 this file had one instance ID written in it, from a single Yotpo account.
  */
 function generate_v3_custom_widgets_code($product): array {
-	$product_data = wc_yotpo_get_product_data($product);
+	$instance_ids = (array) apply_filters('wc_yotpo_custom_widget_instances', array(), $product);
 	$codes = array();
-	foreach ((array) apply_filters('wc_yotpo_custom_widget_instances', array(), $product) as $instance_id) {
+	foreach ($instance_ids as $instance_id) {
 		$instance_id = trim((string) $instance_id);
 		if ('' === $instance_id) {
 			continue;
 		}
 		$codes[] = "<div class='yotpo-widget-instance'
 		data-yotpo-instance-id='".esc_attr($instance_id)."'
-		data-yotpo-product-id='".esc_attr($product_data['id'])."'
+		data-yotpo-product-id='".esc_attr($product->get_id())."'
 	></div>";
 	}
 	return $codes;
