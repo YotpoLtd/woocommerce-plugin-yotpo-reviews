@@ -17,7 +17,8 @@
 defined( 'ABSPATH' ) || exit;
 
 // Single source of truth for the minimum supported PHP version, used by wc_yotpo_compatible().
-// The "Requires PHP" header above and readme.txt only document this same value; keep them in sync.
+// The "Requires PHP" header above, readme.txt, the composer.json platform, phpcs.xml.dist testVersion and the CI matrix
+// only document this same value; keep them in sync (PhpSecurityNoticeTest::test_the_minimum_php_version_is_the_same_everywhere checks it).
 define( 'WC_YOTPO_MIN_PHP_VERSION', '8.2' );
 
 register_activation_hook(   __FILE__, 'wc_yotpo_activation' );
