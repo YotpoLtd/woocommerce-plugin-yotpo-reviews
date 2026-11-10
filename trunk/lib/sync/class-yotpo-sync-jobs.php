@@ -20,6 +20,7 @@ class Yotpo_Sync_Jobs {
 	const MAX_STALL_RESTARTS   = 3; // Automatic restarts of a stalled full sync before it is left stalled for the merchant to retry.
 	const RECHECK_TRANSIENT    = 'wc_yotpo_product_sync_recheck'; // Throttles the queue checks of maybe_start_initial_sync().
 	const RECHECK_EVERY        = 300; // Seconds between those checks while a sync is stopped or possibly stalled.
+	const LATE_AFTER           = 3600; // Seconds a queued job may be overdue before the settings warn that it is still waiting.
 
 	// The third argument of a product job: 0 for a job of a product save, else the stage of a full-sync job.
 	const FULL_SYNC          = 1; // The variations are still to be compared with Yotpo.
@@ -538,6 +539,46 @@ class Yotpo_Sync_Jobs {
 	 */
 	public static function has_jobs( $group, $hook = '' ) {
 		return self::count_jobs( $group, self::JOB_PENDING, $hook ) + self::count_jobs( $group, self::JOB_RUNNING, $hook ) > 0;
+	}
+
+	/**
+	 * When the oldest job of a group that is more than LATE_AFTER seconds overdue was due, or 0 when none is.
+	 * Action Scheduler runs jobs from WP-Cron, and while an admin is in wp-admin: where WP-Cron doesn't run
+	 * (turned off without a server cron, or its loopback request blocked), jobs wait until someone opens
+	 * wp-admin, and the sync looks frozen. An async job's due time is when it was queued. Called by the
+	 * settings template for both the product and the order group.
+	 */
+	public static function late_since( $group ) {
+		if ( ! self::scheduler_ready() || ! class_exists( 'ActionScheduler' ) ) {
+			return 0;
+		}
+		$store = ActionScheduler::store();
+		$ids   = $store->query_actions(
+			array(
+				'group'        => $group,
+				'status'       => self::JOB_PENDING,
+				'date'         => as_get_datetime_object( time() - self::LATE_AFTER ),
+				'date_compare' => '<=',
+				'orderby'      => 'date',
+				'order'        => 'ASC',
+				'per_page'     => 1,
+			)
+		);
+		return $ids ? $store->get_date( reset( $ids ) )->getTimestamp() : 0;
+	}
+
+	/**
+	 * The settings' warning when a group's jobs are overdue (see late_since()), or ''.
+	 */
+	public static function late_warning( $group ) {
+		$since = self::late_since( $group );
+		if ( ! $since ) {
+			return '';
+		}
+		return sprintf(
+			"A Yotpo background job due on %s is still waiting. That is normal while a large backlog catches up; if it doesn't clear, background jobs may not be running on this site, so ask your host to check that WP-Cron runs. WooCommerce > Status > Scheduled Actions lists the waiting jobs.",
+			wp_date( 'j M Y, H:i', $since )
+		);
 	}
 
 	/**

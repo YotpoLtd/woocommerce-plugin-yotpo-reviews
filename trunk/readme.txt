@@ -4,7 +4,7 @@ Tags: reviews, social reviews, woocommerce, woocommerce reviews, woocommerce pro
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 8.2
-Stable tag: 2.0.0
+Stable tag: 2.0.1
 License: GPLv2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -270,7 +270,13 @@ For full installation guide, [please click here](https://support.yotpo.com/docs/
 * The widget IDs are read with the Core API's access token. The plugin no longer uses Yotpo's legacy login or order calls
 * Fixed: browsers could keep the previous storefront script after an update
 
+= 2.0.1 - 10/11/2026 =
+* New: a warning in the Product catalog and Orders cards when the plugin's background jobs have waited more than an hour, which happens when WP-Cron doesn't run on the site. Until now the sync status just stopped moving
+
 == Upgrade Notice ==
+
+= 2.0.1 =
+Warns in the Yotpo settings when the site's background jobs aren't running, so products and orders stop reaching Yotpo. If you see the warning, ask your host to check WP-Cron.
 
 = 2.0.0 =
 Requires PHP 8.2. Orders now go to Yotpo through the Core API, set up in the new Orders card. If your theme calls wc_yotpo_show_custom_widgets(), list your widget IDs with the new wc_yotpo_custom_widget_instances filter.
