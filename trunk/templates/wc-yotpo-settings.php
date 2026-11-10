@@ -118,7 +118,8 @@ function wc_display_yotpo_settings() {
             'Sync products to Yotpo',
             'Keeps your product catalog, including variations, up to date in Yotpo. Runs in the background.',
             '',
-            "<div class='yotpo-status yotpo-tone--" . wc_yotpo_sync_status_tone() . "'>" . esc_html(Yotpo_Product_Sync::status_summary()) . "</div>"
+            "<div class='yotpo-status yotpo-tone--" . wc_yotpo_sync_status_tone() . "'>" . esc_html(Yotpo_Product_Sync::status_summary()) . "</div>" .
+            wc_yotpo_late_jobs_warning(Yotpo_Sync_Jobs::GROUP)
         ) .
         yotpo_switch_row(
             'product_sync_tags',
@@ -139,7 +140,8 @@ function wc_display_yotpo_settings() {
             'Send orders to Yotpo',
             'Sends each order once it reaches the status below, so Yotpo can ask for a review. Runs in the background. Turn off only if your orders reach Yotpo another way.',
             '',
-            "<div class='yotpo-status yotpo-tone--" . esc_attr(Yotpo_Order_Sync::status_tone()) . "'>" . esc_html(Yotpo_Order_Sync::status_summary()) . "</div>"
+            "<div class='yotpo-status yotpo-tone--" . esc_attr(Yotpo_Order_Sync::status_tone()) . "'>" . esc_html(Yotpo_Order_Sync::status_summary()) . "</div>" .
+            wc_yotpo_late_jobs_warning(Yotpo_Order_Sync::GROUP)
         ) .
         yotpo_order_status_option($yotpo_settings) .
         wc_yotpo_past_orders_row()
@@ -282,6 +284,15 @@ function wc_yotpo_past_orders_row() {
         <p class='yotpo-help' id='yotpo-past-orders-count'>" . ($ready ? esc_html(sprintf(_n('%1$d order in the last %2$d days.', '%1$d orders in the last %2$d days.', $count, 'yotpo-social-reviews-for-woocommerce'), $count, $days)) : '') . "</p>
       </div>
     </div>";
+}
+
+/**
+ * Under a card's status line: the warning that its jobs are overdue, so the sync doesn't just look frozen
+ * on a site where WP-Cron doesn't run (Yotpo_Sync_Jobs::late_warning()). Nothing while they run on time.
+ */
+function wc_yotpo_late_jobs_warning($group) {
+    $warning = Yotpo_Sync_Jobs::late_warning($group);
+    return '' === $warning ? '' : "<div class='yotpo-status yotpo-tone--warning yotpo-late-jobs'>" . esc_html($warning) . "</div>";
 }
 
 /**

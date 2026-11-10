@@ -272,3 +272,8 @@ Version 2.0.0
 8) wc_yotpo_show_custom_widgets() renders the instance IDs from the new wc_yotpo_custom_widget_instances filter, none by default. It rendered a hardcoded instance (540894) of a single Yotpo account.
 9) Saved keys can be changed ("Change keys"). The saved secret never reaches the page (a mask, also in the debug dump), and keys Yotpo refuses are not saved. A different app key forgets the old account's product and order Yotpo IDs, queued jobs and order counts; the full catalog sync starts for the new account and the daily sweep goes back no further than the switch.
 10) Fixed: the storefront script had no version, so browsers could keep the previous one after an update.
+
+2026-11-10
+---
+Version 2.0.1
+1) New: the Product catalog and Orders cards warn when a pending Yotpo job of their Action Scheduler group is more than an hour overdue (Yotpo_Sync_Jobs::late_since(), LATE_AFTER 3600). On sites where WP-Cron doesn't run, Action Scheduler only runs jobs while someone is in wp-admin, so the product sync stopped part way and no orders reached Yotpo, while the status lines just stopped moving. The warning gives the oldest waiting job's due time and points to WP-Cron and WooCommerce > Status > Scheduled Actions.
