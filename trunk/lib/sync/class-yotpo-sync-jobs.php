@@ -545,8 +545,8 @@ class Yotpo_Sync_Jobs {
 	 * When the oldest job of a group that is more than LATE_AFTER seconds overdue was due, or 0 when none is.
 	 * Action Scheduler runs jobs from WP-Cron, and while an admin is in wp-admin: where WP-Cron doesn't run
 	 * (turned off without a server cron, or its loopback request blocked), jobs wait until someone opens
-	 * wp-admin, and the sync looks frozen. An async job's due time is when it was queued. Shared with
-	 * Yotpo_Order_Sync.
+	 * wp-admin, and the sync looks frozen. An async job's due time is when it was queued. Called by the
+	 * settings template for both the product and the order group.
 	 */
 	public static function late_since( $group ) {
 		if ( ! self::scheduler_ready() || ! class_exists( 'ActionScheduler' ) ) {
