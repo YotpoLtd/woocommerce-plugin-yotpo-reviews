@@ -30,7 +30,7 @@ class LateJobsTest extends Yotpo_Test_Case {
 
 		$this->assertSame( $oldest, Yotpo_Sync_Jobs::late_since( Yotpo_Sync_Jobs::GROUP ) );
 		$this->assertSame(
-			"Background jobs aren't running on this site: a Yotpo job due on " . wp_date( 'j M Y, H:i', $oldest ) . ' is still waiting. Ask your host to check that WP-Cron runs. WooCommerce > Status > Scheduled Actions lists the waiting jobs.',
+			'A Yotpo background job due on ' . wp_date( 'j M Y, H:i', $oldest ) . " is still waiting. That is normal while a large backlog catches up; if it doesn't clear, background jobs may not be running on this site, so ask your host to check that WP-Cron runs. WooCommerce > Status > Scheduled Actions lists the waiting jobs.",
 			Yotpo_Sync_Jobs::late_warning( Yotpo_Sync_Jobs::GROUP )
 		);
 	}
@@ -50,7 +50,7 @@ class LateJobsTest extends Yotpo_Test_Case {
 		$this->assertSame( 1, substr_count( $html, 'yotpo-late-jobs' ) );
 		$orders = substr( $html, strpos( $html, '>Orders<' ) );
 		$orders = substr( $orders, 0, strpos( $orders, '</section>' ) );
-		$this->assertStringContainsString( '<div class="yotpo-status yotpo-tone--warning yotpo-late-jobs">Background jobs aren', $orders );
+		$this->assertStringContainsString( '<div class="yotpo-status yotpo-tone--warning yotpo-late-jobs">A Yotpo background job due on', $orders );
 	}
 
 	public function test_nothing_shows_while_jobs_run_on_time() {

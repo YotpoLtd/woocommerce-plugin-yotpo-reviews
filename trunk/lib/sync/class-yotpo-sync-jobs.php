@@ -20,7 +20,7 @@ class Yotpo_Sync_Jobs {
 	const MAX_STALL_RESTARTS   = 3; // Automatic restarts of a stalled full sync before it is left stalled for the merchant to retry.
 	const RECHECK_TRANSIENT    = 'wc_yotpo_product_sync_recheck'; // Throttles the queue checks of maybe_start_initial_sync().
 	const RECHECK_EVERY        = 300; // Seconds between those checks while a sync is stopped or possibly stalled.
-	const LATE_AFTER           = 3600; // Seconds a queued job may be overdue before the settings say background jobs aren't running.
+	const LATE_AFTER           = 3600; // Seconds a queued job may be overdue before the settings warn that it is still waiting.
 
 	// The third argument of a product job: 0 for a job of a product save, else the stage of a full-sync job.
 	const FULL_SYNC          = 1; // The variations are still to be compared with Yotpo.
@@ -576,7 +576,7 @@ class Yotpo_Sync_Jobs {
 			return '';
 		}
 		return sprintf(
-			"Background jobs aren't running on this site: a Yotpo job due on %s is still waiting. Ask your host to check that WP-Cron runs. WooCommerce > Status > Scheduled Actions lists the waiting jobs.",
+			"A Yotpo background job due on %s is still waiting. That is normal while a large backlog catches up; if it doesn't clear, background jobs may not be running on this site, so ask your host to check that WP-Cron runs. WooCommerce > Status > Scheduled Actions lists the waiting jobs.",
 			wp_date( 'j M Y, H:i', $since )
 		);
 	}
